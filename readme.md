@@ -376,7 +376,7 @@ MQ异步生成JPG/PDF接口URL：http://host:port/api/convert4mq
 
 接口url示例：
 
-```http
+```
 http://10.11.12.13/callback.do?file=001-online&flag=success
 ```
 
@@ -441,7 +441,7 @@ http://10.11.12.13/callback.do?file=001-online&flag=success
 
 convert2base64接口返回信息示例如下：
 
-```json
+```
 JVBERi0xLjQKJeLjz9MKNCAwIG9iago8PC9TdWJ0eXBlL0Zvcm0vRmlsdGVyL0ZsYXRlRGVjb2RlL1R5………………
 ```
 
