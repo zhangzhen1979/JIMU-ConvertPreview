@@ -5,8 +5,12 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState;
+import org.apache.pdfbox.util.Matrix;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -25,16 +29,17 @@ public class WaterMarkUtil {
      * @param args
      */
     public static void main(String[] args) {
-        String strSourcePdfPath = "d:/cvtest/1-online.pdf";
+        String strSourcePdfPath = "d:/1.pdf";
         String strTargetPdfPath = "d:/cvtest/1-water.pdf";
-//        // 添加水印
-////        String iconPath = "d:/watermark.png";
-////        WaterMarkUtil.markImageByIcon(iconPath, strSourcePdfPath, strTargetPdfPath);
-//
+        // 添加水印
+//        String iconPath = "d:/watermark.png";
+//        WaterMarkUtil.markImageByIcon(iconPath, strSourcePdfPath, strTargetPdfPath);
+
         String strWaterMarkText = "我的网络股份有限公司";
         WaterMarkUtil.waterMarkByText( strWaterMarkText, strSourcePdfPath, strTargetPdfPath,
-                0.5f,45,
-                "宋体",20,"gray");
+                0.5f,30,
+                "宋体",20,"gray",
+                "pdf");
 
 //        try {
 //            Font font = new Font("宋体", Font.PLAIN, 40);
@@ -140,11 +145,13 @@ public class WaterMarkUtil {
      * @param strFontName       字体名称。默认“宋体”
      * @param intFontSize       字号。例如，90
      * @param strFontColor      字体颜色。例如，gray
+     * @param strTargetType     目标格式。pdf/ofd
      * @return
      */
     public static boolean waterMarkByText(String strWaterMarkText, String strSourcePdfPath, String strTargetPdfPath,
                                           float floatAlpha, Integer intDegree,
-                                          String strFontName, Integer intFontSize, String strFontColor) {
+                                          String strFontName, Integer intFontSize, String strFontColor,
+                                          String strTargetType) {
         File fileInputPdf = new File(strSourcePdfPath);
 
         strTargetPdfPath = strTargetPdfPath.replaceAll("\\\\", "/");
@@ -177,66 +184,111 @@ public class WaterMarkUtil {
             Field field = Color.class.getField(strFontColor);
             Color color = (Color) field.get(null);
 
-            // 根据输入的文字，生成水印png图片
-            String strUUID = UUID.randomUUID().toString();
-            File fileWaterMarkPng = createWaterMarkPng(strWaterMarkText,
-                    font, color, intDegree,
-                    strTargetPath + "/" + strUUID + ".png");
 
+            File fileWaterMarkPng = null;
+            FileInputStream is = null;
+            int intIconWidth = 0;
+            int intIconHeight = 0;
+            if("ofd".equalsIgnoreCase(strTargetType)) {
+                // 根据输入的文字，生成水印png图片
+                String strUUID = UUID.randomUUID().toString();
+                fileWaterMarkPng = createWaterMarkPng(strWaterMarkText,
+                        font, color, intDegree,
+                        strTargetPath + "/" + strUUID + ".png");
 
-            FileInputStream is = new FileInputStream(fileWaterMarkPng.getCanonicalFile());
-            BufferedImage img = ImageIO.read(is);
-            int intIconWidth = img.getWidth();
-            int intIconHeight = img.getHeight();
+                is = new FileInputStream(fileWaterMarkPng.getCanonicalFile());
+                BufferedImage img = ImageIO.read(is);
+                intIconWidth = img.getWidth();
+                intIconHeight = img.getHeight();
+            }
+
 
             File file = new File(strSourcePdfPath);
             PDDocument doc = Loader.loadPDF(file);
-            PDImageXObject pdImage = PDImageXObject.createFromFile(fileWaterMarkPng.getCanonicalPath(), doc);
 
             for (int i = 0; i < doc.getNumberOfPages(); i++) {
                 PDPage page = doc.getPage(i);
-                float floatPageWidth = page.getMediaBox().getWidth();
-                float floatPageHeight = page.getMediaBox().getHeight();
-
                 PDPageContentStream contentStream = new PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true);
 
-                PDExtendedGraphicsState pdExtGfxState = new PDExtendedGraphicsState();
                 // 设置透明度
+                PDExtendedGraphicsState pdExtGfxState = new PDExtendedGraphicsState();
                 pdExtGfxState.setNonStrokingAlphaConstant(floatAlpha);
                 pdExtGfxState.setAlphaSourceFlag(true);
                 pdExtGfxState.getCOSObject().setItem(COSName.BM, COSName.MULTIPLY);
                 contentStream.setGraphicsStateParameters(pdExtGfxState);
 
+                if("pdf".equalsIgnoreCase(strTargetType)){
+                    PDFont pdfFont = PDType0Font.load(doc, new FileInputStream(System.getProperty("user.dir") + "/font/STSONG.TTF"), true);
 
-                // 根据pdf每页的高度，与png图片的高度相除，得出需要生成几行
-                float floatYTurns = (floatPageHeight/intIconHeight);
-                int intYTurns = Math.round(floatYTurns);
-                // 根据pdf每页的宽度，与png图片的宽度相除，得出需要生成几次
-                float floatXTurns = (floatPageWidth/intIconWidth);
-                int intXTurns = Math.round(floatXTurns);
+                    // 水印颜色
+                    contentStream.setNonStrokingColor(color);
 
-                // 外层循环，根据“几行”循环
-                for(int y=0; y<intYTurns; y++){
-                    // 计算每次生成图片Y轴坐标（图片高度累加）
-                    int intIconLocateY = y * intIconHeight;
+                    contentStream.beginText();
 
-                    // 内层循环，根据“几次”循环
-                    for(int x=0; x<intXTurns; x++){
-                        // 计算每次生成图片X轴坐标（图片宽度累加）
-                        int intIconLocateX = x * intIconWidth;
+                    // 设置字体大小
+                    float floatFontSize = intFontSize;
+                    contentStream.setFont(pdfFont, floatFontSize);
 
-                        contentStream.drawImage(pdImage, intIconLocateX, intIconLocateY, intIconWidth, intIconHeight);
+                    // 根据水印文字大小长度计算横向坐标需要渲染几次水印
+                    float h = strWaterMarkText.length() * floatFontSize;
+
+                    for (int k = 0; k <= 10; k++) {
+                        // 获取旋转实例
+                        contentStream.setTextMatrix(Matrix.getRotateInstance(Math.toRadians(intDegree), k * 100, 0));
+
+                        for (int j = 0; j < 20; j++) {
+                            contentStream.setTextMatrix(Matrix.getRotateInstance(Math.toRadians(intDegree), k * h * 2, j * h));
+                            contentStream.showText(strWaterMarkText);
+                        }
                     }
+                    contentStream.endText();
+                    contentStream.restoreGraphicsState();
+                    contentStream.close();
+
+                }else{
+                    PDImageXObject pdImage = PDImageXObject.createFromFile(fileWaterMarkPng.getCanonicalPath(), doc);
+
+                    float floatPageWidth = page.getMediaBox().getWidth();
+                    float floatPageHeight = page.getMediaBox().getHeight();
+
+                    // 根据pdf每页的高度，与png图片的高度相除，得出需要生成几行
+                    float floatYTurns = (floatPageHeight/intIconHeight);
+                    int intYTurns = Math.round(floatYTurns);
+                    // 根据pdf每页的宽度，与png图片的宽度相除，得出需要生成几次
+                    float floatXTurns = (floatPageWidth/intIconWidth);
+                    int intXTurns = Math.round(floatXTurns);
+
+                    // 外层循环，根据“几行”循环
+                    for(int y=0; y<intYTurns; y++){
+                        // 计算每次生成图片Y轴坐标（图片高度累加）
+                        int intIconLocateY = y * intIconHeight;
+
+                        // 内层循环，根据“几次”循环
+                        for(int x=0; x<intXTurns; x++){
+                            // 计算每次生成图片X轴坐标（图片宽度累加）
+                            int intIconLocateX = x * intIconWidth;
+
+                            contentStream.drawImage(pdImage, intIconLocateX, intIconLocateY, intIconWidth, intIconHeight);
+                        }
+                    }
+
+                    contentStream.close();
                 }
 
-                contentStream.close();
+
+
                 doc.save(strTargetPdfPath);
             }
 
             doc.close();
 
-            is.close();
-            fileWaterMarkPng.delete();
+            if(is != null){
+                is.close();
+            }
+
+            if(fileWaterMarkPng != null && fileWaterMarkPng.exists()){
+                fileWaterMarkPng.delete();
+            }
 
             return true;
         } catch (Exception e) {
@@ -257,7 +309,7 @@ public class WaterMarkUtil {
      * @return 水印文件的File对象
      */
     public static File createWaterMarkPng(String strWaterMarkText, Font font, Color colorFont, Integer intDegree, String strWaterMarkPng) {
-        JLabel label = new JLabel(strWaterMarkText);
+        JLabel label = new JLabel(strWaterMarkText + "        ");
         FontMetrics metrics = label.getFontMetrics(font);
         int intTextWidth = metrics.stringWidth(label.getText());//文字水印的宽
 
@@ -271,7 +323,7 @@ public class WaterMarkUtil {
         gdSin = gdSin.setScale(2, BigDecimal.ROUND_HALF_UP);
         //a边长
         BigDecimal bdHight = bdLength.multiply(gdSin);
-        int intHight = bdHight.intValue() + 80;
+        int intHight = bdHight.intValue();
 
         //余弦值
         BigDecimal bdCos = BigDecimal.valueOf(Math.cos(dblRadians));
@@ -279,7 +331,7 @@ public class WaterMarkUtil {
         bdCos = bdCos.setScale(2, BigDecimal.ROUND_HALF_UP);
         //b边长
         BigDecimal bdWidth = bdLength.multiply(bdCos);
-        int intWidth = bdWidth.intValue() + 50;
+        int intWidth = bdWidth.intValue();
 
 
 
@@ -295,7 +347,7 @@ public class WaterMarkUtil {
         // 设置字体颜色
         g.setColor(colorFont);
         // 设置对线段的锯齿状边缘处理
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         if (null != intDegree) {
             // 设置水印旋转

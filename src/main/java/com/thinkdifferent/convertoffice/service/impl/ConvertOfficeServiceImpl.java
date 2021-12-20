@@ -204,7 +204,8 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
 
                                 blnSuccess = WaterMarkUtil.waterMarkByText(strWaterMarkText, strPdfFile, strPdfWaterMark,
                                         floatAlpha, intDegree,
-                                        strFontName, intFontSize, strFontColor);
+                                        strFontName, intFontSize, strFontColor,
+                                        strOutputType);
                             }
 
                             if (blnSuccess) {
