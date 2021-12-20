@@ -1,5 +1,7 @@
 package com.thinkdifferent.convertoffice.service.impl;
 
+import cn.hutool.extra.ftp.Ftp;
+import cn.hutool.http.HttpUtil;
 import com.thinkdifferent.convertoffice.config.ConvertOfficeConfig;
 import com.thinkdifferent.convertoffice.service.ConvertOfficeService;
 import com.thinkdifferent.convertoffice.utils.*;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,10 +36,6 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
          *{
          * 	"inputType": "path",
          * 	"inputFile": "D:/1.docx",
-         * 	"inputHeaders":
-         *  {
-         *     		"Authorization":"Bearer da3efcbf-0845-4fe3-8aba-ee040be542c0"
-         *   },
          * 	"outPutFileName": "1-online",
          * 	"outPutFileType": "ofd",
          * 	"waterMark":
@@ -97,14 +96,8 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
                     fileInput.delete();
                 }
 
-                // 从指定的URL中将文件读取为Byte数组，并写入目标文件
-                Map mapInputHeaders = new HashMap<>();
-                if (parameters.get("inputHeaders") != null) {
-                    mapInputHeaders = (Map) parameters.get("inputHeaders");
-                }
-
-                byte[] byteFile = GetFileUtil.getFile(strInputPath, mapInputHeaders);
-                fileInput = GetFileUtil.byte2File(byteFile, strInPutTempPath + strInputFileName);
+                // 从指定的URL中将文件读取下载到目标路径
+                HttpUtil.downloadFile(strInputPath, strInPutTempPath + strInputFileName);
 
                 strInputPath = strInPutTempPath + strInputFileName;
             } else {
@@ -253,20 +246,40 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
 
                     if ("url".equalsIgnoreCase(strWriteBackType)) {
                         String strWriteBackURL = jsonWriteBack.getString("url");
-                        jsonReturn = WriteBackUtil.writeBack2Api(strOutPutPath + strOutPutFileName + "." + strOutputType, strWriteBackURL, mapWriteBackHeaders);
+
+                        jsonReturn = WriteBackUtil.writeBack2Api(fileOut.getCanonicalPath(), strWriteBackURL, mapWriteBackHeaders);
+
                     } else if ("ftp".equalsIgnoreCase(strWriteBackType)) {
                         // ftp回写
                         String strFtpHost = jsonWriteBack.getString("host");
                         int intFtpPort = jsonWriteBack.getInt("port");
                         String strFtpUserName = jsonWriteBack.getString("username");
                         String strFtpPassWord = jsonWriteBack.getString("password");
-                        String strFtpBasePath = jsonWriteBack.getString("basepath");
                         String strFtpFilePath = jsonWriteBack.getString("filepath");
 
                         boolean blnFptSuccess = false;
                         FileInputStream in = new FileInputStream(fileOut);
-                        blnFptSuccess = FtpUtil.uploadFile(strFtpHost, intFtpPort, strFtpUserName, strFtpPassWord,
-                                strFtpBasePath, strFtpFilePath, fileOut.getName(), in);
+
+                        Ftp ftp = null;
+                        try {
+                            //服务器不需要代理访问
+                            ftp = new Ftp(strFtpHost, intFtpPort, strFtpUserName, strFtpPassWord);
+                            //服务器需要代理访问，才能对外访问
+//                            ftp = new Ftp(host, port, user, password, CharsetUtil.CHARSET_UTF_8, FtpMode.Passive);
+
+                            blnFptSuccess =  ftp.upload(strFtpFilePath, fileOut.getName(), in);
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } finally {
+                            try {
+                                if (ftp != null) {
+                                    ftp.close();
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
 
                         if (blnFptSuccess) {
                             jsonReturn.put("flag", "success");
@@ -287,9 +300,17 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
                     // 回调对方系统提供的CallBack方法。
                     if (parameters.get("callBackURL") != null) {
                         String strCallBackURL = String.valueOf(parameters.get("callBackURL"));
-                        strCallBackURL = strCallBackURL + "?file=" + strOutPutFileName + "&flag=" + strFlag;
 
-                        WriteBackUtil.sendGet(strCallBackURL);
+                        Map mapCallBackHeaders = new HashMap<>();
+                        if (parameters.get("callBackHeaders") != null) {
+                            mapCallBackHeaders = (Map) parameters.get("callBackHeaders");
+                        }
+
+                        Map mapParams = new HashMap<>();
+                        mapParams.put("file", strOutPutFileName);
+                        mapParams.put("flag", strFlag);
+
+                        jsonReturn = callBack(strCallBackURL, mapCallBackHeaders, mapParams);
                     }
                 } else {
                     jsonReturn.put("flag", "success");
@@ -310,6 +331,28 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
 
     }
 
+   /**
+     * 回调业务系统提供的接口
+     * @param strWriteBackURL 回调接口URL
+     * @param mapWriteBackHeaders 请求头参数
+     * @param mapParams 参数
+     * @return JSON格式的返回结果
+     */
+    private static JSONObject callBack(String strWriteBackURL, Map<String,String> mapWriteBackHeaders, Map<String, Object> mapParams){
+        //发送get请求并接收响应数据
+        String strResponse = HttpUtil.createGet(strWriteBackURL).
+                addHeaders(mapWriteBackHeaders).form(mapParams)
+                .execute().body();
 
+        JSONObject jsonReturn = new JSONObject();
+        if(strResponse != null){
+            jsonReturn.put("flag", "success");
+            jsonReturn.put("message", "Convert Office File Callback Success.\n" +
+                    "Message is :\n" +
+                    strResponse);
+        }
+
+        return jsonReturn;
+    }
 
 }

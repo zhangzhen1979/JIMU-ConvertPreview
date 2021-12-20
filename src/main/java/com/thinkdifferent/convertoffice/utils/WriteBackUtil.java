@@ -1,15 +1,8 @@
 package com.thinkdifferent.convertoffice.utils;
 
 import net.sf.json.JSONObject;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
-//import org.slf4j.Logger;
-//import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -17,10 +10,9 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Map;
 
-@Component
 public class WriteBackUtil {
 
-//    private static Logger logger = LoggerFactory.getLogger(WriteBackUtil.class);
+    private static Logger logger = LoggerFactory.getLogger(WriteBackUtil.class);
 
     /**
      * 调用API接口，将文件上传
@@ -69,7 +61,7 @@ public class WriteBackUtil {
                             .append("Content-Disposition: form-data; name=\"")
                             .append(entry.getKey())
                             .append("\"").append(strNewLine).append(strNewLine)
-                            .append(String.valueOf(entry.getValue()))
+                            .append(entry.getValue())
                             .append(strNewLine);
                 }
                 out.write(stringBuilder.toString().getBytes(Charset.forName("UTF-8")));
@@ -120,10 +112,10 @@ public class WriteBackUtil {
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
                 BufferedReader reader = new BufferedReader(inputStreamReader);
         ) {
-            String strLine = null;
+            String strLine;
             StringBuffer sb = null;
             while ((strLine = reader.readLine()) != null) {
-                System.out.println(strLine);
+                logger.error(strLine);
                 sb.append(strLine);
             }
 
@@ -135,43 +127,6 @@ public class WriteBackUtil {
 
         return jsonReturn;
     }
-
-
-    private static final CloseableHttpClient httpclient = HttpClients.createDefault();
-
-    /**
-     * 发送HttpGet请求
-     * @param strURL API的URL地址
-     * @return 响应的字符串内容
-     */
-    public static String sendGet(String strURL) {
-
-
-        HttpGet httpGet = new HttpGet(strURL);
-        CloseableHttpResponse response = null;
-        try {
-            response = httpclient.execute(httpGet);
-        } catch (IOException e1) {
-            e1.printStackTrace();
-        }
-        String strResult = null;
-        try {
-            HttpEntity entity = response.getEntity();
-            if (entity != null) {
-                strResult = EntityUtils.toString(entity);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                response.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return strResult;
-    }
-
 
 
 }
