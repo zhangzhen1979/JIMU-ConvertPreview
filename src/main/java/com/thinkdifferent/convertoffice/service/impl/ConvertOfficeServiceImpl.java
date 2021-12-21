@@ -1,6 +1,9 @@
 package com.thinkdifferent.convertoffice.service.impl;
 
+import cn.hutool.core.util.CharsetUtil;
 import cn.hutool.extra.ftp.Ftp;
+import cn.hutool.extra.ftp.FtpConfig;
+import cn.hutool.extra.ftp.FtpMode;
 import cn.hutool.http.HttpUtil;
 import com.thinkdifferent.convertoffice.config.ConvertOfficeConfig;
 import com.thinkdifferent.convertoffice.service.ConvertOfficeService;
@@ -251,6 +254,7 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
 
                     } else if ("ftp".equalsIgnoreCase(strWriteBackType)) {
                         // ftp回写
+                        boolean blnPassive = jsonWriteBack.getBoolean("passive");
                         String strFtpHost = jsonWriteBack.getString("host");
                         int intFtpPort = jsonWriteBack.getInt("port");
                         String strFtpUserName = jsonWriteBack.getString("username");
@@ -262,10 +266,17 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
 
                         Ftp ftp = null;
                         try {
-                            //服务器不需要代理访问
-                            ftp = new Ftp(strFtpHost, intFtpPort, strFtpUserName, strFtpPassWord);
-                            //服务器需要代理访问，才能对外访问
-//                            ftp = new Ftp(host, port, user, password, CharsetUtil.CHARSET_UTF_8, FtpMode.Passive);
+                            if(blnPassive){
+                                // 服务器需要代理访问，才能对外访问
+                                FtpConfig ftpConfig = new FtpConfig(strFtpHost, intFtpPort,
+                                        strFtpUserName, strFtpPassWord,
+                                        CharsetUtil.CHARSET_UTF_8);
+                                ftp = new Ftp(ftpConfig, FtpMode.Passive);
+                            }else{
+                                // 服务器不需要代理访问
+                                ftp = new Ftp(strFtpHost, intFtpPort,
+                                        strFtpUserName, strFtpPassWord);
+                            }
 
                             blnFptSuccess =  ftp.upload(strFtpFilePath, fileOut.getName(), in);
 
@@ -275,6 +286,10 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
                             try {
                                 if (ftp != null) {
                                     ftp.close();
+                                }
+
+                                if(in != null){
+                                    in.close();
                                 }
                             } catch (IOException e) {
                                 e.printStackTrace();

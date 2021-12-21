@@ -36,9 +36,9 @@ public class WaterMarkUtil {
 //        WaterMarkUtil.markImageByIcon(iconPath, strSourcePdfPath, strTargetPdfPath);
 
         String strWaterMarkText = "我的网络股份有限公司";
-        WaterMarkUtil.waterMarkByText( strWaterMarkText, strSourcePdfPath, strTargetPdfPath,
-                0.5f,30,
-                "宋体",20,"gray",
+        WaterMarkUtil.waterMarkByText(strWaterMarkText, strSourcePdfPath, strTargetPdfPath,
+                0.5f, 30,
+                "宋体", 20, "gray",
                 "pdf");
 
 //        try {
@@ -137,15 +137,15 @@ public class WaterMarkUtil {
     /**
      * 给pdf添加水印文字、可设置水印文字的旋转角度
      *
-     * @param strWaterMarkText  水印文字内容
-     * @param strSourcePdfPath  源图片路径和文件名
-     * @param strTargetPdfPath  加水印完毕后的新图片路径和文件名
-     * @param floatAlpha        透明度，小数。例如，0.7f
-     * @param intDegree         文字旋转角度
-     * @param strFontName       字体名称。默认“宋体”
-     * @param intFontSize       字号。例如，90
-     * @param strFontColor      字体颜色。例如，gray
-     * @param strTargetType     目标格式。pdf/ofd
+     * @param strWaterMarkText 水印文字内容
+     * @param strSourcePdfPath 源图片路径和文件名
+     * @param strTargetPdfPath 加水印完毕后的新图片路径和文件名
+     * @param floatAlpha       透明度，小数。例如，0.7f
+     * @param intDegree        文字旋转角度
+     * @param strFontName      字体名称。默认“宋体”
+     * @param intFontSize      字号。例如，90
+     * @param strFontColor     字体颜色。例如，gray
+     * @param strTargetType    目标格式。pdf/ofd
      * @return
      */
     public static boolean waterMarkByText(String strWaterMarkText, String strSourcePdfPath, String strTargetPdfPath,
@@ -171,12 +171,6 @@ public class WaterMarkUtil {
                 intFontSize = 40;
             }
 
-            // 水印文字字体
-            if (strFontName == null || "".equals(strFontName)) {
-                strFontName = "宋体";
-            }
-            Font font = new Font(strFontName, Font.PLAIN, intFontSize);
-
             // 水印文字颜色
             if (strFontColor == null || "".equals(strFontColor)) {
                 strFontColor = "gray";
@@ -189,7 +183,13 @@ public class WaterMarkUtil {
             FileInputStream is = null;
             int intIconWidth = 0;
             int intIconHeight = 0;
-            if("ofd".equalsIgnoreCase(strTargetType)) {
+            if ("ofd".equalsIgnoreCase(strTargetType)) {
+                // 水印文字字体
+                if (strFontName == null || "".equals(strFontName)) {
+                    strFontName = "宋体";
+                }
+                Font font = new Font(strFontName, Font.PLAIN, intFontSize);
+
                 // 根据输入的文字，生成水印png图片
                 String strUUID = UUID.randomUUID().toString();
                 fileWaterMarkPng = createWaterMarkPng(strWaterMarkText,
@@ -200,6 +200,11 @@ public class WaterMarkUtil {
                 BufferedImage img = ImageIO.read(is);
                 intIconWidth = img.getWidth();
                 intIconHeight = img.getHeight();
+            } else {
+                // 水印文字字体
+                if (strFontName == null || "".equals(strFontName)) {
+                    strFontName = "STSONG.TTF";
+                }
             }
 
 
@@ -217,8 +222,8 @@ public class WaterMarkUtil {
                 pdExtGfxState.getCOSObject().setItem(COSName.BM, COSName.MULTIPLY);
                 contentStream.setGraphicsStateParameters(pdExtGfxState);
 
-                if("pdf".equalsIgnoreCase(strTargetType)){
-                    PDFont pdfFont = PDType0Font.load(doc, new FileInputStream(System.getProperty("user.dir") + "/font/STSONG.TTF"), true);
+                if ("pdf".equalsIgnoreCase(strTargetType)) {
+                    PDFont pdfFont = PDType0Font.load(doc, new FileInputStream(System.getProperty("user.dir") + "/font/" + strFontName), true);
 
                     // 水印颜色
                     contentStream.setNonStrokingColor(color);
@@ -245,26 +250,26 @@ public class WaterMarkUtil {
                     contentStream.restoreGraphicsState();
                     contentStream.close();
 
-                }else{
+                } else {
                     PDImageXObject pdImage = PDImageXObject.createFromFile(fileWaterMarkPng.getCanonicalPath(), doc);
 
                     float floatPageWidth = page.getMediaBox().getWidth();
                     float floatPageHeight = page.getMediaBox().getHeight();
 
                     // 根据pdf每页的高度，与png图片的高度相除，得出需要生成几行
-                    float floatYTurns = (floatPageHeight/intIconHeight);
+                    float floatYTurns = (floatPageHeight / intIconHeight);
                     int intYTurns = Math.round(floatYTurns);
                     // 根据pdf每页的宽度，与png图片的宽度相除，得出需要生成几次
-                    float floatXTurns = (floatPageWidth/intIconWidth);
+                    float floatXTurns = (floatPageWidth / intIconWidth);
                     int intXTurns = Math.round(floatXTurns);
 
                     // 外层循环，根据“几行”循环
-                    for(int y=0; y<intYTurns; y++){
+                    for (int y = 0; y < intYTurns; y++) {
                         // 计算每次生成图片Y轴坐标（图片高度累加）
                         int intIconLocateY = y * intIconHeight;
 
                         // 内层循环，根据“几次”循环
-                        for(int x=0; x<intXTurns; x++){
+                        for (int x = 0; x < intXTurns; x++) {
                             // 计算每次生成图片X轴坐标（图片宽度累加）
                             int intIconLocateX = x * intIconWidth;
 
@@ -275,18 +280,16 @@ public class WaterMarkUtil {
                     contentStream.close();
                 }
 
-
-
                 doc.save(strTargetPdfPath);
             }
 
             doc.close();
 
-            if(is != null){
+            if (is != null) {
                 is.close();
             }
 
-            if(fileWaterMarkPng != null && fileWaterMarkPng.exists()){
+            if (fileWaterMarkPng != null && fileWaterMarkPng.exists()) {
                 fileWaterMarkPng.delete();
             }
 
@@ -301,11 +304,12 @@ public class WaterMarkUtil {
 
     /**
      * 根据文字生成png图片，并返回图片路径
+     *
      * @param strWaterMarkText 水印文字内容
-     * @param font 字体（Font对象）
-     * @param colorFont 字体颜色（Color对象）
-     * @param intDegree 旋转角度，整数
-     * @param strWaterMarkPng 水印文件路径和文件名
+     * @param font             字体（Font对象）
+     * @param colorFont        字体颜色（Color对象）
+     * @param intDegree        旋转角度，整数
+     * @param strWaterMarkPng  水印文件路径和文件名
      * @return 水印文件的File对象
      */
     public static File createWaterMarkPng(String strWaterMarkText, Font font, Color colorFont, Integer intDegree, String strWaterMarkPng) {
@@ -332,7 +336,6 @@ public class WaterMarkUtil {
         //b边长
         BigDecimal bdWidth = bdLength.multiply(bdCos);
         int intWidth = bdWidth.intValue();
-
 
 
         // 创建图片

@@ -280,7 +280,10 @@ MQ异步生成JPG/PDF接口URL：http://host:port/api/convert4mq
 - waterMarkText：必填，水印的文字内容。
 - degree：必填，旋转角度。
 - alpha：非必填，透明度。默认值“0.5f”。浮点小数，添加的值必须以“f”结尾。
-- fontName：非必填，字体名称。默认值“宋体”。此处的字体为itext包中已有的字体。
+- fontName：非必填，字体名称。
+  - 如果输出格式为“pdf”，则此处默认值为“宋体”。此处的字体名称为itext包中已有的字体。
+  - 如果输出格式为“ofd”，则此处默认值为"STSONG.TTF"。此处的字体名称为系统font文件夹中的字体文件名，后续可自行添加扩展。
+
 - fontSize：非必填，字号大小。默认值40。
 - fontColor：非必填，字体颜色。默认值“gray”（灰色）。
 
@@ -337,6 +340,7 @@ MQ异步生成JPG/PDF接口URL：http://host:port/api/convert4mq
 ```json
 	"writeBackType": "ftp",
 	"writeBack": {
+         "passive": "false",
 		"host": "ftp://localhost",
          "port": "21",
          "username": "guest",
@@ -347,6 +351,7 @@ MQ异步生成JPG/PDF接口URL：http://host:port/api/convert4mq
 
 - writeBackType：必填，值为“ftp”。
 - writeBack：必填。JSON对象。
+  - passive：是否是被动模式。true/false
   - host：ftp服务的访问地址。
   - port：ftp服务的访问端口。
   - username：ftp服务的用户名。
