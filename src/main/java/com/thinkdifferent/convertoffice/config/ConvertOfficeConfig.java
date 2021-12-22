@@ -8,15 +8,28 @@ import org.springframework.context.annotation.Configuration;
 @RefreshScope
 public class ConvertOfficeConfig {
 
-    @Value(value = "${convert.office.inPutTempPath}")
     public static String inPutTempPath;
+    @Value("${convert.office.inPutTempPath}")
+    public void setInPutTempPath(String inPutTempPath) {
+        ConvertOfficeConfig.inPutTempPath = inPutTempPath;
+    }
 
-    @Value(value = "${convert.office.outPutPath}")
     public static String outPutPath;
+    @Value("${convert.office.outPutPath}")
+    public void setOutPutPath(String outPutPath) {
+        ConvertOfficeConfig.outPutPath = outPutPath;
+    }
 
-    @Value(value = "${convert.watermark.text.type:static}")
     public static String textWaterMarkType;
+    @Value("${convert.watermark.text.type:static}")
+    public void setTextWaterMarkType(String textWaterMarkType) {
+        ConvertOfficeConfig.textWaterMarkType = textWaterMarkType;
+    }
 
-    @Value(value = "${convert.watermark.text.context:My Company}")
     public static String textWaterMarkContext;
+    @Value("${convert.watermark.text.context:My Company}")
+    public void setTextWaterMarkContext(String textWaterMarkContext) {
+        ConvertOfficeConfig.textWaterMarkContext = textWaterMarkContext;
+    }
+
 }

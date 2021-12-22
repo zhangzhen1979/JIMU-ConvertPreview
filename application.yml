@@ -99,6 +99,6 @@ convert:
   watermark:
     text:
       # 水印模式：static，静态；dynamic，动态
-      type: static
+      type: dynamic
       # 当水印模式为static时，需要设置此项，为固定输出的水印文字
       context: 我的公司
