@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.thinkdifferent</groupId>
     <artifactId>convertoffice</artifactId>
-    <version>0.5</version>
+    <version>0.6</version>
     <name>convertoffice</name>
     <description>Demo project for Spring Boot</description>
     <properties>

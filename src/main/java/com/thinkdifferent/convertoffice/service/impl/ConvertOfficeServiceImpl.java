@@ -188,6 +188,11 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
 
                             } else if ("text".equalsIgnoreCase(strWaterMarkType)) {
                                 String strWaterMarkText = jsonWaterMark.getString("waterMarkText");
+
+                                if("static".equalsIgnoreCase(ConvertOfficeConfig.textWaterMarkType)) {
+                                    strWaterMarkText = ConvertOfficeConfig.textWaterMarkContext;
+                                }
+
                                 Integer intDegree = jsonWaterMark.getInt("degree");
                                 String strAlpha = jsonWaterMark.getString("alpha");
                                 float floatAlpha = 0.5f;
@@ -201,7 +206,7 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
                                 blnSuccess = WaterMarkUtil.waterMarkByText(strWaterMarkText, strPdfFile, strPdfWaterMark,
                                         floatAlpha, intDegree,
                                         strFontName, intFontSize, strFontColor,
-                                        strOutputType);
+                                        strOutputType, ConvertOfficeConfig.textWaterMarkType);
                             }
 
                             if (blnSuccess) {

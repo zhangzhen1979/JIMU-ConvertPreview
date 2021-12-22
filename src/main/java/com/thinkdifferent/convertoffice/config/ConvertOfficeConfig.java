@@ -6,18 +6,15 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ConvertOfficeConfig {
 
+    @Value(value = "${convert.office.inPutTempPath}")
     public static String inPutTempPath;
 
-    @Value("${convert.office.inPutTempPath}")
-    public void setInPutTempPath(String strInPutTempPath) {
-        ConvertOfficeConfig.inPutTempPath = strInPutTempPath;
-    }
-
+    @Value(value = "${convert.office.outPutPath}")
     public static String outPutPath;
 
-    @Value("${convert.office.outPutPath}")
-    public void setOutPutPath(String strOutPutPath) {
-        ConvertOfficeConfig.outPutPath = strOutPutPath;
-    }
+    @Value(value = "${convert.watermark.text.type:static}")
+    public static String textWaterMarkType;
 
+    @Value(value = "${convert.watermark.text.context:My Company}")
+    public static String textWaterMarkContext;
 }

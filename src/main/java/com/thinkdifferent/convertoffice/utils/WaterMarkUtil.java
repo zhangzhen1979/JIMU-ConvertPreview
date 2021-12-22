@@ -10,6 +10,7 @@ import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState;
 import org.apache.pdfbox.util.Matrix;
+import org.springframework.util.DigestUtils;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -22,7 +23,6 @@ import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class WaterMarkUtil {
 
@@ -30,28 +30,28 @@ public class WaterMarkUtil {
      * @param args
      */
     public static void main(String[] args) {
-//        String strSourcePdfPath = "d:/1.pdf";
-//        String strTargetPdfPath = "d:/cvtest/1-water.pdf";
+        String strSourcePdfPath = "d:/1.pdf";
+        String strTargetPdfPath = "d:/cvtest/1-water.pdf";
         // 添加水印
 //        String iconPath = "d:/watermark.png";
 //        WaterMarkUtil.markImageByIcon(iconPath, strSourcePdfPath, strTargetPdfPath);
 
-//        String strWaterMarkText = "我的网络股份有限公司";
-//        WaterMarkUtil.waterMarkByText(strWaterMarkText, strSourcePdfPath, strTargetPdfPath,
-//                0.5f, 30,
-//                "宋体", 20, "gray",
-//                "pdf");
+        String strWaterMarkText = "我的网络股份有限公司";
+        WaterMarkUtil.waterMarkByText(strWaterMarkText, strSourcePdfPath, strTargetPdfPath,
+                0.5f, 30,
+                "STSONG.TTF", 20, "gray",
+                "pdf", "static");
 
-        try {
-            Font font = new Font("宋体", Font.PLAIN, 40);
-            Field field = Color.class.getField("gray");
-            Color color = (Color) field.get(null);
-            createWaterMarkPng("我的网络股份有限公司", font, color, 30,
-                    "d:/cvtest/wm.png");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        try {
+//            Font font = new Font("宋体", Font.PLAIN, 40);
+//            Field field = Color.class.getField("gray");
+//            Color color = (Color) field.get(null);
+//            createWaterMarkPng("我的网络股份有限公司", font, color, 30,
+//                    "d:/cvtest/wm.png");
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
 
     }
 
@@ -147,12 +147,13 @@ public class WaterMarkUtil {
      * @param intFontSize      字号。例如，90
      * @param strFontColor     字体颜色。例如，gray
      * @param strTargetType    目标格式。pdf/ofd
+     * @param strTxtWaterMarkType  水印模式。静态，static；动态，dynamic
      * @return
      */
     public static boolean waterMarkByText(String strWaterMarkText, String strSourcePdfPath, String strTargetPdfPath,
                                           float floatAlpha, Integer intDegree,
                                           String strFontName, Integer intFontSize, String strFontColor,
-                                          String strTargetType) {
+                                          String strTargetType, String strTxtWaterMarkType) {
         File fileInputPdf = new File(strSourcePdfPath);
 
         strTargetPdfPath = strTargetPdfPath.replaceAll("\\\\", "/");
@@ -192,10 +193,24 @@ public class WaterMarkUtil {
                 Font font = new Font(strFontName, Font.PLAIN, intFontSize);
 
                 // 根据输入的文字，生成水印png图片
-                String strUUID = UUID.randomUUID().toString();
-                fileWaterMarkPng = createWaterMarkPng(strWaterMarkText,
-                        font, color, intDegree,
-                        strTargetPath + "/" + strUUID + ".png");
+                String strMD5 = DigestUtils.md5DigestAsHex(strWaterMarkText.getBytes());
+                fileWaterMarkPng = new File(strTargetPath + "/" + strMD5 + ".png");
+
+                if("static".equalsIgnoreCase(strTxtWaterMarkType) && fileWaterMarkPng.exists()){
+                    // 当为静态水印，且水印png存在时，啥也不干
+                }else{
+                    if(!fileWaterMarkPng.exists()){
+                        fileWaterMarkPng = createWaterMarkPng(strWaterMarkText,
+                            font, color, intDegree,
+                            strTargetPath + "/" + strMD5 + ".png");
+                    }
+                }
+
+                if(!fileWaterMarkPng.exists()){
+                    fileWaterMarkPng = createWaterMarkPng(strWaterMarkText,
+                            font, color, intDegree,
+                            strTargetPath + "/" + strMD5 + ".png");
+                }
 
                 is = new FileInputStream(fileWaterMarkPng.getCanonicalFile());
                 BufferedImage img = ImageIO.read(is);

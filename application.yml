@@ -79,4 +79,9 @@ convert:
     inPutTempPath: D:/cvtest/temp/
     # 默认本地输出文件所在文件夹
     outPutPath: D:/cvtest/
-
+  watermark:
+    text:
+      # 水印模式：static，静态；dynamic，动态
+      type: static
+      # 当水印模式为static时，需要设置此项，为固定输出的水印文字
+      context: 我的公司

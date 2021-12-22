@@ -2,13 +2,12 @@ package com.thinkdifferent.convertoffice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ConfigurableApplicationContext;
 
 @SpringBootApplication
 public class ConvertofficeApplication {
 
     public static void main(String[] args) {
-        ConfigurableApplicationContext run = SpringApplication.run(ConvertofficeApplication.class, args);
+        SpringApplication.run(ConvertofficeApplication.class, args);
     }
 
 }
