@@ -5,7 +5,6 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
@@ -21,6 +20,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class WaterMarkUtil {
@@ -29,28 +30,28 @@ public class WaterMarkUtil {
      * @param args
      */
     public static void main(String[] args) {
-        String strSourcePdfPath = "d:/1.pdf";
-        String strTargetPdfPath = "d:/cvtest/1-water.pdf";
+//        String strSourcePdfPath = "d:/1.pdf";
+//        String strTargetPdfPath = "d:/cvtest/1-water.pdf";
         // 添加水印
 //        String iconPath = "d:/watermark.png";
 //        WaterMarkUtil.markImageByIcon(iconPath, strSourcePdfPath, strTargetPdfPath);
 
-        String strWaterMarkText = "我的网络股份有限公司";
-        WaterMarkUtil.waterMarkByText(strWaterMarkText, strSourcePdfPath, strTargetPdfPath,
-                0.5f, 30,
-                "宋体", 20, "gray",
-                "pdf");
+//        String strWaterMarkText = "我的网络股份有限公司";
+//        WaterMarkUtil.waterMarkByText(strWaterMarkText, strSourcePdfPath, strTargetPdfPath,
+//                0.5f, 30,
+//                "宋体", 20, "gray",
+//                "pdf");
 
-//        try {
-//            Font font = new Font("宋体", Font.PLAIN, 40);
-//            Field field = Color.class.getField("gray");
-//            Color color = (Color) field.get(null);
-//            createWaterMarkPng("我的网络股份有限公司", font, color, 30,
-//                    "d:/cvtest/wm.png");
-//
-//        } catch (Exception e) {
-//
-//        }
+        try {
+            Font font = new Font("宋体", Font.PLAIN, 40);
+            Field field = Color.class.getField("gray");
+            Color color = (Color) field.get(null);
+            createWaterMarkPng("我的网络股份有限公司", font, color, 30,
+                    "d:/cvtest/wm.png");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -313,30 +314,33 @@ public class WaterMarkUtil {
      * @return 水印文件的File对象
      */
     public static File createWaterMarkPng(String strWaterMarkText, Font font, Color colorFont, Integer intDegree, String strWaterMarkPng) {
-        JLabel label = new JLabel(strWaterMarkText + "        ");
+        JLabel label = new JLabel(strWaterMarkText);
         FontMetrics metrics = label.getFontMetrics(font);
         int intTextWidth = metrics.stringWidth(label.getText());//文字水印的宽
 
-        //斜边长
+
+        int intTextLength = strWaterMarkText.length();
+        int intOneTextWidth = intTextWidth/intTextLength;
+        // 单个字斜边长
+        BigDecimal bdTextLength = BigDecimal.valueOf(intOneTextWidth);
+        Map<String,BigDecimal> mapTextGougu = getGouGu(bdTextLength, intDegree);
+        // 对边长
+        BigDecimal bdTextWidth = mapTextGougu.get("bdGou");
+        int intOneTextX = bdTextWidth.intValue();
+        // 临边长
+        BigDecimal bdTextHeight = mapTextGougu.get("bdGu");
+        int intOneTextY = bdTextHeight.intValue();
+
+
+        // 斜边长
         BigDecimal bdLength = BigDecimal.valueOf(intTextWidth);
-        //转换为弧度制
-        double dblRadians = Math.toRadians(intDegree);
-        //正弦值
-        BigDecimal gdSin = BigDecimal.valueOf(Math.sin(dblRadians));
-        //四舍五入保留2位小数
-        gdSin = gdSin.setScale(2, BigDecimal.ROUND_HALF_UP);
-        //a边长
-        BigDecimal bdHight = bdLength.multiply(gdSin);
-        int intHight = bdHight.intValue();
-
-        //余弦值
-        BigDecimal bdCos = BigDecimal.valueOf(Math.cos(dblRadians));
-        //四舍五入保留2位小数
-        bdCos = bdCos.setScale(2, BigDecimal.ROUND_HALF_UP);
-        //b边长
-        BigDecimal bdWidth = bdLength.multiply(bdCos);
-        int intWidth = bdWidth.intValue();
-
+        Map<String,BigDecimal> mapGougu = getGouGu(bdLength, intDegree);
+        // 对边长
+        BigDecimal bdHight = mapGougu.get("bdGou");
+        int intHight = bdHight.intValue() + intOneTextWidth;
+        // 临边长
+        BigDecimal bdWidth = mapGougu.get("bdGu");
+        int intWidth = bdWidth.intValue() + intOneTextWidth;
 
         // 创建图片
         BufferedImage image = new BufferedImage(intWidth, intHight, BufferedImage.TYPE_INT_BGR);
@@ -373,8 +377,8 @@ public class WaterMarkUtil {
             for (int i = 0; i < intColumnsNumber; i++) {
                 // 画出水印,并设置水印位置
                 g.drawString(strWaterMarkText,
-                        i * intTextWidth + j * intTextWidth + 50,
-                        -i * intTextWidth + j * intTextWidth + 50);
+                        i * intTextWidth + j * intTextWidth + intOneTextX,
+                        -i * intTextWidth + j * intTextWidth + intOneTextY);
             }
         }
 
@@ -391,5 +395,34 @@ public class WaterMarkUtil {
         return fileWaterMarkPng;
     }
 
+    /**
+     * 勾股定理，通过斜边长度、角度，计算对边（勾）和临边（股）的长度
+     * @param bdXian 斜边（弦）长度
+     * @param intDegree 斜边角度
+     * @return Map对象，bdGou：对边（勾）长度；dbGu：临边（股）长度
+     */
+    private static Map<String,BigDecimal> getGouGu(BigDecimal bdXian, int intDegree){
+        Map<String,BigDecimal> mapReturn = new HashMap<>();
+
+        // 角度转换为弧度制
+        double dblRadians = Math.toRadians(intDegree);
+        // 正弦值
+        BigDecimal bdSin = BigDecimal.valueOf(Math.sin(dblRadians));
+        // 四舍五入保留2位小数
+        bdSin = bdSin.setScale(2, BigDecimal.ROUND_HALF_UP);
+        // 对边（勾）长
+        BigDecimal bdGou = bdXian.multiply(bdSin);
+        mapReturn.put("bdGou", bdGou);
+
+        //余弦值
+        BigDecimal bdCos = BigDecimal.valueOf(Math.cos(dblRadians));
+        //四舍五入保留2位小数
+        bdCos = bdCos.setScale(2, BigDecimal.ROUND_HALF_UP);
+        // 临边（股）长
+        BigDecimal bdGu = bdXian.multiply(bdCos);
+        mapReturn.put("bdGu", bdGu);
+
+        return mapReturn;
+    }
 
 }
