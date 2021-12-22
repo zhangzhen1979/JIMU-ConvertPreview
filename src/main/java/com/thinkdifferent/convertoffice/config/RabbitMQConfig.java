@@ -12,7 +12,6 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
-import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
@@ -21,7 +20,6 @@ import org.springframework.context.annotation.Scope;
  * @auther zz
  * @Date 2019/4/26 15:08
  */
-@RefreshScope
 @Configuration
 public class RabbitMQConfig
 {

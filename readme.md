@@ -91,26 +91,6 @@ server:
   connection-timeout: 5000
 
 spring:
-  application:
-    # 应用名称。如果启用nacos，此值必填
-    name: com.thinkdifferent.convertoffice
-  cloud:
-    # Nacos的配置。
-    # 如果启用Nacos服务作为配置中心，
-    # 则此部分之后的内容均可以在Nacos配置中心中管理，
-    # 不必在此配置文件中维护。
-    nacos:
-      config:
-        # 配置服务地址
-        server-addr: 127.0.0.1:8848
-        # 启用状态
-        enabled: false
-      discovery:
-        # 服务发现服务地址
-        server-addr: 127.0.0.1:8848
-        # 启用状态
-        enabled: false
-
   # RabbitMQ设置
   rabbitmq:
     # 访问地址
@@ -131,6 +111,26 @@ spring:
       simple:
         # 自动启动开关
         auto-startup: false
+
+  application:
+    # 应用名称。如果启用nacos，此值必填
+    name: com.thinkdifferent.convertoffice
+  cloud:
+    # Nacos的配置。
+    # 如果启用Nacos服务作为配置中心，
+    # 则此部分之后的内容均可以在Nacos配置中心中管理，
+    # 不必在此配置文件中维护。
+    nacos:
+      config:
+        # 配置服务地址
+        server-addr: 127.0.0.1:8848
+        # 启用状态
+        enabled: false
+      discovery:
+        # 服务发现服务地址
+        server-addr: 127.0.0.1:8848
+        # 启用状态
+        enabled: false
 
 
 # log4j2设置
