@@ -1,5 +1,6 @@
 package com.thinkdifferent.convertoffice.utils;
 
+import com.thinkdifferent.convertoffice.config.CacheObject;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -7,6 +8,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState;
 import org.apache.pdfbox.util.Matrix;
@@ -164,6 +166,8 @@ public class WaterMarkUtil {
             PDDocument pdDocument = Loader.loadPDF(fileInputPdf);
             pdDocument.setAllSecurityToBeRemoved(true);
 
+            boolean blnIsPngInCache = false;
+
             // 水印透明度
             if (floatAlpha == 0) {
                 floatAlpha = 0.5f;
@@ -172,6 +176,7 @@ public class WaterMarkUtil {
             if (intFontSize == null) {
                 intFontSize = 40;
             }
+            float floatFontSize = intFontSize;
 
             // 水印文字颜色
             if (strFontColor == null || "".equals(strFontColor)) {
@@ -185,37 +190,52 @@ public class WaterMarkUtil {
             FileInputStream is = null;
             int intIconWidth = 0;
             int intIconHeight = 0;
+            BufferedImage bufferedImage = null;
+
+
             if ("ofd".equalsIgnoreCase(strTargetType)) {
-                // 水印文字字体
-                if (strFontName == null || "".equals(strFontName)) {
-                    strFontName = "宋体";
-                }
-                Font font = new Font(strFontName, Font.PLAIN, intFontSize);
-
-                // 根据输入的文字，生成水印png图片
+                // 根据输入的文字，计算MD5值，即为png的文件名
                 String strMD5 = DigestUtils.md5DigestAsHex(strWaterMarkText.getBytes());
-                fileWaterMarkPng = new File(strTargetPath + "/" + strMD5 + ".png");
 
-                if("static".equalsIgnoreCase(strTxtWaterMarkType) && fileWaterMarkPng.exists()){
-                    // 当为静态水印，且水印png存在时，啥也不干
+                // 判断缓存中是否有此图片
+                if(CacheObject.mapPng.get(strMD5) != null){
+                    // 如果缓存中有，则直接读取
+                    blnIsPngInCache = true;
+
+                    bufferedImage = CacheObject.mapPng.get(strMD5);
                 }else{
-                    if(!fileWaterMarkPng.exists()){
-                        fileWaterMarkPng = createWaterMarkPng(strWaterMarkText,
-                            font, color, intDegree,
-                            strTargetPath + "/" + strMD5 + ".png");
+                    // 如果缓存中没有，则生成png图片 //////////////////////////
+                    // 水印文字字体
+                    if (strFontName == null || "".equals(strFontName)) {
+                        strFontName = "宋体";
                     }
+                    Font font = new Font(strFontName, Font.PLAIN, intFontSize);
+
+                    // 根据输入的文字，生成水印png图片
+                    fileWaterMarkPng = new File(strTargetPath + "/" + strMD5 + ".png");
+
+                    if("static".equalsIgnoreCase(strTxtWaterMarkType) && fileWaterMarkPng.exists()){
+                        // 当为静态水印，且水印png存在时，啥也不干
+                    }else{
+                        if(!fileWaterMarkPng.exists()){
+                            fileWaterMarkPng = createWaterMarkPng(strWaterMarkText,
+                                    font, color, intDegree,
+                                    strTargetPath + "/" + strMD5 + ".png");
+                        }
+                    }
+
+                    is = new FileInputStream(fileWaterMarkPng.getCanonicalFile());
+                    bufferedImage = ImageIO.read(is);
+
+                    // 判断水印模式是否为“static”（静态）。如果是，则将图片对象加入缓存
+                    if("static".equalsIgnoreCase(strTxtWaterMarkType)){
+                        CacheObject.mapPng.put(strMD5, bufferedImage);
+                    }
+
                 }
 
-                if(!fileWaterMarkPng.exists()){
-                    fileWaterMarkPng = createWaterMarkPng(strWaterMarkText,
-                            font, color, intDegree,
-                            strTargetPath + "/" + strMD5 + ".png");
-                }
-
-                is = new FileInputStream(fileWaterMarkPng.getCanonicalFile());
-                BufferedImage img = ImageIO.read(is);
-                intIconWidth = img.getWidth();
-                intIconHeight = img.getHeight();
+                intIconWidth = bufferedImage.getWidth();
+                intIconHeight = bufferedImage.getHeight();
             } else {
                 // 水印文字字体
                 if (strFontName == null || "".equals(strFontName)) {
@@ -226,6 +246,10 @@ public class WaterMarkUtil {
 
             File file = new File(strSourcePdfPath);
             PDDocument doc = Loader.loadPDF(file);
+            PDFont pdfFont = null;
+            if ("pdf".equalsIgnoreCase(strTargetType)) {
+                pdfFont = PDType0Font.load(doc, new FileInputStream(System.getProperty("user.dir") + "/font/" + strFontName), true);
+            }
 
             for (int i = 0; i < doc.getNumberOfPages(); i++) {
                 PDPage page = doc.getPage(i);
@@ -239,15 +263,12 @@ public class WaterMarkUtil {
                 contentStream.setGraphicsStateParameters(pdExtGfxState);
 
                 if ("pdf".equalsIgnoreCase(strTargetType)) {
-                    PDFont pdfFont = PDType0Font.load(doc, new FileInputStream(System.getProperty("user.dir") + "/font/" + strFontName), true);
-
                     // 水印颜色
                     contentStream.setNonStrokingColor(color);
 
                     contentStream.beginText();
 
                     // 设置字体大小
-                    float floatFontSize = intFontSize;
                     contentStream.setFont(pdfFont, floatFontSize);
 
                     // 根据水印文字大小长度计算横向坐标需要渲染几次水印
@@ -267,7 +288,13 @@ public class WaterMarkUtil {
                     contentStream.close();
 
                 } else {
-                    PDImageXObject pdImage = PDImageXObject.createFromFile(fileWaterMarkPng.getCanonicalPath(), doc);
+                    PDImageXObject pdImage = null;
+                    if(blnIsPngInCache) {
+                        pdImage = LosslessFactory.createFromImage(doc, bufferedImage);
+                    }else{
+                        pdImage = PDImageXObject.createFromFile(fileWaterMarkPng.getCanonicalPath(), doc);
+                    }
+
 
                     float floatPageWidth = page.getMediaBox().getWidth();
                     float floatPageHeight = page.getMediaBox().getHeight();
