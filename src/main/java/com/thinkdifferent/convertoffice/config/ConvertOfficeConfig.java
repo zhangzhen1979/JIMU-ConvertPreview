@@ -20,16 +20,5 @@ public class ConvertOfficeConfig {
         ConvertOfficeConfig.outPutPath = outPutPath;
     }
 
-    public static String textWaterMarkType;
-    @Value("${convert.watermark.text.type:static}")
-    public void setTextWaterMarkType(String textWaterMarkType) {
-        ConvertOfficeConfig.textWaterMarkType = textWaterMarkType;
-    }
-
-    public static String textWaterMarkContext;
-    @Value("${convert.watermark.text.context:My Company}")
-    public void setTextWaterMarkContext(String textWaterMarkContext) {
-        ConvertOfficeConfig.textWaterMarkContext = textWaterMarkContext;
-    }
 
 }

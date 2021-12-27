@@ -177,12 +177,6 @@ convert:
     inPutTempPath: D:/cvtest/temp/
     # 默认本地输出文件所在文件夹
     outPutPath: D:/cvtest/
-  watermark:
-    text:
-      # 水印模式：static，静态；dynamic，动态
-      type: static
-      # 当水印模式为static时，需要设置此项，为固定输出的水印文字
-      context: 我的公司
 ```
 
 可以根据服务器的实际情况进行修改。
@@ -270,6 +264,7 @@ MQ异步生成JPG/PDF接口URL：http://host:port/api/convert4mq
     "waterMark":{
         "waterMarkType":"pic",
         "waterMarkFile":"watermark.png",
+        "degree": "45",
         "alpha":"0.5f",
         "LocateX":"150",
         "LocateY":"150",
@@ -280,6 +275,7 @@ MQ异步生成JPG/PDF接口URL：http://host:port/api/convert4mq
 
 - waterMarkType：必填，图片水印为“pic”。
 - waterMarkFile：必填，为本服务“watermark”文件夹中已经存放的水印文件。建议使用png格式的文件（支持半透明）。
+- degree：必填，旋转角度。不旋转，则为0。
 - alpha：非必填，透明度。默认值“0.5f”。浮点小数，添加的值必须以“f”结尾。
 - LocateX：非必填，水印在文档中横轴的位置。默认值为宽度的1/6位置（左下角）。
 - LocateY：非必填，水印在文档中纵轴的位置。默认值为高度的1/6位置（左下角）。
@@ -294,7 +290,7 @@ MQ异步生成JPG/PDF接口URL：http://host:port/api/convert4mq
 		"waterMarkText": "内部文件",
 		"degree": "45",
 		"alpha": "0.5f",
-		"fontName": "宋体",
+		"fontName": "STSONG.TTF",
 		"fontSize": "20",
 		"fontColor": "gray"
 	},
@@ -302,13 +298,13 @@ MQ异步生成JPG/PDF接口URL：http://host:port/api/convert4mq
 
 - waterMarkType：必填，文字水印为“text”。
 - waterMarkText：必填，水印的文字内容。
-- degree：必填，旋转角度。
+- degree：必填，旋转角度。不旋转，则为0。
 - alpha：非必填，透明度。默认值“0.5f”。浮点小数，添加的值必须以“f”结尾。
 - fontName：非必填，字体名称。
-  - 如果输出格式为“pdf”，则此处默认值为“宋体”。此处的字体名称为itext包中已有的字体。
-  - 如果输出格式为“ofd”，则此处默认值为"STSONG.TTF"。此处的字体名称为系统font文件夹中的字体文件名，后续可自行添加扩展。
+  - 如果输出格式为“pdf”，则此处默认值为“STSONG.TTF”。此处的字体名称为系统font文件夹中的字体文件名，后续可自行添加扩展。
+  - 如果输出格式为“ofd”，则此值无需填写，系统自动取服务中字库的“宋体”。
 
-- fontSize：非必填，字号大小。默认值40。
+- fontSize：必填，字号大小。PDF字体可为20；OFD字体可为10。
 - fontColor：非必填，字体颜色。默认值“gray”（灰色）。
 
 ### 输出信息

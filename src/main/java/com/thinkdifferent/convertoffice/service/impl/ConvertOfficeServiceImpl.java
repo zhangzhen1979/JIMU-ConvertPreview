@@ -13,9 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.awt.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +28,7 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
 
     /**
      * 将传入的JSON对象中记录的文件，转换为PDF/OFD，输出到指定的目录中；回调应用系统接口，将数据写回。
+     *
      * @param parameters 输入的参数，JSON格式数据对象
      * @return
      */
@@ -45,19 +48,20 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
          *   {
          *     		"waterMarkType":"pic",
          *     		"waterMarkFile":"watermark.png",
+         *     		"degree":"45",
          *     		"alpha":"0.5f",
-         *     		"LocateX":"150",
-         *     		"LocateY":"150",
-         *     		"waterMarkWidth":"100",
-         *     		"waterMarkHeight":"100"
+         *     		"LocateX":"150", #100
+         *     		"LocateY":"150", #50
+         *     		"waterMarkWidth":"100", #50
+         *     		"waterMarkHeight":"100" #50
          *   },
          *   {
          *     		"waterMarkType":"text",
          *     		"waterMarkText":"内部文件",
          *     		"degree":"45",
          *     		"alpha":"0.5f",
-         *     		"fontName":"宋体",
-         *     		"fontSize":"20",
+         *     		"fontName":"STSONG.TTF",
+         *     		"fontSize":"20", #10
          *     		"fontColor":"gray"
          *   },
          * 	"writeBackType": "path",
@@ -78,7 +82,7 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
             String strInputType = String.valueOf(parameters.get("inputType"));
             // 输入文件（"D:/1.docx"）
             String strInputPath = String.valueOf(parameters.get("inputFile"));
-            String strInputFileExt = strInputPath.substring(strInputPath.lastIndexOf(".") +1);
+            String strInputFileExt = strInputPath.substring(strInputPath.lastIndexOf(".") + 1);
 
             String strInputPathParam = strInputPath;
             // 默认输入文件存储的临时路径（非path类型时使用）
@@ -145,12 +149,12 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
                 File fileOut = null;
 
                 // 如果输入的文件格式为ofd，则单独处理
-                if("ofd".equalsIgnoreCase(strInputFileExt)){
-                    if("pdf".equalsIgnoreCase(strOutputType)){
+                if ("ofd".equalsIgnoreCase(strInputFileExt)) {
+                    if ("pdf".equalsIgnoreCase(strOutputType)) {
                         fileOut = convertOfficeUtil.convertOfd2Pdf(strInputPath, strPdfFile);
                     }
 
-                }else{
+                } else {
                     // 否则，认为是Office系列文件
                     fileOut = convertOfficeUtil.convertOffice2Pdf(strInputPath, strPdfFile);
 
@@ -171,6 +175,7 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
                                 // 获取水印图片
                                 String strWaterMarkFile = System.getProperty("user.dir") + "/watermark/" + jsonWaterMark.getString("waterMarkFile");
 
+                                Integer intDegree = jsonWaterMark.getInt("degree");
                                 String strAlpha = jsonWaterMark.getString("alpha");
                                 float floatAlpha = 0.5f;
                                 if (strAlpha != null && !"".equals(strAlpha)) {
@@ -181,17 +186,43 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
                                 Integer intWaterMarkWidth = jsonWaterMark.getInt("waterMarkWidth");
                                 Integer intWaterMarkHeight = jsonWaterMark.getInt("waterMarkHeight");
 
-                                blnSuccess = WaterMarkUtil.waterMarkByIcon(strWaterMarkFile, strPdfFile, strPdfWaterMark,
-                                        floatAlpha,
-                                        intLocateX, intLocateY,
-                                        intWaterMarkWidth, intWaterMarkHeight);
+                                if ("pdf".equalsIgnoreCase(strOutputType)) {
+                                    blnSuccess = WaterMarkUtil.waterMarkByIcon4Pdf(strWaterMarkFile, strPdfFile, strPdfWaterMark,
+                                            floatAlpha, intDegree,
+                                            intLocateX, intLocateY,
+                                            intWaterMarkWidth, intWaterMarkHeight);
+
+                                    if (blnSuccess) {
+                                        fileOut.delete();
+                                        fileOut = new File(strPdfWaterMark);
+                                        fileOut.renameTo(new File(strPdfFile));
+                                    }
+
+                                }else{
+                                    File fileOfd = convertOfficeUtil.convertPdf2Ofd(strPdfFile, strOutPutPath + strOutPutFileName + ".ofd");
+
+                                    if (fileOfd.exists()) {
+                                        new File(strPdfFile).delete();
+
+                                        blnSuccess = WaterMarkUtil.waterMarkByIcon4Ofd(strWaterMarkFile, fileOfd.getCanonicalPath(), fileOfd.getCanonicalPath()+"_wm.ofd",
+                                                floatAlpha, intDegree,
+                                                intLocateX, intLocateY,
+                                                intWaterMarkWidth, intWaterMarkHeight);
+
+                                        File fileTemp = new File(fileOfd.getCanonicalPath()+"_wm.ofd");
+
+                                        if(blnSuccess){
+                                            fileOfd.delete();
+                                            fileTemp.renameTo(fileOfd);
+                                        }
+                                        fileOut = fileTemp;
+                                    }
+
+                                    log.info("文件[" + strInputPathParam + "]转换OFD成功");
+                                }
 
                             } else if ("text".equalsIgnoreCase(strWaterMarkType)) {
                                 String strWaterMarkText = jsonWaterMark.getString("waterMarkText");
-
-                                if("static".equalsIgnoreCase(ConvertOfficeConfig.textWaterMarkType)) {
-                                    strWaterMarkText = ConvertOfficeConfig.textWaterMarkContext;
-                                }
 
                                 Integer intDegree = jsonWaterMark.getInt("degree");
                                 String strAlpha = jsonWaterMark.getString("alpha");
@@ -202,31 +233,64 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
                                 String strFontName = jsonWaterMark.getString("fontName");
                                 Integer intFontSize = jsonWaterMark.getInt("fontSize");
                                 String strFontColor = jsonWaterMark.getString("fontColor");
+                                // 水印文字颜色
+                                if (strFontColor == null || "".equals(strFontColor)) {
+                                    strFontColor = "gray";
+                                }
+                                Field field = Color.class.getField(strFontColor);
+                                Color color = (Color) field.get(null);
 
-                                blnSuccess = WaterMarkUtil.waterMarkByText(strWaterMarkText, strPdfFile, strPdfWaterMark,
-                                        floatAlpha, intDegree,
-                                        strFontName, intFontSize, strFontColor,
-                                        strOutputType, ConvertOfficeConfig.textWaterMarkType);
+                                if ("pdf".equalsIgnoreCase(strOutputType)) {
+                                    blnSuccess = WaterMarkUtil.waterMarkByText4Pdf(strPdfFile, strPdfWaterMark,
+                                            strWaterMarkText,
+                                            floatAlpha, intDegree,
+                                            strFontName, intFontSize, color);
+
+                                    if (blnSuccess) {
+                                        fileOut.delete();
+                                        fileOut = new File(strPdfWaterMark);
+                                        fileOut.renameTo(new File(strPdfFile));
+                                    }
+
+                                } else {
+                                    File fileOfd = convertOfficeUtil.convertPdf2Ofd(strPdfFile, strOutPutPath + strOutPutFileName + ".ofd");
+
+                                    if (fileOfd.exists()) {
+                                        new File(strPdfFile).delete();
+
+                                        float floatFontSize = Float.parseFloat(jsonWaterMark.getString("fontSize"));
+                                        double dblAlpha = floatAlpha;
+
+                                        blnSuccess = WaterMarkUtil.waterMarkByText4Ofd(fileOfd.getCanonicalPath(), fileOfd.getCanonicalPath()+"_wm.ofd",
+                                                strWaterMarkText, floatFontSize, dblAlpha, color, intDegree);
+
+                                        File fileTemp = new File(fileOfd.getCanonicalPath()+"_wm.ofd");
+
+                                        if(blnSuccess){
+                                            fileOfd.delete();
+                                            fileTemp.renameTo(fileOfd);
+                                        }
+                                        fileOut = fileTemp;
+                                    }
+                                    log.info("文件[" + strInputPathParam + "]转换OFD成功");
+                                }
+
                             }
 
-                            if (blnSuccess) {
-                                fileOut.delete();
-                                fileOut = new File(strPdfWaterMark);
-                                fileOut.renameTo(new File(strPdfFile));
+
+
+                        } else {
+                            // 如果不加水印，则直接将PDF转换为OFD
+                            if ("ofd".equalsIgnoreCase(strOutputType)) {
+                                File fileOfd = convertOfficeUtil.convertPdf2Ofd(strPdfFile, strOutPutPath + strOutPutFileName + ".ofd");
+
+                                if (fileOfd.exists()) {
+                                    new File(strPdfFile).delete();
+                                    fileOut = fileOfd;
+                                }
+                                log.info("文件[" + strInputPathParam + "]转换OFD成功");
                             }
 
-                        }
-
-
-                        if("ofd".equalsIgnoreCase(strOutputType)){
-                            File fileOfd = convertOfficeUtil.convertPdf2Ofd(strPdfFile, strOutPutPath + strOutPutFileName + ".ofd");
-
-                            if(fileOfd.exists()){
-                                new File(strPdfFile).delete();
-                                fileOut = fileOfd;
-                            }
-
-                            log.info("文件[" + strInputPathParam + "]转换OFD成功");
                         }
 
                     } else {
@@ -271,19 +335,19 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
 
                         Ftp ftp = null;
                         try {
-                            if(blnPassive){
+                            if (blnPassive) {
                                 // 服务器需要代理访问，才能对外访问
                                 FtpConfig ftpConfig = new FtpConfig(strFtpHost, intFtpPort,
                                         strFtpUserName, strFtpPassWord,
                                         CharsetUtil.CHARSET_UTF_8);
                                 ftp = new Ftp(ftpConfig, FtpMode.Passive);
-                            }else{
+                            } else {
                                 // 服务器不需要代理访问
                                 ftp = new Ftp(strFtpHost, intFtpPort,
                                         strFtpUserName, strFtpPassWord);
                             }
 
-                            blnFptSuccess =  ftp.upload(strFtpFilePath, fileOut.getName(), in);
+                            blnFptSuccess = ftp.upload(strFtpFilePath, fileOut.getName(), in);
 
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -293,7 +357,7 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
                                     ftp.close();
                                 }
 
-                                if(in != null){
+                                if (in != null) {
                                     in.close();
                                 }
                             } catch (IOException e) {
@@ -351,21 +415,22 @@ public class ConvertOfficeServiceImpl implements ConvertOfficeService {
 
     }
 
-   /**
+    /**
      * 回调业务系统提供的接口
-     * @param strWriteBackURL 回调接口URL
+     *
+     * @param strWriteBackURL     回调接口URL
      * @param mapWriteBackHeaders 请求头参数
-     * @param mapParams 参数
+     * @param mapParams           参数
      * @return JSON格式的返回结果
      */
-    private static JSONObject callBack(String strWriteBackURL, Map<String,String> mapWriteBackHeaders, Map<String, Object> mapParams){
+    private static JSONObject callBack(String strWriteBackURL, Map<String, String> mapWriteBackHeaders, Map<String, Object> mapParams) {
         //发送get请求并接收响应数据
         String strResponse = HttpUtil.createGet(strWriteBackURL).
                 addHeaders(mapWriteBackHeaders).form(mapParams)
                 .execute().body();
 
         JSONObject jsonReturn = new JSONObject();
-        if(strResponse != null){
+        if (strResponse != null) {
             jsonReturn.put("flag", "success");
             jsonReturn.put("message", "Convert Office File Callback Success.\n" +
                     "Message is :\n" +
