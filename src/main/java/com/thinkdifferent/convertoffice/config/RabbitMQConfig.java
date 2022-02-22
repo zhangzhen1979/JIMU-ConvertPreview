@@ -25,6 +25,21 @@ public class RabbitMQConfig
 {
 //    public static Log log = LogFactory.getLog(RabbitMQConfig.class.getName());
 
+    // 生产者，是否开启
+    public static boolean producer;
+    @Value(value = "${spring.rabbitmq.listener.direct.auto-startup}")
+    public static void setProducer(boolean producer) {
+        RabbitMQConfig.producer = producer;
+    }
+
+    // 消费者，是否开启
+    public static boolean consumer;
+    @Value(value = "${spring.rabbitmq.listener.simple.auto-startup}")
+    public static void setConsumer(boolean consumer) {
+        RabbitMQConfig.consumer = consumer;
+    }
+
+
     @Value(value = "${spring.rabbitmq.host}")
     private String host;
 

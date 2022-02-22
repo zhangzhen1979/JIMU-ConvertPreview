@@ -24,10 +24,12 @@ public class ConvertOfficeConsumer {
     @RabbitListener(queues  = RabbitMQConfig.QUEUE_RECEIVE)
     public void receiveTodoRequestByMap(String strData){
         try{
-            JSONObject jsonData = JSONObject.fromObject(strData);
-            task.doTask(convertOfficeService, jsonData);
-            //	      Thread.currentThread().join();
-        } catch (Exception e) {
+            if(RabbitMQConfig.consumer){
+                JSONObject jsonData = JSONObject.fromObject(strData);
+                task.doTask(convertOfficeService, jsonData);
+                //	      Thread.currentThread().join();
+            }
+         } catch (Exception e) {
             e.printStackTrace();
         }
     }

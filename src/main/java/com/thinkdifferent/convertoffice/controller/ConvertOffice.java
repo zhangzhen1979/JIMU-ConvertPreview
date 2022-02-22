@@ -1,6 +1,7 @@
 package com.thinkdifferent.convertoffice.controller;
 
 import com.thinkdifferent.convertoffice.config.ConvertOfficeConfig;
+import com.thinkdifferent.convertoffice.config.RabbitMQConfig;
 import com.thinkdifferent.convertoffice.service.ConvertOfficeService;
 import com.thinkdifferent.convertoffice.service.RabbitMQService;
 import io.swagger.annotations.Api;
@@ -17,7 +18,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
 
 @Api(tags="根据传入的JSON参数将Office文件转换为Pdf文件")
@@ -59,8 +59,16 @@ public class ConvertOffice {
     @ApiOperation("接收传入的JSON数据，将源Office文件转换为Pdf/Ofd文件；按照传入的设置，将文件回写到指定位置")
     @RequestMapping(value = "/convert", method = RequestMethod.POST)
     public Map<String, String> convert2Jpg(@RequestBody JSONObject jsonInput) {
+        JSONObject jsonReturn = new JSONObject();
 
-        JSONObject jsonReturn = convertOfficeService.ConvertOffice(jsonInput);
+        if(!RabbitMQConfig.producer){
+            jsonReturn = convertOfficeService.ConvertOffice(jsonInput);
+        }else{
+            jsonReturn.put("flag", "success" );
+            jsonReturn.put("message", "Set Data to MQ Success" );
+
+            rabbitMQService.setData2MQ(jsonInput);
+        }
 
         return jsonReturn;
     }
@@ -112,24 +120,6 @@ public class ConvertOffice {
         }
 
         return null;
-    }
-
-
-    /**
-     * 接收传入的JSON数据，加入到RabbitMQ队列中，队列异步处理，将文件转换为Pdf文件
-     * @param jsonInput 输入的JSON对象。内容与“convert”接口相同
-     * @return
-     */
-    @ApiOperation("接收传入的JSON数据，加入到RabbitMQ队列中，队列异步处理，将文件转换为Pdf文件")
-    @RequestMapping(value = "/convert4mq", method = RequestMethod.POST)
-    public Map<String, String> data2MQ(@RequestBody JSONObject jsonInput) {
-        Map<String, String> mapReturn = new HashMap<>();
-        mapReturn.put("flag", "success" );
-        mapReturn.put("message", "Set Data to MQ Success" );
-
-        rabbitMQService.setData2MQ(jsonInput);
-
-        return mapReturn;
     }
 
 }

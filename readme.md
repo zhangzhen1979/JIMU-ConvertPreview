@@ -193,11 +193,9 @@ convert:
 
 本服务提供REST接口供外部系统调用，提供了直接转换接口和通过MQ异步转换的接口。
 
-## 图片转换接口说明
+## 文档转换接口说明
 
-直接生成JPG/PDF接口URL：http://host:port/api/convert
-
-MQ异步生成JPG/PDF接口URL：http://host:port/api/convert4mq
+生成PDF/OFD接口URL：http://host:port/api/convert
 
 接口调用方式：POST
 
