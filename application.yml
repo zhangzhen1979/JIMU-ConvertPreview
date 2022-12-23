@@ -1,13 +1,14 @@
 # Tomcat
 server:
-  tomcat:
-    uri-encoding: UTF-8
-    max-threads: 1000
-    min-spare-threads: 30
   # 端口号
   port: 8080
-  # 超时时间
-  connection-timeout: 5000
+  tomcat:
+    uri-encoding: UTF-8
+    threads:
+      max: 1000
+      min-spare: 30
+    # 超时时间
+    connection-timeout: 5000
 
 spring:
   # RabbitMQ设置
@@ -33,7 +34,7 @@ spring:
 
   application:
     # 应用名称。如果启用nacos，此值必填
-    name: com.thinkdifferent.convertoffice
+    name: convert
   cloud:
     # Nacos的配置。
     # 如果启用Nacos服务作为配置中心，
@@ -54,10 +55,12 @@ spring:
 
 # log4j2设置
 logging:
-  # 配置文件名
-  config: log4j2.xml
   level:
-    com.thinkdifferent: trace
+    root: info
+    com.thinkdifferent: debug
+    de.codecentric.boot.admin.client: error
+  file:
+    name: logs/application.log
 
 # 线程设置参数 #######
 ThreadPool:
@@ -72,13 +75,61 @@ ThreadPool:
   # 允许线程的空闲时间60秒：当超过了核心线程出之外的线程在空闲时间到达之后会被销毁
   AwaitTerminationSeconds: 60
 
+# 本服务IP、端口
+base:
+  url: http://localhost:${server.port}/
+
+# 本服务设置
+convert:
+  preview:
+    # 文字水印内容
+    watermarkTxt: 文字水印
+    # 图片水印地址, 优先级比文字水印高
+    watermarkImage: watermark/watermark.png
+  # 重试功能需启用MQ才有效
+  retry:
+    # 最大重试次数（0-8）, 0标识不重试, 若异常情况只记录日志， 大于1（最大8）：标识失败进行重试的次数, 将会在以下时间重试（5min, 10min, 30min, 1h, 2h, 4h, 8h, 16h）
+    max: 3
+  pdf:
+    # pdf 用字体文件路径 仿宋
+    font: C:/Windows/Fonts/simfang.ttf
+  path:
+    # 接收的输入文件存储的临时文件夹
+    inPutTempPath: E:/temp/input/
+    # 默认本地输出文件所在文件夹
+    outPutPath: E:/temp/output/
+
+  # 转换引擎配置
+  engine:
+    # 可转换的图片格式
+    picType: tif,tiff,jpg,jpeg,png,bmp,png
+    localUtil:
+      # 使用本地WPS应用转换
+      wps:
+        # 是否启用
+        enabled: true
+        # 文件格式
+        fileType: txt,csv,doc,docx,xls,xlsx,ppt,pptx
+        # 运行类型：exe/jacob
+        runType: jacob
+
+      # 使用本地Office应用转换的文件格式。
+      office:
+        # 是否启用
+        enabled: true
+        # 文件格式
+        fileType:
+        # 运行类型：exe/jacob
+        runType: jacob
+
 jodconverter:
   local:
-    enabled: true
+    # 是否启用LibrOffice引擎。使用其他引擎时，此项必须设置为false
+    enabled: false
     # libreOffice根目录
     office-home: D:/LibreOffice
     # 端口（线程）
-    portNumbers: [2001,2002,2003]
+    portNumbers: 8001,8002,8003
     # LibreOffice进程重启前的最大进程数
     maxTasksPerProcess: 100
     # 任务执行的超时时间
@@ -87,13 +138,3 @@ jodconverter:
     taskQueueTimeout: 86400000
     # 一个进程的超时时间
     processTimeout: 86400000
-
-
-# 本服务设置
-convert:
-  office:
-    # 接收的输入文件存储的临时文件夹
-    inPutTempPath: D:/cvtest/temp/
-    # 默认本地输出文件所在文件夹
-    outPutPath: D:/cvtest/
-

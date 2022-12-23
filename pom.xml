@@ -9,24 +9,30 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.thinkdifferent</groupId>
-    <artifactId>convertoffice</artifactId>
-    <version>0.6</version>
-    <name>convertoffice</name>
-    <description>Convert Office file to PDF or OFD</description>
+    <artifactId>convertpreview</artifactId>
+    <version>0.7.0</version>
+    <name>convertpreview</name>
+    <description>Convert File to JPG/PDF/OFD and Preview</description>
     <properties>
         <java.version>1.8</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <spring-boot-admin.version>2.3.1</spring-boot-admin.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <exclusions><!-- 去掉springboot默认配置 -->
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-logging</artifactId>
-                </exclusion>
-            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-freemarker</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
@@ -35,18 +41,11 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- 引入log4j2依赖 -->
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>2.17.0</version>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
         </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.17.0</version>
-        </dependency>
-
 
         <!-- JSON工具包 -->
         <dependency>
@@ -79,6 +78,23 @@
             <version>1.5.2.RELEASE</version>
         </dependency>
 
+        <!-- 图片格式转换依赖JAI包 -->
+        <dependency>
+            <groupId>javax.media</groupId>
+            <artifactId>jai_core</artifactId>
+            <version>1.1.3</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/jai_core-1.1.3.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.media</groupId>
+            <artifactId>jai_codec</artifactId>
+            <version>RELEASE</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/jai_codec-1.1.3.jar</systemPath>
+        </dependency>
+
         <!-- 引入jodconverter、libreoffice依赖转office文档pdf -->
         <dependency>
             <groupId>org.jodconverter</groupId>
@@ -101,7 +117,6 @@
             <version>5.4.2</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.apache.pdfbox/pdfbox -->
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
@@ -111,13 +126,7 @@
         <dependency>
             <groupId>org.ofdrw</groupId>
             <artifactId>ofdrw-full</artifactId>
-            <version>1.17.6</version>
-        </dependency>
-
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.11.0</version>
+            <version>1.20.1</version>
         </dependency>
 
         <dependency>
@@ -127,9 +136,21 @@
         </dependency>
 
         <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.11.0</version>
+        </dependency>
+
+
+        <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
             <version>5.7.17</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.6</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.alibaba.cloud/spring-cloud-starter-alibaba-nacos-config -->
@@ -145,26 +166,103 @@
             <version>2021.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>0.4.17</version>
+        </dependency>
+
+
+        <!-- https://mvnrepository.com/artifact/org.xhtmlrenderer/core-renderer -->
+        <dependency>
+            <groupId>org.xhtmlrenderer</groupId>
+            <artifactId>core-renderer</artifactId>
+            <version>R8</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>7.0.2.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>de.codecentric</groupId>
+            <artifactId>spring-boot-admin-starter-client</artifactId>
+        </dependency>
+
+        <!--契约锁-->
+        <dependency>
+            <groupId>net.qiyuesuo.sdk</groupId>
+            <artifactId>private-sdk</artifactId>
+            <version>4.3.1</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/private-sdk.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.9.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>31.0.1-jre</version>
+        </dependency>
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>1.9.6</version>
+        </dependency>
+
+        <!--金山WPS预览服务-->
+        <dependency>
+            <groupId>cn.keking</groupId>
+            <artifactId>office-plugin</artifactId>
+            <version>4.1.0-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/office-plugin-4.1.0-SNAPSHOT.jar</systemPath>
+        </dependency>
+        <!--Jacob-->
+        <dependency>
+            <groupId>com.jacob</groupId>
+            <artifactId>jacob</artifactId>
+            <version>1.19</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/jacob-1.19.jar</systemPath>
+        </dependency>
 
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>de.codecentric</groupId>
+                <artifactId>spring-boot-admin-dependencies</artifactId>
+                <version>${spring-boot-admin.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>2.7.0</version>
+                <configuration>
+                    <includeSystemScope>true</includeSystemScope>
+                </configuration>
             </plugin>
         </plugins>
-        <resources>
-            <resource>
-                <directory>lib/</directory>
-                <includes>
-                    <include>**/*.jar</include>
-                </includes>
-                <filtering>false</filtering>
-            </resource>
-        </resources>
     </build>
-
 
 </project>

@@ -1,0 +1,1 @@
+如果是32位操作系统，将jacob-1.19-x86.dll复制到jdk/bin文件夹、windows/system32文件夹；如果是64位操作系统，将jacob-1.19-x64.dll复制到jdk/bin文件夹、windows/SysWOW64文件夹。
