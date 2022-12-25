@@ -95,7 +95,6 @@
 ```
 │  application.yml               配置文件
 │  convertpreview-{版本号}.jar    运行jar
-│  {项目名}.license               license文件，文件名不重要
 │  utils                         工具程序文件夹
 │  watermark                     水印、归档章文件夹
 ```
