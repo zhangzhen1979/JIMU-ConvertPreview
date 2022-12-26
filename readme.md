@@ -58,7 +58,7 @@
 
 ## 快速启动
 
-1. 获取`jar`包：联系档案项目组或使用`mvn clean package -Dmaven.test.skip=true`编译,
+1. 获取`jar`包：使用`mvn clean package -Dmaven.test.skip=true`编译
 
 2. 修改配置`application.yml`：
 
@@ -95,7 +95,6 @@
 ```
 │  application.yml               配置文件
 │  convertpreview-{版本号}.jar    运行jar
-│  {项目名}.license               license文件，文件名不重要
 │  utils                         工具程序文件夹
 │  watermark                     水印、归档章文件夹
 ```
