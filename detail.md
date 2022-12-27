@@ -338,7 +338,7 @@ url、ftp方式配置内容与【输入信息】章节中说明一致。
 - inputFiles：此场景下必填，输入的多个PDF文件路径。
 - outPutFileName：必填，为文件生成后的文件名，扩展名自动为pdf/ofd。
 
-### PDF加密设置
+###### PDF加密设置
 
 系统支持在转换的PDF文件中设置用户名和密码，并可控制PDF文件的使用权限。
 
@@ -353,16 +353,62 @@ url、ftp方式配置内容与【输入信息】章节中说明一致。
         "ownerPassword": "ownerpwd",
         "copy": false,
         "modify": false,
-        "print": false
+        "print": false,
+
+        "assembleDocument": false,
+        "fillInForm": false,
+        "modifyAnnotations": false,
+        "printDegraded": false
     },
 ```
 
-- username：用户名，使用加密时必填。
+- username：用户名，必填。
+- userPassword：用户密码（权限受控），必填。
+- ownerPassword：拥有者密码（不控制权限），必填。
+- copy：是否允许用户复制（权限受控），必填。
+- modify：是否允许用户编辑（权限受控），必填。
+- print：是否允许用户打印（权限受控），必填。
+- assembleDocument：是否可以插入/删除/旋转页面，非必填。
+- fillInForm：是否可以填写交互式表单字段（包括签名字段），非必填。
+- modifyAnnotations：是否可以添加或修改文本注释并填写交互式表单字段，如果canModify()返回true，则创建或修改交互式表单字段（包括签名字段）。非必填。
+- printDegraded：是否可以降级格式打印文档，非必填。
+
+### OFD加密设置
+
+系统支持在转换的OFD文件中设置访问密码。建议使用“超越版式办公套件”浏览加密后的OFD（数科阅览器、WPS均不支持打开加密OFD）。
+
+（可选项，不设置则此项不传值即可）
+
+示例如下：
+
+```json
+    "outEncry": {
+        "userPassword": "zhang3pwd",
+        "copy": false,
+        "modify": false,
+        "print": false,
+
+        "copies": 3,
+        "signature": false,
+        "watermark": false,
+        "export": false,
+        "modifyAnnotations": false,
+        "validPeriodStart": "2022-12-01",
+        "validPeriodEnd": "2022-12-31"
+    },
+```
+
 - userPassword：用户密码（权限受控），使用加密时必填。
-- ownerPassword：拥有者密码（不控制权限），使用加密时必填。
-- copy：是否允许用户复制（权限受控）。
-- modify：是否允许用户编辑（权限受控）。
-- print：是否允许用户打印（权限受控）。
+- copy：是否允许用户复制（权限受控），必填。
+- modify：是否允许用户编辑（权限受控），必填。
+- print：是否允许用户打印（权限受控），必填。
+- copies：允许打印的份数（允许打印时有效），非必填。
+- signature：是否允许添加签章，非必填。
+- watermark：是否允许添加水印，非必填。
+- export：是否允许导出，非必填。
+- modifyAnnotations：是否允许添加批注，非必填。
+- validPeriodStart：有效期开始日期。使用有效期设置时必填。
+- validPeriodEnd：有效期结束日期。使用有效期设置时必填。
 
 ### 水印设置
 
@@ -680,10 +726,6 @@ http://10.11.12.13/callback.do?file=001-online&flag=success
 生成多个目标文件后返回Base64字符串接口URL：http://host:port/api/convert2base64s
 
 接口调用方式：POST
-
-
-
-
 
 传入参数形式：JSON
 

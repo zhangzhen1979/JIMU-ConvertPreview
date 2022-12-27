@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.thinkdifferent</groupId>
     <artifactId>convertpreview</artifactId>
-    <version>0.7.0</version>
+    <version>0.7.1</version>
     <name>convertpreview</name>
     <description>Convert File to JPG/PDF/OFD and Preview</description>
     <properties>
@@ -196,14 +196,6 @@
             <artifactId>spring-boot-admin-starter-client</artifactId>
         </dependency>
 
-        <!--契约锁-->
-        <dependency>
-            <groupId>net.qiyuesuo.sdk</groupId>
-            <artifactId>private-sdk</artifactId>
-            <version>4.3.1</version>
-            <scope>system</scope>
-            <systemPath>${basedir}/lib/private-sdk.jar</systemPath>
-        </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
@@ -236,6 +228,37 @@
             <version>1.19</version>
             <scope>system</scope>
             <systemPath>${basedir}/lib/jacob-1.19.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>4.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-scratchpad</artifactId>
+            <version>4.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>4.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml-schemas</artifactId>
+            <version>4.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-excelant</artifactId>
+            <version>4.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itextpdf</artifactId>
+            <version>5.5.13</version>
         </dependency>
 
     </dependencies>

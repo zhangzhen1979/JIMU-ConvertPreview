@@ -26,9 +26,14 @@ import org.apache.pdfbox.rendering.PDFRenderer;
 import org.bouncycastle.crypto.CryptoException;
 import org.jodconverter.DocumentConverter;
 import org.ofd.render.OFDRender;
+import org.ofdrw.core.basicStructure.doc.permission.CT_Permission;
+import org.ofdrw.core.basicStructure.doc.permission.Print;
+import org.ofdrw.core.basicStructure.doc.permission.ValidPeriod;
 import org.ofdrw.crypto.OFDEncryptor;
 import org.ofdrw.crypto.enryptor.UserFEKEncryptor;
 import org.ofdrw.crypto.enryptor.UserPasswordEncryptor;
+import org.ofdrw.layout.OFDDoc;
+import org.ofdrw.reader.OFDReader;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
@@ -44,10 +49,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Order
 @Component
@@ -273,7 +279,7 @@ public class ConvertUtil {
      * @return 返回的ofd文件的File对象
      */
     public File ofdEncry(String strOfdFilePath, OutFileEncryptorEntity outFileEncryptorEntity)
-            throws IOException, CryptoException, GeneralSecurityException {
+            throws IOException, CryptoException, GeneralSecurityException, ParseException {
         File fileOfd = new File(strOfdFilePath);
         File fileOfdEnc = new File(strOfdFilePath + "_enc.ofd");
 
@@ -282,11 +288,54 @@ public class ConvertUtil {
             Path pathTarget = Paths.get(strOfdFilePath + "_enc.ofd");
             log.debug("开始对OFD文件加密码，文件{}到{}", strOfdFilePath, strOfdFilePath + "_enc.ofd");
 
-            if(!StringUtils.isEmpty(outFileEncryptorEntity.getUserName()) && !StringUtils.isEmpty(outFileEncryptorEntity.getUserPassWord())){
+           try (OFDReader reader = new OFDReader(pathSource);
+               OFDDoc ofdDoc = new OFDDoc(reader, pathTarget)){
+               org.ofdrw.core.basicStructure.doc.Document doc = ofdDoc.getOfdDocument();
 
+               CT_Permission permission = new CT_Permission();
+               // 签章操作权限
+               permission.setSignature(outFileEncryptorEntity.getSignature());
+               // 水印操作权限
+               permission.setWatermark(outFileEncryptorEntity.getWatermark());
+               // 打印操作权限
+               permission.setPrint(new Print(outFileEncryptorEntity.getPrint(), outFileEncryptorEntity.getCopies()));
+               permission.setPrintScreen(outFileEncryptorEntity.getPrint());
+               // 导出操作权限
+               permission.setExport(outFileEncryptorEntity.getExport());
+               // 批注操作权限
+               permission.setAnnot(outFileEncryptorEntity.getModifyAnnotations());
+               // 编辑操作权限（文档信息权限、元数据权限、公文元数据权限）
+               permission.setEdit(outFileEncryptorEntity.getModify());
+               // 有效期
+               if(!StringUtils.isEmpty(outFileEncryptorEntity.getValidPeriodStart())
+                       && !StringUtils.isEmpty(outFileEncryptorEntity.getValidPeriodEnd())){
+                   SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd");
+                   Date dateStart = sdfInput.parse(outFileEncryptorEntity.getValidPeriodStart());
+                   Date dateEnd = sdfInput.parse(outFileEncryptorEntity.getValidPeriodEnd());
+
+                   SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                   LocalDateTime ldtStart = LocalDateTime.parse(sdf.format(dateStart));
+                   LocalDateTime ldtEnd = LocalDateTime.parse(sdf.format(dateEnd));
+                   permission.setValidPeriod(
+                           new ValidPeriod(
+                                   ldtStart,
+                                   ldtEnd
+                           )
+                   );
+
+               }
+
+               doc.setPermissions(permission);
+           }
+
+           FileUtil.rename(pathTarget, strOfdFilePath, true);
+
+            if(!StringUtils.isEmpty(outFileEncryptorEntity.getUserPassWord())){
                 try (OFDEncryptor ofdEncryptor = new OFDEncryptor(pathSource, pathTarget)) {
                     final UserFEKEncryptor encryptor = new UserPasswordEncryptor(
-                            outFileEncryptorEntity.getUserName(),
+                            // 目前，加密后的OFD建议使用“超越版式办公套件”（不要用数科OFD阅读器，无法打开加密后的OFD）
+                            // 此工具个人版仅支持用户名为admin的加密信息。
+                            "admin",
                             outFileEncryptorEntity.getUserPassWord()
                     );
                     ofdEncryptor.addUser(encryptor);
@@ -329,21 +378,21 @@ public class ConvertUtil {
 
             AccessPermission permissions = new AccessPermission();
             // 是否可以插入/删除/旋转页面
-            permissions.setCanAssembleDocument(false);
+            permissions.setCanAssembleDocument(outFileEncryptorEntity.getAssembleDocument());
             // 是否可以复制和提取内容
             permissions.setCanExtractContent(outFileEncryptorEntity.getCopy());
 
             permissions.setCanExtractForAccessibility(false);
             // 设置用户是否可以填写交互式表单字段（包括签名字段）
-            permissions.setCanFillInForm(false);
+            permissions.setCanFillInForm(outFileEncryptorEntity.getFillInForm());
             // 设置用户是否可以修改文档
             permissions.setCanModify(outFileEncryptorEntity.getModify());
             // 设置用户是否可以添加或修改文本注释并填写交互式表单字段，如果canModify()返回true，则创建或修改交互式表单字段（包括签名字段）。
-            permissions.setCanModifyAnnotations(false);
+            permissions.setCanModifyAnnotations(outFileEncryptorEntity.getModifyAnnotations());
             // 设置用户是否可以打印。
             permissions.setCanPrint(outFileEncryptorEntity.getPrint());
             // 设置用户是否可以降级格式打印文档
-            permissions.setCanPrintDegraded(false);
+            permissions.setCanPrintDegraded(outFileEncryptorEntity.getPrintDegraded());
 
             String strOwnerPwd = "";
             String strUserPwd = "";
@@ -418,6 +467,7 @@ public class ConvertUtil {
         }
         return fileReturn;
     }
+
 
     /*************************** 图片处理相关方法 **************************/
 

@@ -38,6 +38,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.InvalidParameterException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -163,7 +164,7 @@ public class ConvertServiceImpl implements ConvertService {
      * @throws GeneralSecurityException
      */
     private void outFileEncryptor(ConvertEntity convertEntity, String strOutFile)
-            throws IOException {
+            throws IOException, CryptoException, GeneralSecurityException, ParseException {
         if (convertEntity.getOutFileEncryptorEntity() != null
                 && convertEntity.getOutFileEncryptorEntity().getEncry()) {
             ConvertUtil convertUtil = new ConvertUtil();
@@ -171,8 +172,7 @@ public class ConvertServiceImpl implements ConvertService {
             if ("pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
                 convertUtil.pdfEncry(strOutFile, convertEntity.getOutFileEncryptorEntity());
             } else {
-                // todo OFD加密、权限设置，暂未调试成功
-//                convertUtil.ofdEncry(strOutFile, convertEntity.getOutFileEncryptorEntity());
+                convertUtil.ofdEncry(strOutFile, convertEntity.getOutFileEncryptorEntity());
             }
         }
 
@@ -291,7 +291,7 @@ public class ConvertServiceImpl implements ConvertService {
         for (int i = 0; i < convertEntity.getInputFiles().length; i++) {
             File fileInput = convertEntity.getInputFiles()[i].checkAndGetInputFile();
             String strInputFileType = FileTypeUtil.getFileType(fileInput);
-            File tPdfFile;
+            File tPdfFile = null;
             List<String> tempJpgs;
 
             String strDestFile = convertEntity.getInputFiles().length == 1
@@ -314,7 +314,7 @@ public class ConvertServiceImpl implements ConvertService {
                         continue;
                     }
                 }
-            } else {
+            } else if(!StringUtils.equalsIgnoreCase(strInputFileType, "ofd")){
                 // 2、各种非图片文件转pdf
                 tPdfFile = convertUtil.convertOffice2Pdf(
                         fileInput.getCanonicalPath(),
@@ -348,8 +348,7 @@ public class ConvertServiceImpl implements ConvertService {
             if(fileInput != null && fileInput.exists()){
                 if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "pdf", "ofd")){
                     File copyFile = new File(strDestFile + "." + convertEntity.getOutPutFileType().toLowerCase());
-                    if ((convertEntity.getInputFiles()[i] instanceof InputPath)
-                            && !copyFile.exists()) {
+                    if ((convertEntity.getInputFiles()[i] instanceof InputPath)) {
                         // 4.1、如果是本地文件，复制到输入目录
                         FileUtil.copy(fileInput, copyFile, true);
                         inputFiles.add(i, copyFile);
@@ -373,34 +372,39 @@ public class ConvertServiceImpl implements ConvertService {
      * @throws Exception
      */
     private String markFile(ConvertEntity convertEntity, String strDestPathFileName, File fileOutNoMark) throws Exception {
-        String strOutPath = null;
-        File fileOutMark = null;
-        if (Objects.nonNull(fileOutNoMark)) {
-            if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
-                strOutPath = strDestPathFileName + "_wm.pdf";
-                PdfWaterMarkUtil.mark4Pdf(fileOutNoMark.getAbsolutePath(), strOutPath, convertEntity, 0);
-            } else if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "ofd")) {
-                strOutPath = strDestPathFileName + "_wm.ofd";
-                OfdWaterMarkUtil.mark4Ofd(fileOutNoMark.getAbsolutePath(), strOutPath, convertEntity);
-            } else {
-                // 缩略图路径
-                strOutPath = fileOutNoMark.getAbsolutePath();
+        String strOut = fileOutNoMark.getAbsolutePath();
+        if(convertEntity.getPngMark() != null
+                || convertEntity.getTextMark() != null
+                || convertEntity.getFirstPageMark() != null
+                || convertEntity.isPageNum()){
+            String strOutPath = null;
+            File fileOutMark = null;
+            if (Objects.nonNull(fileOutNoMark)) {
+                if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
+                    strOutPath = strDestPathFileName + "_wm.pdf";
+                    PdfWaterMarkUtil.mark4Pdf(fileOutNoMark.getAbsolutePath(), strOutPath, convertEntity, 0);
+                } else if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "ofd")) {
+                    strOutPath = strDestPathFileName + "_wm.ofd";
+                    OfdWaterMarkUtil.mark4Ofd(fileOutNoMark.getAbsolutePath(), strOutPath, convertEntity);
+                } else {
+                    // 缩略图路径
+                    strOutPath = fileOutNoMark.getAbsolutePath();
+                }
+                fileOutMark = new File(strOutPath);
             }
-            fileOutMark = new File(strOutPath);
-        }
 
-        if (fileOutNoMark != null
-                && !fileOutMark.equals(fileOutNoMark)) {
-            FileUtil.del(fileOutNoMark);
-        }
+            if (fileOutNoMark != null
+                    && !fileOutMark.equals(fileOutNoMark)) {
+                FileUtil.del(fileOutNoMark);
+            }
 
-        String strOut;
-        if (strOutPath != null
-                && !fileOutMark.equals(fileOutNoMark)) {
-            Path pathOut = FileUtil.rename(Paths.get(strOutPath), fileOutNoMark.getName(), true);
-            strOut = pathOut.toString();
-        } else {
-            strOut = strOutPath;
+            if (strOutPath != null
+                    && !fileOutMark.equals(fileOutNoMark)) {
+                Path pathOut = FileUtil.rename(Paths.get(strOutPath), fileOutNoMark.getName(), true);
+                strOut = pathOut.toString();
+            } else {
+                strOut = strOutPath;
+            }
         }
 
         return strOut;
@@ -458,8 +462,12 @@ public class ConvertServiceImpl implements ConvertService {
                     }
 
                 } else if (lowerFileName.endsWith("ofd")) {
-                    try (OFDReader ofdReader = new OFDReader(Paths.get(fileOut.getCanonicalPath()))) {
-                        log.info("转换OFD完成，共{}页", ofdReader.getPageList().size());
+                    if(StringUtils.isEmpty(convertEntity.getOutFileEncryptorEntity().getUserPassWord())){
+                        try (OFDReader ofdReader = new OFDReader(Paths.get(fileOut.getCanonicalPath()))) {
+                            log.info("转换OFD完成，共{}页", ofdReader.getPageList().size());
+                        }
+                    }else{
+                        // todo 有密码的文件读取，尚未解决
                     }
                 }
             } catch (Exception e) {
@@ -545,6 +553,20 @@ public class ConvertServiceImpl implements ConvertService {
         if (input.exists() && input.getInputFile().getName().endsWith(".pdf")) {
             return input.getInputFile();
         }
+        // 合并后的文件路径及文件名，无后缀
+        String strDestPathFileName = ConvertConfig.outPutPath + DateUtil.today() + "/" + input.getInputFile().getName();
+
+        // excel 特殊处理
+        if (StringUtils.equalsAnyIgnoreCase(FileUtil.extName(input.getInputFile()), "xls", "xlsx")){
+            String targetHtmlPath = strDestPathFileName + ".html";
+            if (FileUtil.exist(targetHtmlPath)){
+                // 今天已经转换过的，直接返回
+                return new File(targetHtmlPath);
+            }
+
+            Excel2HtmlUtil.excel2html(input.getInputFile(), targetHtmlPath);
+            return new File(targetHtmlPath);
+        }
 
         ConvertEntity convertEntity = new ConvertEntity();
         convertEntity.setOutPutFileType("pdf");
@@ -553,8 +575,6 @@ public class ConvertServiceImpl implements ConvertService {
         // 定时任务清理预览文件
         convertEntity.setInputType(InputType.PATH);
 
-        // 合并后的文件路径及文件名，无后缀
-        String strDestPathFileName = ConvertConfig.outPutPath + DateUtil.today() + "/" + input.getInputFile().getName();
         if (FileUtil.exist(strDestPathFileName + ".pdf")){
             // 今天已经转换过的，直接返回
             return new File(strDestPathFileName + ".pdf");
