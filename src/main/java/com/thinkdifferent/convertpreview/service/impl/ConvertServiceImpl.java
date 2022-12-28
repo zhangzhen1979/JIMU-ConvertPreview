@@ -294,66 +294,66 @@ public class ConvertServiceImpl implements ConvertService {
         for (int i = 0; i < convertEntity.getInputFiles().length; i++) {
             File fileInput = convertEntity.getInputFiles()[i].checkAndGetInputFile();
             String strInputFileType = FileTypeUtil.getFileType(fileInput);
-            File tPdfFile = null;
-            List<String> tempJpgs;
 
             String strDestFile = convertEntity.getInputFiles().length == 1
                     ? strDestPathFileName : strDestPathFileName + "_" + i;
+            if(!strInputFileType.equalsIgnoreCase(convertEntity.getOutPutFileType())){
+                File tPdfFile = null;
+                List<String> tempJpgs;
 
-            // 1、各种图片转jpg、pdf
-            if (StringUtils.equalsAnyIgnoreCase(strInputFileType, strsPicType)) {
-                tempJpgs = convertJpgUtil.convertPic2Jpg(fileInput.getCanonicalPath(), strDestFile + ".jpg");
-                tempFiles.addAll(tempJpgs);
-                // 1.1、如果目标格式就是jpg，则pdf、ofd转换跳过。下一循环。
-                if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "jpg")) {
-                    continue;
-                } else {
-                    // 1.2、jpg文件转pdf（如果输入文件是pdf，不处理）
-                    tPdfFile = convertPdfUtil.convertPic2Pdf(fileInput.getCanonicalPath(),
-                            "jpg", tempJpgs, convertEntity);
-                    // 1.3、如果输出格式为pdf，则ofd转换跳过。下一循环。
-                    if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
+                // 1、各种图片转jpg、pdf
+                if (StringUtils.equalsAnyIgnoreCase(strInputFileType, strsPicType)) {
+                    tempJpgs = convertJpgUtil.convertPic2Jpg(fileInput.getCanonicalPath(), strDestFile + ".jpg");
+                    tempFiles.addAll(tempJpgs);
+                    // 1.1、如果目标格式就是jpg，则pdf、ofd转换跳过。下一循环。
+                    if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "jpg")) {
+                        continue;
+                    } else {
+                        // 1.2、jpg文件转pdf（如果输入文件是pdf，不处理）
+                        tPdfFile = convertPdfUtil.convertPic2Pdf(fileInput.getCanonicalPath(),
+                                "jpg", tempJpgs, convertEntity);
+                        // 1.3、如果输出格式为pdf，则ofd转换跳过。下一循环。
+                        if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
+                            inputFiles.add(i, tPdfFile);
+                            continue;
+                        }
+                    }
+                } else if(!StringUtils.equalsIgnoreCase(strInputFileType, "ofd")){
+                    // 2、各种非图片文件转pdf
+                    tPdfFile = convertPdfUtil.convertOffice2Pdf(
+                            fileInput.getAbsolutePath(),
+                            strDestFile + ".pdf",
+                            convertEntity
+                    );
+                    if (tPdfFile != null && tPdfFile.exists()
+                            && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
                         inputFiles.add(i, tPdfFile);
                         continue;
                     }
-                }
-            } else if(!StringUtils.equalsIgnoreCase(strInputFileType, "ofd")){
-                // 2、各种非图片文件转pdf
-                tPdfFile = convertPdfUtil.convertOffice2Pdf(
-                        fileInput.getAbsolutePath(),
-                        strDestFile + ".pdf",
-                        convertEntity
-                );
-                if (tPdfFile != null && tPdfFile.exists()
-                        && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
-                    inputFiles.add(i, tPdfFile);
-                    continue;
+
+                }else if(StringUtils.equalsIgnoreCase(strInputFileType, "ofd")
+                        && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")){
+                    // 3、OFD转PDF
+                    convertOfdUtil.convertOfd2Pdf(fileInput.getAbsolutePath(), strDestFile + ".pdf");
                 }
 
-            }else if(StringUtils.equalsIgnoreCase(strInputFileType, "ofd")
-                    && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")){
-                // 3、OFD转PDF
-                convertOfdUtil.convertOfd2Pdf(fileInput.getAbsolutePath(), strDestFile + ".pdf");
-            }
+                // 4、PDF文件转ofd（如果输入文件是ofd，不处理）
+                if (!StringUtils.equalsIgnoreCase(strInputFileType, "ofd")
+                        && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "ofd")) {
 
-            // 4、PDF文件转ofd（如果输入文件是ofd，不处理）
-            if (!StringUtils.equalsIgnoreCase(strInputFileType, "ofd")
-                    && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "ofd")) {
+                    if (tPdfFile != null && tPdfFile.exists()){
+                        File ofdFile = new File(strDestFile + ".ofd");
+                        convertOfdUtil.convertPdf2Ofd((tPdfFile == null ? fileInput : tPdfFile).getPath(), ofdFile.getPath());
+                        inputFiles.add(i, ofdFile);
 
-                if (tPdfFile != null && tPdfFile.exists()){
-                    File ofdFile = new File(strDestFile + ".ofd");
-                    convertOfdUtil.convertPdf2Ofd((tPdfFile == null ? fileInput : tPdfFile).getPath(), ofdFile.getPath());
-                    inputFiles.add(i, ofdFile);
-
-                    // PDF文件转的，移除临时文件
-                    FileUtil.del(tPdfFile);
-                    continue;
+                        // PDF文件转的，移除临时文件
+                        FileUtil.del(tPdfFile);
+                        continue;
+                    }
                 }
-            }
 
-            // 5、传入pdf，传出pdf | 传入ofd, 传出ofd,
-            if(("pdf".equalsIgnoreCase(strInputFileType) && "pdf".equalsIgnoreCase(convertEntity.getOutPutFileType()))
-                    || ("ofd".equalsIgnoreCase(strInputFileType) && "ofd".equalsIgnoreCase(convertEntity.getOutPutFileType()))){
+            }else{
+                // 5、传入pdf，传出pdf | 传入ofd, 传出ofd,
                 if(fileInput != null && fileInput.exists()){
                     File copyFile = new File(strDestFile + "." + convertEntity.getOutPutFileType().toLowerCase());
                     if ((convertEntity.getInputFiles()[i] instanceof InputPath)) {
