@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.thinkdifferent</groupId>
     <artifactId>convertpreview</artifactId>
-    <version>0.7.1</version>
+    <version>0.7.2</version>
     <name>convertpreview</name>
     <description>Convert File to JPG/PDF/OFD and Preview</description>
     <properties>

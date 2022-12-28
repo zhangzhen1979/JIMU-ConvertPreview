@@ -8,7 +8,7 @@ import com.thinkdifferent.convertpreview.consts.ConfigConstants;
 import com.thinkdifferent.convertpreview.entity.InputType;
 import com.thinkdifferent.convertpreview.entity.input.Input;
 import com.thinkdifferent.convertpreview.service.ConvertService;
-import com.thinkdifferent.convertpreview.utils.ConvertUtil;
+import com.thinkdifferent.convertpreview.utils.ConvertPdfUtil;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -87,7 +87,7 @@ public class OnlinePreviewController {
                 return PDF_PREVIEW;
             } else {
                 // 图片预览
-                List<String> jpgUrl = convertUtil.pdf2jpg(pdfFile)
+                List<String> jpgUrl = convertPdfUtil.pdf2jpg(pdfFile)
                         .stream()
                         .map(str -> "/api/download?urlPath=" + aes.encryptHex(str))
                         .collect(Collectors.toList());
@@ -147,5 +147,5 @@ public class OnlinePreviewController {
     @Resource
     private ConvertService convertService;
     @Resource
-    private ConvertUtil convertUtil;
+    private ConvertPdfUtil convertPdfUtil;
 }

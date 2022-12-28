@@ -50,7 +50,11 @@ import java.util.stream.Collectors;
 public class ConvertServiceImpl implements ConvertService {
 
     @Autowired(required = false)
-    private ConvertUtil convertUtil;
+    private ConvertJpgUtil convertJpgUtil;
+    @Autowired(required = false)
+    private ConvertPdfUtil convertPdfUtil;
+    @Autowired(required = false)
+    private ConvertOfdUtil convertOfdUtil;
     @Resource
     private RabbitMQService rabbitMQService;
 
@@ -167,12 +171,11 @@ public class ConvertServiceImpl implements ConvertService {
             throws IOException, CryptoException, GeneralSecurityException, ParseException {
         if (convertEntity.getOutFileEncryptorEntity() != null
                 && convertEntity.getOutFileEncryptorEntity().getEncry()) {
-            ConvertUtil convertUtil = new ConvertUtil();
 
             if ("pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
-                convertUtil.pdfEncry(strOutFile, convertEntity.getOutFileEncryptorEntity());
+                convertPdfUtil.pdfEncry(strOutFile, convertEntity.getOutFileEncryptorEntity());
             } else {
-                convertUtil.ofdEncry(strOutFile, convertEntity.getOutFileEncryptorEntity());
+                convertOfdUtil.ofdEncry(strOutFile, convertEntity.getOutFileEncryptorEntity());
             }
         }
 
@@ -200,12 +203,12 @@ public class ConvertServiceImpl implements ConvertService {
                 if (!StringUtils.equalsAnyIgnoreCase(strInputFileType, "pdf", "ofd")
                         && "jpg".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
                     // 将传入的图片文件转换为jpg文件，存放到输出路径中
-                    List<String> listJpg = convertUtil.convertPic2Jpg(fileInput.getCanonicalPath(),
+                    List<String> listJpg = convertJpgUtil.convertPic2Jpg(fileInput.getCanonicalPath(),
                             strDestPathFileName + ".jpg");
 
                     // 如果生成缩略图【首页缩略图】，则不执行后续水印等操作。
                     if (convertEntity.getThumbnail() != null) {
-                        return convertUtil.getThumbnail(convertEntity, listJpg);
+                        return convertJpgUtil.getThumbnail(convertEntity, listJpg);
                     } else {
                         // 图片添加水印
                         JpgWaterMarkUtil.mark4JpgList(listJpg, convertEntity);
@@ -299,14 +302,14 @@ public class ConvertServiceImpl implements ConvertService {
 
             // 1、各种图片转jpg、pdf
             if (StringUtils.equalsAnyIgnoreCase(strInputFileType, strsPicType)) {
-                tempJpgs = convertUtil.convertPic2Jpg(fileInput.getCanonicalPath(), strDestFile + ".jpg");
+                tempJpgs = convertJpgUtil.convertPic2Jpg(fileInput.getCanonicalPath(), strDestFile + ".jpg");
                 tempFiles.addAll(tempJpgs);
                 // 1.1、如果目标格式就是jpg，则pdf、ofd转换跳过。下一循环。
                 if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "jpg")) {
                     continue;
                 } else {
                     // 1.2、jpg文件转pdf（如果输入文件是pdf，不处理）
-                    tPdfFile = convertUtil.convertPic2Pdf(fileInput.getCanonicalPath(),
+                    tPdfFile = convertPdfUtil.convertPic2Pdf(fileInput.getCanonicalPath(),
                             "jpg", tempJpgs, convertEntity);
                     // 1.3、如果输出格式为pdf，则ofd转换跳过。下一循环。
                     if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
@@ -316,8 +319,8 @@ public class ConvertServiceImpl implements ConvertService {
                 }
             } else if(!StringUtils.equalsIgnoreCase(strInputFileType, "ofd")){
                 // 2、各种非图片文件转pdf
-                tPdfFile = convertUtil.convertOffice2Pdf(
-                        fileInput.getCanonicalPath(),
+                tPdfFile = convertPdfUtil.convertOffice2Pdf(
+                        fileInput.getAbsolutePath(),
                         strDestFile + ".pdf",
                         convertEntity
                 );
@@ -327,35 +330,41 @@ public class ConvertServiceImpl implements ConvertService {
                     continue;
                 }
 
+            }else if(StringUtils.equalsIgnoreCase(strInputFileType, "ofd")
+                    && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")){
+                // 3、OFD转PDF
+                convertOfdUtil.convertOfd2Pdf(fileInput.getAbsolutePath(), strDestFile + ".pdf");
             }
 
-            // 3、PDF文件转ofd（如果输入文件是ofd，不处理）
+            // 4、PDF文件转ofd（如果输入文件是ofd，不处理）
             if (!StringUtils.equalsIgnoreCase(strInputFileType, "ofd")
                     && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "ofd")) {
 
                 if (tPdfFile != null && tPdfFile.exists()){
                     File ofdFile = new File(strDestFile + ".ofd");
-                    convertUtil.convertPdf2Ofd((tPdfFile == null ? fileInput : tPdfFile).getPath(), ofdFile.getPath());
+                    convertOfdUtil.convertPdf2Ofd((tPdfFile == null ? fileInput : tPdfFile).getPath(), ofdFile.getPath());
                     inputFiles.add(i, ofdFile);
 
-                    // 3.1、PDF文件转的，移除临时文件
+                    // PDF文件转的，移除临时文件
                     FileUtil.del(tPdfFile);
                     continue;
                 }
             }
 
-            // 4、传入pdf，传出pdf | 传入ofd, 传出ofd,
-            if(fileInput != null && fileInput.exists()){
-                if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "pdf", "ofd")){
+            // 5、传入pdf，传出pdf | 传入ofd, 传出ofd,
+            if(("pdf".equalsIgnoreCase(strInputFileType) && "pdf".equalsIgnoreCase(convertEntity.getOutPutFileType()))
+                    || ("ofd".equalsIgnoreCase(strInputFileType) && "ofd".equalsIgnoreCase(convertEntity.getOutPutFileType()))){
+                if(fileInput != null && fileInput.exists()){
                     File copyFile = new File(strDestFile + "." + convertEntity.getOutPutFileType().toLowerCase());
                     if ((convertEntity.getInputFiles()[i] instanceof InputPath)) {
-                        // 4.1、如果是本地文件，复制到输入目录
+                        // 如果是本地文件，复制到输入目录
                         FileUtil.copy(fileInput, copyFile, true);
                         inputFiles.add(i, copyFile);
                     } else {
                         inputFiles.add(i, fileInput);
                     }
                 }
+
             }
 
         }

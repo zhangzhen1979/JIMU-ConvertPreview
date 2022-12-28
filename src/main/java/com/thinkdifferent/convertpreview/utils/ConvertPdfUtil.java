@@ -3,37 +3,25 @@ package com.thinkdifferent.convertpreview.utils;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.crypto.SecureUtil;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.pdf.RandomAccessFileOrArray;
 import com.lowagie.text.pdf.codec.TiffImage;
-import com.sun.media.jai.codec.*;
 import com.thinkdifferent.convertpreview.cache.CacheManager;
 import com.thinkdifferent.convertpreview.config.ConvertConfig;
 import com.thinkdifferent.convertpreview.entity.ConvertEntity;
 import com.thinkdifferent.convertpreview.entity.OutFileEncryptorEntity;
-import com.thinkdifferent.convertpreview.entity.Thumbnail;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import net.coobird.thumbnailator.Thumbnails;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.encryption.*;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
-import org.bouncycastle.crypto.CryptoException;
 import org.jodconverter.DocumentConverter;
-import org.ofd.render.OFDRender;
-import org.ofdrw.core.basicStructure.doc.permission.CT_Permission;
-import org.ofdrw.core.basicStructure.doc.permission.Print;
-import org.ofdrw.core.basicStructure.doc.permission.ValidPeriod;
-import org.ofdrw.crypto.OFDEncryptor;
-import org.ofdrw.crypto.enryptor.UserFEKEncryptor;
-import org.ofdrw.crypto.enryptor.UserPasswordEncryptor;
-import org.ofdrw.layout.OFDDoc;
-import org.ofdrw.reader.OFDReader;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
@@ -41,112 +29,25 @@ import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
 import javax.imageio.ImageIO;
-import javax.media.jai.JAI;
-import javax.media.jai.PlanarImage;
 import java.awt.image.BufferedImage;
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.security.GeneralSecurityException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.*;
+import java.util.Objects;
 
+/**
+ * PDF转换工具。
+ * 各种格式转换为PDF文件。
+ * PDF文件的处理（获取首页图等）
+ */
 @Order
 @Component
 @Log4j2
-public class ConvertUtil {
+public class ConvertPdfUtil {
 
-    /**
-     * 图片 转  JPG。
-     * 支持输入格式如下：BMP、GIF、FlashPix、JPEG、PNG、PMN、TIFF、WBMP
-     *
-     * @param strInputFile  输入文件的路径和文件名
-     * @param strOutputFile 输出文件的路径和文件名
-     * @return
-     */
-    public List<String> convertPic2Jpg(String strInputFile, String strOutputFile)
-            throws IOException {
-        List<String> listImageFiles = new ArrayList<>();
-        Assert.isTrue(StringUtils.isNotBlank(strInputFile), "文件名为空");
-        File inputFile = new File(strInputFile);
-        Assert.isTrue(inputFile.exists(), "找不到文件【" + strInputFile + "】");
-        strInputFile = SystemUtil.beautifulFilePath(strInputFile);
-        strOutputFile = SystemUtil.beautifulFilePath(strOutputFile);
-
-        try {
-            // create file
-            FileUtil.touch(strOutputFile);
-            BufferedImage image = ImageIO.read(inputFile);
-            int width = image.getWidth();
-            int height = image.getHeight();
-
-            Thumbnails.of(inputFile)
-                    .size(width, height)
-                    .outputFormat("jpg")
-                    .toFile(strOutputFile);
-            image = null;
-            // inputFile.delete();
-            return Collections.singletonList(strOutputFile);
-        } catch (Exception e) {
-            log.error("转换单页jpg出现问题，使用旧方法", e);
-        }
-
-        // 老办法，解决Thumbnails组件部分格式不兼容的问题。
-        String strFilePrefix = strOutputFile.substring(strOutputFile.lastIndexOf("/") + 1, strOutputFile.lastIndexOf("."));
-        String strFileExt = strInputFile.substring(strInputFile.lastIndexOf(".") + 1).toUpperCase();
-
-        @Cleanup FileSeekableStream fileSeekStream = new FileSeekableStream(strInputFile);
-
-        ImageDecoder imageDecoder = ImageCodec.createImageDecoder(getPicType(strFileExt), fileSeekStream, null);
-        int intPicCount = imageDecoder.getNumPages();
-        log.info("该" + strFileExt + "文件共有【" + intPicCount + "】页");
-
-        String strJpgPath = "";
-        if (intPicCount == 1) {
-            // 如果是单页tif文件，则转换的目标文件夹就在指定的位置
-            strJpgPath = strOutputFile.substring(0, strOutputFile.lastIndexOf("/"));
-        } else {
-            // 如果是多页tif文件，则在目标文件夹下，按照文件名再创建子目录，将转换后的文件放入此新建的子目录中
-            strJpgPath = strOutputFile.substring(0, strOutputFile.lastIndexOf("."));
-        }
-
-        // 处理目标文件夹，如果不存在则自动创建
-        File fileJpgPath = new File(strJpgPath);
-        if (!fileJpgPath.exists()) {
-            fileJpgPath.mkdirs();
-        }
-
-        PlanarImage in = JAI.create("stream", fileSeekStream);
-        // OutputStream os = null;
-        JPEGEncodeParam param = new JPEGEncodeParam();
-
-        // 循环，处理每页tif文件，转换为jpg
-        for (int i = 0; i < intPicCount; i++) {
-            String strJpg;
-            if (intPicCount == 1) {
-                strJpg = strJpgPath + "/" + strFilePrefix + ".jpg";
-            } else {
-                strJpg = strJpgPath + "/" + i + ".jpg";
-            }
-
-            File fileJpg = new File(strJpg);
-            @Cleanup OutputStream os = new FileOutputStream(strJpg);
-            ImageEncoder enc = ImageCodec.createImageEncoder("JPEG", os, param);
-            enc.encode(in);
-
-            log.info("每页分别保存至： " + fileJpg.getCanonicalPath());
-
-            listImageFiles.add(strJpg);
-        }
-
-        return listImageFiles;
-    }
-
-    /**
+     /**
      * 将Jpg图片转换为Pdf文件
      *
      * @param listJpgFile 输入的jpg的路径和文件名的List对象
@@ -215,7 +116,8 @@ public class ConvertUtil {
         if (intPages == 1) {
             String strJpg = strTifFile.substring(0, strTifFile.lastIndexOf(".")) + ".jpg";
             File fileJpg = new File(strJpg);
-            List<String> listPic2Jpg = convertPic2Jpg(strTifFile, strJpg);
+            ConvertJpgUtil convertJpgUtil = new ConvertJpgUtil();
+            List<String> listPic2Jpg = convertJpgUtil.convertPic2Jpg(strTifFile, strJpg);
 
             if (fileJpg.exists()) {
                 if (FileUtil.exist(convertJpg2Pdf(listPic2Jpg, strPdfFile))) {
@@ -240,121 +142,6 @@ public class ConvertUtil {
         return new File(strPdfFile);
     }
 
-    private String getPicType(String strExt) {
-        switch (strExt.toUpperCase()) {
-            case "JPG":
-                return "JPEG";
-            case "TIF":
-                return "TIFF";
-            default:
-                return strExt.toUpperCase();
-        }
-    }
-
-    /**
-     * 将pdf文件转换为ofd文件。可对OFD文件设置密码
-     *
-     * @param strPdfFilePath     输入的pdf文件路径和文件名
-     * @param strOfdFilePath     输出的ofd文件路径和文件名
-     * @return 返回的ofd文件的File对象
-     */
-    public File convertPdf2Ofd(String strPdfFilePath, String strOfdFilePath)
-            throws IOException {
-        Path pathPdfIn = Paths.get(strPdfFilePath);
-        Path pathOfdOut = Paths.get(strOfdFilePath);
-        log.debug("开始转换PDF->OFD文件{}到{}", strPdfFilePath, strOfdFilePath);
-        @Cleanup InputStream inputStream = Files.newInputStream(pathPdfIn);
-        @Cleanup OutputStream otherStream = Files.newOutputStream(pathOfdOut);
-        OFDRender.convertPdfToOfd(inputStream, otherStream);
-
-        return new File(strOfdFilePath);
-    }
-
-
-    /**
-     * 对OFD文件加密
-     *
-     * @param strOfdFilePath         输出的ofd文件路径和文件名
-     * @param outFileEncryptorEntity 输出文件加密对象
-     * @return 返回的ofd文件的File对象
-     */
-    public File ofdEncry(String strOfdFilePath, OutFileEncryptorEntity outFileEncryptorEntity)
-            throws IOException, CryptoException, GeneralSecurityException, ParseException {
-        File fileOfd = new File(strOfdFilePath);
-        File fileOfdEnc = new File(strOfdFilePath + "_enc.ofd");
-
-        if(outFileEncryptorEntity != null && outFileEncryptorEntity.getEncry()){
-            Path pathSource = Paths.get(strOfdFilePath);
-            Path pathTarget = Paths.get(strOfdFilePath + "_enc.ofd");
-            log.debug("开始对OFD文件加密码，文件{}到{}", strOfdFilePath, strOfdFilePath + "_enc.ofd");
-
-           try (OFDReader reader = new OFDReader(pathSource);
-               OFDDoc ofdDoc = new OFDDoc(reader, pathTarget)){
-               org.ofdrw.core.basicStructure.doc.Document doc = ofdDoc.getOfdDocument();
-
-               CT_Permission permission = new CT_Permission();
-               // 签章操作权限
-               permission.setSignature(outFileEncryptorEntity.getSignature());
-               // 水印操作权限
-               permission.setWatermark(outFileEncryptorEntity.getWatermark());
-               // 打印操作权限
-               permission.setPrint(new Print(outFileEncryptorEntity.getPrint(), outFileEncryptorEntity.getCopies()));
-               permission.setPrintScreen(outFileEncryptorEntity.getPrint());
-               // 导出操作权限
-               permission.setExport(outFileEncryptorEntity.getExport());
-               // 批注操作权限
-               permission.setAnnot(outFileEncryptorEntity.getModifyAnnotations());
-               // 编辑操作权限（文档信息权限、元数据权限、公文元数据权限）
-               permission.setEdit(outFileEncryptorEntity.getModify());
-               // 有效期
-               if(!StringUtils.isEmpty(outFileEncryptorEntity.getValidPeriodStart())
-                       && !StringUtils.isEmpty(outFileEncryptorEntity.getValidPeriodEnd())){
-                   SimpleDateFormat sdfInput = new SimpleDateFormat("yyyy-MM-dd");
-                   Date dateStart = sdfInput.parse(outFileEncryptorEntity.getValidPeriodStart());
-                   Date dateEnd = sdfInput.parse(outFileEncryptorEntity.getValidPeriodEnd());
-
-                   SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-                   LocalDateTime ldtStart = LocalDateTime.parse(sdf.format(dateStart));
-                   LocalDateTime ldtEnd = LocalDateTime.parse(sdf.format(dateEnd));
-                   permission.setValidPeriod(
-                           new ValidPeriod(
-                                   ldtStart,
-                                   ldtEnd
-                           )
-                   );
-
-               }
-
-               doc.setPermissions(permission);
-           }
-
-           FileUtil.rename(pathTarget, strOfdFilePath, true);
-
-            if(!StringUtils.isEmpty(outFileEncryptorEntity.getUserPassWord())){
-                try (OFDEncryptor ofdEncryptor = new OFDEncryptor(pathSource, pathTarget)) {
-                    final UserFEKEncryptor encryptor = new UserPasswordEncryptor(
-                            // 目前，加密后的OFD建议使用“超越版式办公套件”（不要用数科OFD阅读器，无法打开加密后的OFD）
-                            // 此工具个人版仅支持用户名为admin的加密信息。
-                            "admin",
-                            outFileEncryptorEntity.getUserPassWord()
-                    );
-                    ofdEncryptor.addUser(encryptor);
-                    ofdEncryptor.encrypt();
-                    log.debug("Encryptor OFD: " + pathTarget.toAbsolutePath().toString());
-
-                    if(fileOfdEnc.exists()){
-                        log.debug("加密后的OFD文件改名，文件{}到{}", strOfdFilePath + "_enc.ofd", strOfdFilePath);
-                        ofdEncryptor.close();
-                        FileUtil.rename(fileOfdEnc, strOfdFilePath, true);
-                    }
-                }
-
-             }
-
-        }
-
-        return fileOfd;
-    }
 
 
     /**
@@ -427,11 +214,11 @@ public class ConvertUtil {
     }
 
     /**
-     * 将传入的jpg文件转换为pdf、ofd文件
+     * 将传入的jpg文件转换为pdf文件
      *
      * @param inputFilePath 传入的文件路径
      * @param inputFileType 传入的文件类型
-     * @param listJpg       转换后的jpg图片
+     * @param listJpg       传入的jpg图片
      * @param convertEntity 配置信息
      */
     public File convertPic2Pdf(String inputFilePath, String inputFileType,
@@ -467,93 +254,6 @@ public class ConvertUtil {
         }
         return fileReturn;
     }
-
-
-    /*************************** 图片处理相关方法 **************************/
-
-    /**
-     * 使用给定的图片生成指定大小的图片（原格式）
-     *
-     * @param strInputFilePath  输入文件的绝对路径和文件名
-     * @param strOutputFilePath 输出文件的绝对路径和文件名
-     * @param intWidth          输出文件的宽度
-     * @param intHeight         输出文件的高度
-     */
-    public File fixedSizeImage(String strInputFilePath, String strOutputFilePath,
-                                      int intWidth, int intHeight)
-            throws IOException {
-        Thumbnails.of(strInputFilePath).
-                size(intWidth, intHeight).
-                toFile(strOutputFilePath);
-        return new File(strOutputFilePath);
-    }
-
-    /**
-     * 按比例缩放图片
-     *
-     * @param strInputFilePath  输入文件的绝对路径和文件名
-     * @param strOutputFilePath 输出文件的绝对路径和文件名
-     * @param dblScale          输出文件的缩放百分比。1为100%,0.8为80%，以此类推。
-     * @param dblQuality        输出文件的压缩比（质量）。1为100%,0.8为80%，以此类推。
-     */
-    public File thumbnail(String strInputFilePath, String strOutputFilePath,
-                                 double dblScale, double dblQuality)
-            throws IOException {
-        Thumbnails.of(strInputFilePath).
-                //scalingMode(ScalingMode.BICUBIC).
-                        scale(dblScale). // 图片缩放80%, 不能和size()一起使用
-                outputQuality(dblQuality). // 图片质量压缩80%
-                toFile(strOutputFilePath);
-        return new File(strOutputFilePath);
-    }
-
-    public File getThumbnail(ConvertEntity convertEntity, List<String> listJpg)
-            throws IOException {
-        File fileOut = null;
-        Thumbnail thumbnail = convertEntity.getThumbnail();
-        if (thumbnail.getWidth() > 0 || thumbnail.getHeight() > 0) {
-            // 如果输入了边长，则按边长生成
-            int intImageWidth = 0;
-            int intImageHeight = 0;
-            try (FileInputStream fis = new FileInputStream(new File(listJpg.get(0)))) {
-                BufferedImage buffSourceImg = ImageIO.read(fis);
-                BufferedImage buffImg = new BufferedImage(buffSourceImg.getWidth(), buffSourceImg.getHeight(), BufferedImage.TYPE_INT_RGB);
-                // 获取图片的大小
-                intImageWidth = buffImg.getWidth();
-                intImageHeight = buffImg.getHeight();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            if (thumbnail.getWidth() > 0 && thumbnail.getHeight() == 0) {
-                // 如果只输入了宽，则按比例计算高
-                thumbnail.setHeight(thumbnail.getWidth() * intImageHeight / intImageWidth);
-            } else if (thumbnail.getWidth() == 0 && thumbnail.getHeight() > 0) {
-                // 如果只输入了高，则按比例计算宽
-                thumbnail.setWidth(thumbnail.getHeight() * intImageWidth / intImageHeight);
-            }
-
-            fileOut = fixedSizeImage(
-                    listJpg.get(0),
-                    convertEntity.getWriteBack().getOutputPath() + convertEntity.getOutPutFileName() + ".jpg",
-                    thumbnail.getWidth(),
-                    thumbnail.getHeight()
-            );
-
-        } else if (thumbnail.getScale() >= 0d) {
-            // 如果输入了比例，则按比例生成
-            fileOut = thumbnail(
-                    listJpg.get(0),
-                    convertEntity.getWriteBack().getOutputPath() + convertEntity.getOutPutFileName() + ".jpg",
-                    thumbnail.getScale(),
-                    thumbnail.getQuality()
-            );
-
-        }
-
-        return fileOut;
-    }
-
 
 
     /*************************** Office文件处理相关方法 **************************/
