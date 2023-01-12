@@ -112,26 +112,10 @@ public class ConvertController {
     @PostMapping(value = "/convert2base64")
     public String convert2Base64(@RequestBody JSONObject jsonInput) {
 
-        CallBackResult callBackResult = convertService.convert(jsonInput);
+        CallBackResult callBackResult = convertService.convert(jsonInput, "base64");
 
         if (callBackResult.isFlag()) {
-            String strPath = ConvertConfig.outPutPath;
-
-            String strOutPutFileName = jsonInput.getString("outPutFileName");
-            String strOutPutFileType = jsonInput.getString("outPutFileType");
-
-            String strJpgFilePathName = strPath + strOutPutFileName + "." + strOutPutFileType;
-            File fileJpg = new File(strJpgFilePathName);
-            if (fileJpg.exists()) {
-                try {
-                    byte[] b = Files.readAllBytes(Paths.get(strJpgFilePathName));
-                    // 文件转换为字节后，转换后的文件即可删除（jpg没用了）。
-                    FileUtil.del(fileJpg);
-                    return Base64.getEncoder().encodeToString(b);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            return callBackResult.getBase64();
         }
 
         return null;
@@ -158,7 +142,7 @@ public class ConvertController {
     @RequestMapping(value = "/convert2base64s", method = RequestMethod.POST)
     public ConvertBase64Entity convert2Base64s(@RequestBody JSONObject jsonInput) {
 
-        CallBackResult callBackResult = convertService.convert(jsonInput);
+        CallBackResult callBackResult = convertService.convert(jsonInput, "base64");
         ConvertBase64Entity convertBase64Entity = new ConvertBase64Entity(callBackResult);
         if (callBackResult.isFlag()) {
             List<ConvertBase64Entity.SimpleBase64> base64List = new ArrayList<>();

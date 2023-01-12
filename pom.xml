@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.thinkdifferent</groupId>
     <artifactId>convertpreview</artifactId>
-    <version>0.7.2</version>
+    <version>1.0.2</version>
     <name>convertpreview</name>
     <description>Convert File to JPG/PDF/OFD and Preview</description>
     <properties>
@@ -259,6 +259,18 @@
             <groupId>com.itextpdf</groupId>
             <artifactId>itextpdf</artifactId>
             <version>5.5.13</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>net.sf.sevenzipjbinding</groupId>
+            <artifactId>sevenzipjbinding</artifactId>
+            <version>16.02-2.01</version>
+        </dependency>
+        <dependency>
+            <groupId>net.sf.sevenzipjbinding</groupId>
+            <artifactId>sevenzipjbinding-all-platforms</artifactId>
+            <version>16.02-2.01</version>
         </dependency>
 
     </dependencies>

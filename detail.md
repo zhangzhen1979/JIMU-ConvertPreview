@@ -794,3 +794,47 @@ convert2base64s接口返回信息示例如下：
 - base64
   - filename：文件名
   - base64：文件Base64编码之后的字符串。
+
+
+
+## 预览接口（页面）说明
+
+请求地址：/api/onlinePreview
+
+请求方式：GET
+
+请求参数：
+
+- filePath: base64格式后的文件路径。支持以下方式传入文件路径
+  - 本地文件：C:/a.doc
+  - http链接：[http://ip:port/download/fileId](http://ip:port/download/fileId)
+  - ftp路径：[ftp://username:password@ip:port/dir/file.doc](ftp://username:password@ip:port/dir/file.doc)
+- fileType: 文件类型，即文件的扩展名。
+
+请求头参数：
+
+| key   | 说明         | 示例                              |
+| ----- | ---------- | ------------------------------- |
+| token | RSA加密token | OEIHGFE29L24J94U24FLKJLFOEU2U33 |
+
+请求结果：html页面，需通过浏览器进行预览。
+
+请求示例： http://localhost:8080/api/onlinePreview?filePath=RTpcdGVtcFxvdXRwdXRcMjAyMi0xMi0yOFzmiqXooajmnI3liqEuemlwXOaKpeihqOacjeWKoVzjgJDmlofkuablrprjgJHmiqXooajmnI3liqHpg6jnvbLphY3nva7or7TmmI4tMjAyMi4xMTE1LTIwMjIxMjA1LmRvY3g=&fileType=doc## 预览接口（页面）说明
+
+请求地址：/api/onlinePreview
+
+请求方式：GET
+
+请求参数：
+
+- filePath: base64格式后的文件路径。支持以下方式传入文件路径
+  - 本地文件：C:/a.doc
+  - http链接：[http://ip:port/download/fileId](http://ip:port/download/fileId)
+  - ftp路径：[ftp://username:password@ip:port/dir/file.doc](ftp://username:password@ip:port/dir/file.doc)
+- fileType: 文件类型，即文件的扩展名。
+
+
+
+请求结果：html页面，需通过浏览器进行预览。
+
+请求示例： http://localhost:8080/api/onlinePreview?filePath=RTpcdGVtcFxvdXRwdXRcMjAyMi0xMi0yOFzmiqXooajmnI3liqEuemlwXOaKpeihqOacjeWKoVzjgJDmlofkuablrprjgJHmiqXooajmnI3liqHpg6jnvbLphY3nva7or7TmmI4tMjAyMi4xMTE1LTIwMjIxMjA1LmRvY3g=&fileType=doc

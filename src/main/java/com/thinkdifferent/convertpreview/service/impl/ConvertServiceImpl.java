@@ -25,6 +25,7 @@ import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.bouncycastle.crypto.CryptoException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.ofdrw.reader.OFDReader;
 import org.ofdrw.tool.merge.OFDMerger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,15 +35,13 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.InvalidParameterException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -92,7 +91,7 @@ public class ConvertServiceImpl implements ConvertService {
     @Async
     @Override
     public void asyncConvert(Map<String, Object> parameters) {
-        CallBackResult callBackResult = convert(parameters);
+        CallBackResult callBackResult = convert(parameters, "convert");
         if (callBackResult.isFlag()) {
             // 成功，清理失败记录
             SystemConstants.removeErrorData((JSONObject) parameters);
@@ -107,10 +106,11 @@ public class ConvertServiceImpl implements ConvertService {
      * 将传入的JSON对象中记录的文件，转换为JPG，输出到指定的目录中；回调应用系统接口，将数据写回。
      *
      * @param parameters 输入的参数，JSON格式数据对象
+     * @param strType    调用类型：convert，转换；base64，需要返回base64。
      */
     @SneakyThrows
     @Override
-    public CallBackResult convert(Map<String, Object> parameters) {
+    public CallBackResult convert(Map<String, Object> parameters, String strType) {
         // 开始时间
         long stime = System.currentTimeMillis();
 
@@ -127,7 +127,7 @@ public class ConvertServiceImpl implements ConvertService {
         // 1. 获取输入文件、格式转换、多文件合并
         File fileOut = mergerInputFile(convertEntity, strDestPathFileName);
 
-        if(fileOut !=null && fileOut.exists()){
+        if (fileOut != null && fileOut.exists()) {
             // 2. 加水印、归档章、页标等
             String strOutFile = markFile(convertEntity, strDestPathFileName, fileOut);
             // 2.1 对输出文件加密
@@ -143,8 +143,19 @@ public class ConvertServiceImpl implements ConvertService {
             }
         }
 
-        // 4. 回调
-        CallBackResult callBackResult = callBack(writeBackResult, convertEntity, listJpg, fileOut);
+        // 判断是转换还是base64。如果是base64，则返回base64值，不回调；如果是转换，则执行回调。
+        CallBackResult callBackResult = new CallBackResult();
+        if("base64".equalsIgnoreCase(strType)){
+            byte[] b = Files.readAllBytes(Paths.get(fileOut.getAbsolutePath()));
+            // 文件转换为字节后，转换后的文件即可删除（文件没用了）。
+            FileUtil.del(fileOut);
+            callBackResult.setBase64(Base64.getEncoder().encodeToString(b));
+            callBackResult.setFlag(true);
+        }else if("convert".equalsIgnoreCase(strType)){
+            // 4. 回调
+            callBackResult = callBack(writeBackResult, convertEntity, listJpg, fileOut);
+        }
+
         // 5. 清理临时文件
         cleanTempFile(convertEntity.getWriteBackType().name(),
                 convertEntity.getInputType().name(), convertEntity.getInputFiles(),
@@ -311,7 +322,7 @@ public class ConvertServiceImpl implements ConvertService {
                     } else {
                         // 1.2、jpg文件转pdf（如果输入文件是pdf，不处理）
                         tPdfFile = convertPdfUtil.convertPic2Pdf(fileInput.getCanonicalPath(),
-                                "jpg", tempJpgs, convertEntity);
+                                "jpg", tempJpgs, convertEntity, i);
                         // 1.3、如果输出格式为pdf，则ofd转换跳过。下一循环。
                         if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
                             inputFiles.add(i, tPdfFile);
@@ -382,10 +393,10 @@ public class ConvertServiceImpl implements ConvertService {
      */
     private String markFile(ConvertEntity convertEntity, String strDestPathFileName, File fileOutNoMark) throws Exception {
         String strOut = fileOutNoMark.getAbsolutePath();
-        if(convertEntity.getPngMark() != null
+        if (convertEntity.getPngMark() != null
                 || convertEntity.getTextMark() != null
                 || convertEntity.getFirstPageMark() != null
-                || convertEntity.isPageNum()){
+                || convertEntity.isPageNum()) {
             String strOutPath = null;
             File fileOutMark = null;
             if (Objects.nonNull(fileOutNoMark)) {
@@ -471,11 +482,11 @@ public class ConvertServiceImpl implements ConvertService {
                     }
 
                 } else if (lowerFileName.endsWith("ofd")) {
-                    if(StringUtils.isEmpty(convertEntity.getOutFileEncryptorEntity().getUserPassWord())){
+                    if (StringUtils.isEmpty(convertEntity.getOutFileEncryptorEntity().getUserPassWord())) {
                         try (OFDReader ofdReader = new OFDReader(Paths.get(fileOut.getCanonicalPath()))) {
                             log.info("转换OFD完成，共{}页", ofdReader.getPageList().size());
                         }
-                    }else{
+                    } else {
                         // todo 有密码的文件读取，尚未解决
                     }
                 }
@@ -555,28 +566,43 @@ public class ConvertServiceImpl implements ConvertService {
      * 文件预览
      *
      * @param input 输入文件
+     * @param params 其他参数
      * @return 转换后的pdf文件
      */
     @Override
-    public File filePreview(Input input) throws Exception {
-        if (input.exists() && input.getInputFile().getName().endsWith(".pdf")) {
+    public File filePreview(Input input, Map<String, String> params) throws Exception {
+        if (input.exists() && (StringUtils.equalsAnyIgnoreCase(FileUtil.extName(input.getInputFile()), ".pdf",
+                "ofd"))) {
             return input.getInputFile();
         }
         // 合并后的文件路径及文件名，无后缀
         String strDestPathFileName = ConvertConfig.outPutPath + DateUtil.today() + "/" + input.getInputFile().getName();
 
-        // excel 特殊处理
-        if (StringUtils.equalsAnyIgnoreCase(FileUtil.extName(input.getInputFile()), "xls", "xlsx")){
-            String targetHtmlPath = strDestPathFileName + ".html";
-            if (FileUtil.exist(targetHtmlPath)){
-                // 今天已经转换过的，直接返回
-                return new File(targetHtmlPath);
-            }
-
-            Excel2HtmlUtil.excel2html(input.getInputFile(), targetHtmlPath);
-            return new File(targetHtmlPath);
+        String extName = FileUtil.extName(input.getInputFile());
+        if (StringUtils.equalsAnyIgnoreCase(extName, "xls", "xlsx")) {
+            // excel 特殊处理
+            return previewExcel(input, strDestPathFileName);
+        } else if (StringUtils.equalsAnyIgnoreCase(extName, "zip", "rar", "tar", "7z", "jar")) {
+            // 7z 解压, 返回解压后的文件夹
+            return TDZipUtil.unzip(input.getInputFile(),
+                    ConvertConfig.outPutPath + DateUtil.today(),
+                    params.getOrDefault("zip.password",""));
         }
 
+        // 默认PDF预览
+        return previewPdf(input, strDestPathFileName);
+    }
+
+    /**
+     * PDF预览转换
+     *
+     * @param input               传入的文件对象
+     * @param strDestPathFileName 目标文件名，无后缀
+     * @return pdf转换结果
+     * @throws IOException err
+     */
+    @Nullable
+    private File previewPdf(Input input, String strDestPathFileName) throws Exception {
         ConvertEntity convertEntity = new ConvertEntity();
         convertEntity.setOutPutFileType("pdf");
         Input[] inputs = {input};
@@ -584,10 +610,30 @@ public class ConvertServiceImpl implements ConvertService {
         // 定时任务清理预览文件
         convertEntity.setInputType(InputType.PATH);
 
-        if (FileUtil.exist(strDestPathFileName + ".pdf")){
+        if (FileUtil.exist(strDestPathFileName + ".pdf")) {
             // 今天已经转换过的，直接返回
             return new File(strDestPathFileName + ".pdf");
         }
         return mergerInputFile(convertEntity, strDestPathFileName);
+    }
+
+    /**
+     * 预览excel， csv未处理
+     *
+     * @param input               传入的文件对象
+     * @param strDestPathFileName 目标文件名，无后缀
+     * @return excel转换结果
+     * @throws IOException err
+     */
+    @NotNull
+    private File previewExcel(Input input, String strDestPathFileName) throws IOException {
+        String targetHtmlPath = strDestPathFileName + ".html";
+        if (FileUtil.exist(targetHtmlPath)) {
+            // 今天已经转换过的，直接返回
+            return new File(targetHtmlPath);
+        }
+
+        Excel2HtmlUtil.excel2html(input.getInputFile(), targetHtmlPath);
+        return new File(targetHtmlPath);
     }
 }

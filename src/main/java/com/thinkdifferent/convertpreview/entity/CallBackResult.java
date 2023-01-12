@@ -22,6 +22,11 @@ public class CallBackResult extends SimpleResult {
      */
     private String filePath;
 
+    /**
+     * 文件Base64值
+     */
+    private String base64;
+
     public CallBackResult(boolean flag) {
         super.setFlag(flag);
     }
@@ -42,6 +47,7 @@ public class CallBackResult extends SimpleResult {
         beanMap.forEach((key, value) -> map.put(String.valueOf(key), value));
         return map;
     }
+
 
     @Override
     public String toString() {

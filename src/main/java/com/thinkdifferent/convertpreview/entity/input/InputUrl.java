@@ -5,6 +5,7 @@ import cn.hutool.http.HttpUtil;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.util.Assert;
 
 import java.io.File;
 import java.net.URL;
@@ -59,11 +60,13 @@ public class InputUrl extends Input {
         if (super.inputFile == null) {
             String strInputFileName = getFileNameFromHeader();
             // 移除重名文件
-            FileUtil.del(getBaseUrl() + strInputFileName);
+            String downloadFilePath = getBaseUrl() + strInputFileName;
+            FileUtil.del(downloadFilePath);
             // 从指定的URL中将文件读取下载到目标路径
-            HttpUtil.downloadFile(url, getBaseUrl() + strInputFileName);
-            log.info("下载【{}】文件【{}】成功", this.url, getBaseUrl() + strInputFileName);
-            super.setInputFile(new File(getBaseUrl() + strInputFileName));
+            HttpUtil.downloadFile(url, downloadFilePath);
+            Assert.isTrue(FileUtil.exist(downloadFilePath), this.url + "下载文件失败");
+            // log.info("下载【{}】文件【{}】成功", this.url, downloadFilePath);
+            super.setInputFile(new File(downloadFilePath));
         }
         return super.inputFile;
     }

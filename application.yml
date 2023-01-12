@@ -62,19 +62,6 @@ logging:
   file:
     name: logs/application.log
 
-# 线程设置参数 #######
-ThreadPool:
-  # 核心线程数10：线程池创建时候初始化的线程数
-  CorePoolSize: 10
-  # 最大线程数20：线程池最大的线程数，只有在缓冲队列满了之后才会申请超过核心线程数的线程
-  MaxPoolSize: 20
-  # 缓冲队列200：用来缓冲执行任务的队列
-  QueueCapacity: 200
-  # 保持活动时间60秒
-  KeepAliveSeconds: 60
-  # 允许线程的空闲时间60秒：当超过了核心线程出之外的线程在空闲时间到达之后会被销毁
-  AwaitTerminationSeconds: 60
-
 # 本服务IP、端口
 base:
   url: http://localhost:${server.port}/

@@ -48,10 +48,10 @@ public class ConvertJpgUtil {
         strInputFile = SystemUtil.beautifulFilePath(strInputFile);
         strOutputFile = SystemUtil.beautifulFilePath(strOutputFile);
 
-        try {
+        try (FileInputStream fis = new FileInputStream(inputFile)){
             // create file
             FileUtil.touch(strOutputFile);
-            BufferedImage image = ImageIO.read(inputFile);
+            BufferedImage image = ImageIO.read(fis);
             int width = image.getWidth();
             int height = image.getHeight();
 

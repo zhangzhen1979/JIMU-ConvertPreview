@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.map.MapUtil;
 import com.thinkdifferent.convertpreview.utils.WaterMarkUtil;
 import com.thinkdifferent.convertpreview.utils.XHTMLToImage;
+import lombok.Cleanup;
 import lombok.SneakyThrows;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang3.StringUtils;
@@ -354,7 +355,8 @@ public class FirstPageMark {
     public void mark4Jpg(String strInputJpg, String strOutputJpg,
                          FirstPageMark firstPageMark) throws Exception {
         File fileSourceImg = new File(strInputJpg);
-        BufferedImage buffSourceImg = ImageIO.read(new FileInputStream(fileSourceImg));
+        @Cleanup FileInputStream input = new FileInputStream(fileSourceImg);
+        BufferedImage buffSourceImg = ImageIO.read(input);
         BufferedImage buffImg = new BufferedImage(buffSourceImg.getWidth(), buffSourceImg.getHeight(), BufferedImage.TYPE_INT_RGB);
         // 获取图片的大小
         int intImageWidth = buffImg.getWidth();

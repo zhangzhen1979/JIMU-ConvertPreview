@@ -9,17 +9,30 @@ import com.jacob.com.Variant;
 import com.thinkdifferent.convertpreview.config.ConvertConfig;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Component;
 
+import javax.annotation.PreDestroy;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+@Component
 @Log4j2
 public class LocalConvertUtil {
+    private static ExecutorService executorService = Executors.newFixedThreadPool(5);
 
-    public static boolean process(String strOfficeFile, String strPdfFile) throws IOException, InterruptedException {
+    @PreDestroy
+    public void preDestroy() {
+        executorService.shutdown();
+        ComThread.quitMainSTA();
+    }
+
+    public static synchronized boolean process(String strOfficeFile, String strPdfFile) throws IOException, InterruptedException {
         if (!checkfile(strOfficeFile)) {
             log.info(strOfficeFile + " is not file");
             return false;
@@ -29,11 +42,7 @@ public class LocalConvertUtil {
 
         strPdfFile = SystemUtil.beautifulFilePath(strPdfFile);
         File filePDF = new File(strPdfFile);
-        if (filePDF.exists()) {
-            filePDF.delete();
-        } else {
-            FileUtil.touch(filePDF);
-        }
+        FileUtil.touch(filePDF).delete();
 
         String strPath = SystemUtil.beautifulFilePath(System.getProperty("user.dir") + "/utils/");
 
@@ -48,27 +57,27 @@ public class LocalConvertUtil {
                     String strAppName = getUseAppName(strInputFileType);
 
                     if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "doc", "docx", "txt")) {
-                        if("jacob".equalsIgnoreCase(ConvertConfig.wpsRunType) || "jacob".equalsIgnoreCase(ConvertConfig.officeRunType)){
+                        if ("jacob".equalsIgnoreCase(ConvertConfig.wpsRunType) || "jacob".equalsIgnoreCase(ConvertConfig.officeRunType)) {
                             intReturn = doc2PDF(strAppName, strOfficeFile, strPdfFile);
-                        }else if("exe".equalsIgnoreCase(ConvertConfig.wpsRunType) || "exe".equalsIgnoreCase(ConvertConfig.officeRunType)){
+                        } else if ("exe".equalsIgnoreCase(ConvertConfig.wpsRunType) || "exe".equalsIgnoreCase(ConvertConfig.officeRunType)) {
                             intReturn = runExe(strAppName, strPath, strInputFileType, strOfficeFile, strPdfFile);
                         }
                     } else if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "ppt", "pptx")) {
-                        if("jacob".equalsIgnoreCase(ConvertConfig.wpsRunType) || "jacob".equalsIgnoreCase(ConvertConfig.officeRunType)){
+                        if ("jacob".equalsIgnoreCase(ConvertConfig.wpsRunType) || "jacob".equalsIgnoreCase(ConvertConfig.officeRunType)) {
                             intReturn = ppt2PDF(strAppName, strOfficeFile, strPdfFile);
-                        }else if("exe".equalsIgnoreCase(ConvertConfig.wpsRunType) || "exe".equalsIgnoreCase(ConvertConfig.officeRunType)){
+                        } else if ("exe".equalsIgnoreCase(ConvertConfig.wpsRunType) || "exe".equalsIgnoreCase(ConvertConfig.officeRunType)) {
                             intReturn = runExe(strAppName, strPath, strInputFileType, strOfficeFile, strPdfFile);
                         }
-                    } else if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "xls", "xlsx")) {
-                        if("jacob".equalsIgnoreCase(ConvertConfig.wpsRunType) || "jacob".equalsIgnoreCase(ConvertConfig.officeRunType)){
+                    } else if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "xls", "xlsx", "csv")) {
+                        if ("jacob".equalsIgnoreCase(ConvertConfig.wpsRunType) || "jacob".equalsIgnoreCase(ConvertConfig.officeRunType)) {
                             intReturn = xls2PDF(strAppName, strOfficeFile, strPdfFile);
-                        }else if("exe".equalsIgnoreCase(ConvertConfig.wpsRunType) || "exe".equalsIgnoreCase(ConvertConfig.officeRunType)){
+                        } else if ("exe".equalsIgnoreCase(ConvertConfig.wpsRunType) || "exe".equalsIgnoreCase(ConvertConfig.officeRunType)) {
                             intReturn = runExe(strAppName, strPath, strInputFileType, strOfficeFile, strPdfFile);
                         }
                     } else if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "vsd", "vsdx")) {
-                        if("jacob".equalsIgnoreCase(ConvertConfig.officeRunType)){
+                        if ("jacob".equalsIgnoreCase(ConvertConfig.officeRunType)) {
                             intReturn = vsd2PDF(strOfficeFile, strPdfFile);
-                        }else if("exe".equalsIgnoreCase(ConvertConfig.officeRunType)){
+                        } else if ("exe".equalsIgnoreCase(ConvertConfig.officeRunType)) {
                             intReturn = runExe(strAppName, strPath, strInputFileType, strOfficeFile, strPdfFile);
                         }
                     } else {
@@ -133,7 +142,26 @@ public class LocalConvertUtil {
 
 
     private static int runExe(String strAppName, String strPath, String strInputFileType,
-                                  String strOfficeFile, String strPdfFile) throws InterruptedException, IOException {
+                              String strOfficeFile, String strPdfFile) {
+        try {
+            Future<Integer> future = executorService.submit(() -> {
+                try {
+                    return runExe0(strAppName, strPath, strInputFileType, strOfficeFile, strPdfFile);
+                } catch (Exception e) {
+                    log.error("exe 转 pdf 异常", e);
+                    return -1;
+                }
+            });
+            return future.get();
+        } catch (Exception e) {
+            log.error("线程池执行exe转换获取结果异常", e);
+            return -1;
+        }
+
+    }
+
+    private static int runExe0(String strAppName, String strPath, String strInputFileType,
+                               String strOfficeFile, String strPdfFile) throws InterruptedException, IOException {
         // 如果本地转换引擎启用，则判断是否使用对应的本地工具
         if ("wps".equalsIgnoreCase(strAppName)) {
             if (!StringUtils.isEmpty(ConvertConfig.wpsFile)) {
@@ -237,8 +265,9 @@ public class LocalConvertUtil {
      * @return
      */
 
-    private static int doc2PDF(String appName, String inputFile, String pdfFile) {
+    private synchronized static int doc2PDF(String appName, String inputFile, String pdfFile) {
         ActiveXComponent app = null;
+        Dispatch docs = null;
         Dispatch word = null;
         try {
             //  这句是调用初始化并放入内存中等待调用
@@ -252,12 +281,12 @@ public class LocalConvertUtil {
             log.info("开始转化Word为PDF...");
             long date = new Date().getTime();
             // 设置Word不可见
-            app.setProperty("Visible", new Variant(false));
+            app.setProperty("Visible", new Variant(0));
             app.setProperty("DisplayAlerts", new Variant(false));
             // 禁用宏
             app.setProperty("AutomationSecurity", new Variant(3));
             // 获得Word中所有打开的文档，返回documents对象
-            Dispatch docs = app.getProperty("Documents").toDispatch();
+            docs = app.getProperty("Documents").toDispatch();
             // 调用Documents对象中Open方法打开文档，并返回打开的文档对象Document
             word = Dispatch.call(docs, "Open", inputFile, false, true).toDispatch();
             /***
@@ -284,7 +313,17 @@ public class LocalConvertUtil {
                 app.invoke("Quit", 0);
             }
             // 释放占用的内存空间
-            ComThread.Release();
+            try {
+                if (Objects.nonNull(word)) {
+                    word.safeRelease();
+                }
+                if (Objects.nonNull(docs)) {
+                    docs.safeRelease();
+                }
+                ComThread.Release();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
     }
@@ -298,9 +337,10 @@ public class LocalConvertUtil {
      * @param pdfFile     输出pdf文件
      * @return
      */
-    private static int xls2PDF(String appName, String inputFile, String pdfFile) {
+    private synchronized static int xls2PDF(String appName, String inputFile, String pdfFile) {
         ActiveXComponent app = null;
         Dispatch excel = null;
+        Dispatch xlss = null;
         try {
             //  这句是调用初始化并放入内存中等待调用
             ComThread.InitSTA();
@@ -312,13 +352,13 @@ public class LocalConvertUtil {
             }
             log.info("开始转化Excel为PDF...");
             long date = new Date().getTime();
-            app.setProperty("Visible", false);
+            app.setProperty("Visible", new Variant(0));
             app.setProperty("DisplayAlerts", new Variant(false));
             app.setProperty("AutomationSecurity", new Variant(3)); // 禁用宏
-            Dispatch excels = app.getProperty("Workbooks").toDispatch();
+            xlss = app.getProperty("Workbooks").toDispatch();
 
             excel = Dispatch
-                    .invoke(excels, "Open", Dispatch.Method,
+                    .invoke(xlss, "Open", Dispatch.Method,
                             new Object[]{inputFile, new Variant(false), new Variant(false)}, new int[9])
                     .toDispatch();
             // 转换格式
@@ -348,8 +388,19 @@ public class LocalConvertUtil {
             if (app != null) {
                 app.invoke("Quit", new Variant[]{});
             }
+
             // 释放占用的内存空间
-            ComThread.Release();
+            try {
+                if (Objects.nonNull(excel)) {
+                    excel.safeRelease();
+                }
+                if (Objects.nonNull(xlss)) {
+                    xlss.safeRelease();
+                }
+                ComThread.Release();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -361,9 +412,10 @@ public class LocalConvertUtil {
      * @param pdfFile     输出pdf文件
      * @return
      */
-    private static int ppt2PDF(String appName, String inputFile, String pdfFile) {
+    private synchronized static int ppt2PDF(String appName, String inputFile, String pdfFile) {
         ActiveXComponent app = null;
-        Dispatch ppt = null;
+        Dispatch powerPoint = null;
+        Dispatch ppts = null;
         try {
             //  这句是调用初始化并放入内存中等待调用
             ComThread.InitSTA();
@@ -378,14 +430,14 @@ public class LocalConvertUtil {
             log.info("开始转化PPT为PDF...");
             long date = new Date().getTime();
 
-            Dispatch ppts = app.getProperty("Presentations").toDispatch();
-            ppt = Dispatch.call(ppts, "Open", inputFile, true, // ReadOnly
+            ppts = app.getProperty("Presentations").toDispatch();
+            powerPoint = Dispatch.call(ppts, "Open", inputFile, true, // ReadOnly
                     //    false, // Untitled指定文件是否有标题
                     false// WithWindow指定文件是否可见
             ).toDispatch();
 
             pdfFile = pdfFile.replaceAll("/", "\\\\");
-            Dispatch.invoke(ppt,
+            Dispatch.invoke(powerPoint,
                     "SaveAs",
                     Dispatch.Method,
                     new Object[]{pdfFile, new Variant(32)},
@@ -397,14 +449,25 @@ public class LocalConvertUtil {
             log.error("ppt 转 pdf 异常", e);
             return -1;
         } finally {
-            if (Objects.nonNull(ppt)) {
-                Dispatch.call(ppt, "Close");
+            if (Objects.nonNull(powerPoint)) {
+                Dispatch.call(powerPoint, "Close");
             }
             if (Objects.nonNull(app)) {
                 app.invoke("Quit");
             }
+
             // 释放占用的内存空间
-            ComThread.Release();
+            try {
+                if (Objects.nonNull(powerPoint)) {
+                    powerPoint.safeRelease();
+                }
+                if (Objects.nonNull(ppts)) {
+                    ppts.safeRelease();
+                }
+                ComThread.Release();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -416,7 +479,7 @@ public class LocalConvertUtil {
      * @param pdfFile     输出pdf文件
      * @return
      */
-    private static int vsd2PDF(String inputFile, String pdfFile) {
+    private synchronized static int vsd2PDF(String inputFile, String pdfFile) {
         ActiveXComponent app = null;
         ActiveXComponent documents = null;
         Dispatch vsd = null;
@@ -428,7 +491,7 @@ public class LocalConvertUtil {
 
             // 打开Office应用程序
             app = new ActiveXComponent("Visio.Application");
-            app.setProperty("Visible", new Variant(false));
+            app.setProperty("Visible", new Variant(0));
 
             documents = new ActiveXComponent(app.getProperty("Documents").toDispatch());
 
@@ -452,11 +515,22 @@ public class LocalConvertUtil {
             if (Objects.nonNull(vsd)) {
                 Dispatch.call(vsd, "Close");
             }
+            if (Objects.nonNull(documents)) {
+                Dispatch.call(documents, "Close");
+            }
             if (Objects.nonNull(app)) {
                 app.invoke("Quit");
             }
+
             // 释放占用的内存空间
-            ComThread.Release();
+            try {
+                if (Objects.nonNull(vsd)) {
+                    vsd.safeRelease();
+                }
+                ComThread.Release();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
