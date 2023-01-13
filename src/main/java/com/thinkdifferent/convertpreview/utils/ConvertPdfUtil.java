@@ -3,7 +3,6 @@ package com.thinkdifferent.convertpreview.utils;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.crypto.SecureUtil;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.pdf.RandomAccessFileOrArray;
@@ -57,30 +56,36 @@ public class ConvertPdfUtil {
     public File convertJpg2Pdf(List<String> listJpgFile, String strPdfFile) {
         log.info("jpg {} 转pdf {}", String.join(" ", listJpgFile), strPdfFile);
         Document document = null;
+        FileOutputStream fos = null;
         try {
             document = new Document();
 
-        // 设置文档页边距
-        document.setMargins(0, 0, 0, 0);
-        FileOutputStream fos = new FileOutputStream(strPdfFile);
+            // 设置文档页边距
+            document.setMargins(0, 0, 0, 0);
+            fos = new FileOutputStream(strPdfFile);
             PdfWriter.getInstance(document, fos);
             // 打开文档
             document.open();
 
             // 循环，读取每个文件，添加到pdf的document中。
             for (String strJpgFile : listJpgFile) {
-                // 获取图片的宽高
-                Image image = Image.getInstance(strJpgFile);
-                float floatImageHeight = image.getScaledHeight();
-                float floatImageWidth = image.getScaledWidth();
-                // 设置页面宽高与图片一致
-                Rectangle rectangle = new Rectangle(floatImageWidth, floatImageHeight);
-                document.setPageSize(rectangle);
-                // 图片居中
-                image.setAlignment(Element.ALIGN_CENTER);
-                //新建一页添加图片
-                document.newPage();
-                document.add(image);
+                try{
+                    // 获取图片的宽高
+                    Image image = Image.getInstance(strJpgFile);
+                    float floatImageHeight = image.getScaledHeight();
+                    float floatImageWidth = image.getScaledWidth();
+                    // 设置页面宽高与图片一致
+                    Rectangle rectangle = new Rectangle(floatImageWidth, floatImageHeight);
+                    document.setPageSize(rectangle);
+                    // 图片居中
+                    image.setAlignment(Element.ALIGN_CENTER);
+                    //新建一页添加图片
+                    document.newPage();
+                    document.add(image);
+                }catch (Exception imgExp){
+                    log.error(imgExp);
+                    continue;
+                }
             }
 
             fos.flush();
@@ -88,9 +93,27 @@ public class ConvertPdfUtil {
         }catch (Exception e){
             log.error(e);
         }finally {
-            if (document != null && document.isOpen()){
-                document.close();
+            try {
+                if (document != null && document.isOpen()){
+                    document.close();
+                }
+            }catch (Exception e){
+                log.error(e);
             }
+
+            try {
+                if(fos != null){
+                    fos.close();
+                }
+                File filePdf = new File(strPdfFile);
+                if(filePdf.length() == 0){
+                    FileUtil.del(new File(strPdfFile));
+                }
+            }catch (Exception e){
+                log.error(e);
+            }
+
+
         }
         return new File(strPdfFile);
     }
@@ -247,12 +270,14 @@ public class ConvertPdfUtil {
                 fileReturn = convertJpg2Pdf(listJpg, strPdfFilePath);
             }
 
-            // 双层PDF
-            if (!CollectionUtils.isEmpty(convertEntity.getContexts())) {
-                // 双层PDF修改
-                DoubleLayerPdfUtil.addText(fileReturn, convertEntity.getContexts());
-            }
+            if(fileReturn.exists()){
+                // 双层PDF
+                if (!CollectionUtils.isEmpty(convertEntity.getContexts())) {
+                    // 双层PDF修改
+                    DoubleLayerPdfUtil.addText(fileReturn, convertEntity.getContexts());
+                }
 
+            }
         }
         return fileReturn;
     }

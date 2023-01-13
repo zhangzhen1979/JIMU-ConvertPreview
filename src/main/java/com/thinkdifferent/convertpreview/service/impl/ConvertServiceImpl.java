@@ -115,6 +115,11 @@ public class ConvertServiceImpl implements ConvertService {
         // 开始时间
         long stime = System.currentTimeMillis();
 
+        File fileOutputDir = new File(ConvertConfig.outPutPath);
+        if(!fileOutputDir.exists()){
+            fileOutputDir.mkdirs();
+        }
+
         // 转换结果
         WriteBackResult writeBackResult = new WriteBackResult(false);
         // 参数转换
@@ -366,32 +371,42 @@ public class ConvertServiceImpl implements ConvertService {
                 // 转换后生成的pdf文件File对象
                 File filePdf = null;
                 // 其他格式图片文件，转换后生成的JPG文件路径字符串List
-                List<String> listTempJpg;
+                List<String> listTempJpg = new ArrayList<>();
 
                 // 如果输入的文件格式是图片格式（配置文件中设置格式列表），则执行图片转jpg、pdf操作
                 if (StringUtils.equalsAnyIgnoreCase(strInputFileType, strsPicType)) {
                     // 将图片文件转换为JPG格式。返回文件路径字符串List
-                    listTempJpg = convertJpgUtil.convertPic2Jpg(fileInput.getCanonicalPath(), strDestFile + ".jpg");
+                    if(!"jpg".equalsIgnoreCase(strInputFileType)){
+                        listTempJpg = convertJpgUtil.convertPic2Jpg(fileInput.getAbsolutePath(), strDestFile + ".jpg");
+                    }else{
+                        listTempJpg.add(fileInput.getAbsolutePath());
+                    }
 
                     // 如果目标格式就是jpg，则跳过后续处理（pdf、ofd转换），执行下一循环。
                     if ("jpg".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
+                        // 将原图片文件加入到“目标文件列表”
+                        targetFiles.add(fileInput);
+                        // 跳过后续操作，执行下一循环。
                         continue;
                     } else {
-                        // 将JPG文件路径字符串List加入到“临时文件列表”
-                        tempFiles.addAll(listTempJpg);
-                        // jpg文件转pdf（自动完成JPG文件列表中所有文件的转换、合并）
-                        filePdf = convertPdfUtil.convertPic2Pdf(
-                                fileInput.getCanonicalPath(),
-                                "jpg",
-                                listTempJpg,
-                                strDestFile,
-                                convertEntity);
-                        // 如果输出格式为pdf，则跳过ofd转换。执行下一循环。
-                        if ("pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
-                            // 将转换好的PDF文件加入到“目标文件列表”
-                            targetFiles.add(i, filePdf);
-                            // 跳过后续操作，执行下一循环。
-                            continue;
+                        if(listTempJpg != null){
+                            // 将JPG文件路径字符串List加入到“临时文件列表”
+                            tempFiles.addAll(listTempJpg);
+                            // jpg文件转pdf（自动完成JPG文件列表中所有文件的转换、合并）
+                            filePdf = convertPdfUtil.convertPic2Pdf(
+                                    fileInput.getCanonicalPath(),
+                                    "jpg",
+                                    listTempJpg,
+                                    strDestFile,
+                                    convertEntity);
+                            // 如果输出格式为pdf，则跳过ofd转换。执行下一循环。
+                            if ("pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())
+                                    && filePdf.exists()) {
+                                // 将转换好的PDF文件加入到“目标文件列表”
+                                targetFiles.add(filePdf);
+                                // 跳过后续操作，执行下一循环。
+                                continue;
+                            }
                         }
                     }
                 } else if(!"ofd".equalsIgnoreCase(strInputFileType)){
@@ -406,7 +421,7 @@ public class ConvertServiceImpl implements ConvertService {
                     if (filePdf != null && filePdf.exists()
                             && "pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
                         // 将转换好的PDF文件加入到“目标文件列表”
-                        targetFiles.add(i, filePdf);
+                        targetFiles.add(filePdf);
                         // 跳过后续操作，执行下一循环。
                         continue;
                     }
@@ -417,7 +432,7 @@ public class ConvertServiceImpl implements ConvertService {
                     // todo 图片水印会跑版。暂时无法解决。
                     File fileOfd = convertOfdUtil.convertOfd2Pdf(fileInput.getAbsolutePath(), strDestFile + ".pdf");
                     // 将转换好的OFD文件加入到“目标文件列表”
-                    targetFiles.add(i, fileOfd);
+                    targetFiles.add(fileOfd);
                     // 跳过后续操作，执行下一循环。
                     continue;
                 }
@@ -434,7 +449,7 @@ public class ConvertServiceImpl implements ConvertService {
                         // 将PDF文件转换为OFD
                         convertOfdUtil.convertPdf2Ofd(strPdfFilePath, ofdFile.getPath());
                         // 将转换后的OFD文件加入“目标文件列表”
-                        targetFiles.add(i, ofdFile);
+                        targetFiles.add(ofdFile);
                         // 将输入的PDF文件（过程文件）加入“临时文件列表”，后续自动删除
                         tempFiles.add(strPdfFilePath);
 
@@ -453,7 +468,7 @@ public class ConvertServiceImpl implements ConvertService {
                     // 将输入文件复制到目标文件夹
                     FileUtil.copy(fileInput, destFile, true);
                     // 将转换后的OFD文件加入“目标文件列表”
-                    targetFiles.add(i, destFile);
+                    targetFiles.add(destFile);
                     // 如果输入方式不是“path”（本地路径），则将数据文件加入到“临时文件列表”中，等待后续删除。
                     // （本地路径输入的文件不能删除，是原始文件；url或ftp下载的文件属于临时文件，可以在复制后删除）
                     if (!"path".equalsIgnoreCase(convertEntity.getInputType().name())) {

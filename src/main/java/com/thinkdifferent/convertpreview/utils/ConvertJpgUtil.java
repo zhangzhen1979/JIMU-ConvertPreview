@@ -60,7 +60,7 @@ public class ConvertJpgUtil {
                     .outputFormat("jpg")
                     .toFile(strOutputFile);
             image = null;
-            // inputFile.delete();
+
             return Collections.singletonList(strOutputFile);
         } catch (Exception e) {
             log.error("转换单页jpg出现问题，使用旧方法", e);

@@ -8,7 +8,7 @@ server:
       max: 1000
       min-spare: 30
     # 超时时间
-    connection-timeout: 5000
+    connection-timeout: 500000
 
 spring:
   # RabbitMQ设置
