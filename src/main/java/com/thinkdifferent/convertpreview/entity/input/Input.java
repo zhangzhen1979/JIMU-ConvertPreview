@@ -70,7 +70,7 @@ public abstract class Input {
      */
     public void clean() {
         if (Objects.nonNull(inputFile) && inputFile.isFile() && inputFile.exists()) {
-            FileUtil.del(inputFile.getParentFile());
+            FileUtil.del(inputFile);
         }
     }
 }
