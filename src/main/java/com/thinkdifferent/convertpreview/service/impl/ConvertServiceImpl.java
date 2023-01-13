@@ -19,6 +19,7 @@ import com.thinkdifferent.convertpreview.utils.*;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import net.sf.json.JSONObject;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
@@ -33,8 +34,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.io.File;
-import java.io.IOException;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -91,7 +92,7 @@ public class ConvertServiceImpl implements ConvertService {
     @Async
     @Override
     public void asyncConvert(Map<String, Object> parameters) {
-        CallBackResult callBackResult = convert(parameters, "convert");
+        CallBackResult callBackResult = convert(parameters, "convert", null);
         if (callBackResult.isFlag()) {
             // 成功，清理失败记录
             SystemConstants.removeErrorData((JSONObject) parameters);
@@ -106,11 +107,12 @@ public class ConvertServiceImpl implements ConvertService {
      * 将传入的JSON对象中记录的文件，转换为JPG，输出到指定的目录中；回调应用系统接口，将数据写回。
      *
      * @param parameters 输入的参数，JSON格式数据对象
-     * @param strType    调用类型：convert，转换；base64，需要返回base64。
+     * @param type       调用类型：convert，转换；base64，需要返回base64；stream，将文件信息返回Http响应头。
+     * @param response   Http响应对象。
      */
     @SneakyThrows
     @Override
-    public CallBackResult convert(Map<String, Object> parameters, String strType) {
+    public CallBackResult convert(Map<String, Object> parameters, String type, HttpServletResponse response) {
         // 开始时间
         long stime = System.currentTimeMillis();
 
@@ -145,13 +147,35 @@ public class ConvertServiceImpl implements ConvertService {
 
         // 判断是转换还是base64。如果是base64，则返回base64值，不回调；如果是转换，则执行回调。
         CallBackResult callBackResult = new CallBackResult();
-        if("base64".equalsIgnoreCase(strType)){
+        if("base64".equalsIgnoreCase(type)){
             byte[] b = Files.readAllBytes(Paths.get(fileOut.getAbsolutePath()));
             // 文件转换为字节后，转换后的文件即可删除（文件没用了）。
-            FileUtil.del(fileOut);
-            callBackResult.setBase64(Base64.getEncoder().encodeToString(b));
             callBackResult.setFlag(true);
-        }else if("convert".equalsIgnoreCase(strType)){
+            callBackResult.setBase64(Base64.getEncoder().encodeToString(b));
+
+            FileUtil.del(fileOut);
+        }else if("stream".equalsIgnoreCase(type)){
+            callBackResult.setFlag(true);
+
+            response.setCharacterEncoding("UTF-8");
+
+            InputStream is = new BufferedInputStream(new FileInputStream(fileOut));
+            byte[] bytes = new byte[1024];
+            //设置响应头参数
+            response.addHeader("Content-Disposition", "inline;filename=" + fileOut.getName());
+            response.setContentType("application/octet-stream");
+            //响应输出流输出
+            OutputStream os = new BufferedOutputStream(response.getOutputStream());
+            while (is.read(bytes) != -1) {
+                os.write(bytes);
+            }
+            IOUtils.closeQuietly(os);
+            IOUtils.closeQuietly(is);
+
+            callBackResult.setResponse(response);
+
+            FileUtil.del(fileOut);
+        }else if("convert".equalsIgnoreCase(type)){
             // 4. 回调
             callBackResult = callBack(writeBackResult, convertEntity, listJpg, fileOut);
         }

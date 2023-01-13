@@ -5,6 +5,7 @@ import com.thinkdifferent.convertpreview.entity.input.Input;
 import net.sf.json.JSONObject;
 import org.springframework.scheduling.annotation.Async;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.util.Map;
 
@@ -18,9 +19,10 @@ public interface ConvertService {
      * 将传入的JSON对象中记录的文件，转换为MP4，输出到指定的目录中；回调应用系统接口，将数据写回。
      *
      * @param parameters 输入的参数，JSON格式数据对象
-     * @param type       调用类型：convert，转换；base64，需要返回base64。
+     * @param type       调用类型：convert，转换；base64，需要返回base64；stream，将文件信息返回Http响应头。
+     * @param response   Http响应对象。
      */
-    CallBackResult convert(Map<String, Object> parameters, String type);
+    CallBackResult convert(Map<String, Object> parameters, String type, HttpServletResponse response);
 
     /**
      * 文件预览

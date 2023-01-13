@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import org.springframework.cglib.beans.BeanMap;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +27,11 @@ public class CallBackResult extends SimpleResult {
      * 文件Base64值
      */
     private String base64;
+
+    /**
+     * HTTP响应对象
+     */
+    private HttpServletResponse response;
 
     public CallBackResult(boolean flag) {
         super.setFlag(flag);

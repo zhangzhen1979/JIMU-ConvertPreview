@@ -36,7 +36,7 @@ public class Task implements RabbitTemplate.ConfirmCallback {
 
         CallBackResult callBackResult = new CallBackResult(false);
         try {
-            callBackResult = convertService.convert(jsonInput);
+            callBackResult = convertService.convert(jsonInput, "convert", null);
         } catch (Exception e) {
             e.printStackTrace();
             log.error("转换Jpg/Pdf异常", e);

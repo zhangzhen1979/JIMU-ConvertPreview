@@ -271,7 +271,7 @@ jodconverter:
 
 ### 输入信息
 
-系统支持本地文件路径输入（path）和http协议的url文件下载输入（url）。可以传入各种文档格式，由系统转换为PDF/OFD；也可以直接传入PDF/OFD，由系统自动进行后续的添加水印、添加定制首页表格水印的操作。
+系统支持本地文件路径输入（path）、http协议的url文件下载输入（url）、ftp服务路径输入（ftp）。可以传入各种文档格式，由系统转换为PDF/OFD；也可以直接传入PDF/OFD，由系统自动进行后续的添加水印、添加定制首页表格水印的操作。
 
 当使用文件路径输入时，配置示例如下：
 
@@ -334,7 +334,6 @@ url、ftp方式配置内容与【输入信息】章节中说明一致。
 系统会按照PDF文件传入的顺序，将其合并为一个新的PDF文件。
 
 - inputType：必填，文件输入方式，path、url、ftp
-- 
 - inputFiles：此场景下必填，输入的多个PDF文件路径。
 - outPutFileName：必填，为文件生成后的文件名，扩展名自动为pdf/ofd。
 
@@ -736,7 +735,7 @@ http://10.11.12.13/callback.do?file=001-online&flag=success
     "inputType": "path",
     "inputFile": "D:/cvtest/001.tif",
     "outPutFileName": "001-online",
-    "outPutFileType": "jpg"
+    "outPutFileType": "pdf"
 }
 ```
 
@@ -744,21 +743,21 @@ http://10.11.12.13/callback.do?file=001-online&flag=success
 
 ### 输入信息
 
-系统支持本地文件路径输入（path）和http协议的url文件下载输入（url）。
+系统支持本地文件路径输入（path）、http协议的url文件下载输入（url）、ftp服务路径输入（ftp）。
 
 配置示例请见上述章节。
 
 ### 输出信息
 
-可以设置输出的Jpg/Pdf文件的文件名（无扩展名）和输出的文件类型，如下：
+可以设置输出的Jpg/Pdf/Ofd文件的文件名（无扩展名）和输出的文件类型，如下：
 
 ```json
     "outPutFileName": "001-online",
-    "outPutFileType": "jpg",
+    "outPutFileType": "pdf",
 ```
 
 - outPutFileName：必填，为文件生成后的文件名（无扩展名）。
-- outPutFileType：必填，为文件生成后的扩展名。本接口中，可以设置：jpg、pdf、ofd、jpg,pdf,ofd。
+- outPutFileType：必填，为文件生成后的扩展名。本接口中，可以设置：jpg、pdf、ofd。
 
 ### 返回信息
 
@@ -795,7 +794,48 @@ convert2base64s接口返回信息示例如下：
   - filename：文件名
   - base64：文件Base64编码之后的字符串。
 
+## 生成文件后返回文件流
 
+生成一个目标文件后返回Http Response文件流：[http://host:port/api/convert2stream](http://host:port/api/convert2stream)
+
+接口调用方式：POST
+
+传入参数形式：JSON
+
+传入参数示例：
+
+```json
+{
+    "inputType": "path",
+    "inputFile": "D:/cvtest/001.tif",
+    "outPutFileName": "001-online",
+    "outPutFileType": "pdf"
+}
+```
+
+以下分块解释传入参数每部分的内容。
+
+### 输入信息
+
+系统支持本地文件路径输入（path）、http协议的url文件下载输入（url）、ftp服务路径输入（ftp）。
+
+配置示例请见上述章节。
+
+### 输出信息
+
+可以设置输出的Jpg/Pdf/Ofd文件的文件名（无扩展名）和输出的文件类型，如下：
+
+```json
+    "outPutFileName": "001-online",
+    "outPutFileType": "jpg",
+```
+
+- outPutFileName：必填，为文件生成后的文件名（无扩展名）。
+- outPutFileType：必填，为文件生成后的扩展名。本接口中，可以设置：jpg、pdf、ofd。
+
+### 返回信息
+
+convert2stream接口将转换后的文件输出到Http响应信息中，以文件流方式返回。
 
 ## 预览接口（页面）说明
 
@@ -832,8 +872,6 @@ convert2base64s接口返回信息示例如下：
   - http链接：[http://ip:port/download/fileId](http://ip:port/download/fileId)
   - ftp路径：[ftp://username:password@ip:port/dir/file.doc](ftp://username:password@ip:port/dir/file.doc)
 - fileType: 文件类型，即文件的扩展名。
-
-
 
 请求结果：html页面，需通过浏览器进行预览。
 

@@ -16,6 +16,7 @@ import net.sf.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -92,6 +93,36 @@ public class ConvertController {
     }
 
     /**
+     * 接收传入的JSON数据，将源图片文件转换为Jpg、Pdf、Ofd文件，并在Response中返回流。
+     * 本接口只能返回一种格式的转换结果文件
+     *
+     * @param jsonInput 输入的JSON对象
+     *                  {
+     *                  "inputType": "path",
+     *                  "inputFile": "D:/cvtest/001.tif",
+     *                  "inputHeaders":
+     *                  {
+     *                  "Authorization":"Bearer da3efcbf-0845-4fe3-8aba-ee040be542c0"
+     *                  },
+     *                  "outPutFileName": "001-online",
+     *                  "outPutFileType": "jpg"
+     *                  }
+     * @return JSON结果
+     */
+    @ApiOperation("接收传入的JSON数据，将源图片文件转换为jpg、pdf、ofd文件，并在Response中返回流")
+    @PostMapping(value = "/convert2stream")
+    public String convert2stream(@RequestBody JSONObject jsonInput, HttpServletResponse response) {
+
+        CallBackResult callBackResult = convertService.convert(jsonInput, "stream", response);
+
+        if (callBackResult.isFlag()) {
+            return callBackResult.getBase64();
+        }
+
+        return null;
+    }
+
+    /**
      * 接收传入的JSON数据，将源图片文件转换为Jpg、Pdf、Ofd文件，并以Base64字符串输出。
      * 本接口只能返回一种格式的转换结果文件
      *
@@ -112,7 +143,7 @@ public class ConvertController {
     @PostMapping(value = "/convert2base64")
     public String convert2Base64(@RequestBody JSONObject jsonInput) {
 
-        CallBackResult callBackResult = convertService.convert(jsonInput, "base64");
+        CallBackResult callBackResult = convertService.convert(jsonInput, "base64", null);
 
         if (callBackResult.isFlag()) {
             return callBackResult.getBase64();
@@ -142,7 +173,7 @@ public class ConvertController {
     @RequestMapping(value = "/convert2base64s", method = RequestMethod.POST)
     public ConvertBase64Entity convert2Base64s(@RequestBody JSONObject jsonInput) {
 
-        CallBackResult callBackResult = convertService.convert(jsonInput, "base64");
+        CallBackResult callBackResult = convertService.convert(jsonInput, "base64", null);
         ConvertBase64Entity convertBase64Entity = new ConvertBase64Entity(callBackResult);
         if (callBackResult.isFlag()) {
             List<ConvertBase64Entity.SimpleBase64> base64List = new ArrayList<>();
