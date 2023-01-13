@@ -12,7 +12,6 @@ import com.thinkdifferent.convertpreview.entity.ConvertEntity;
 import com.thinkdifferent.convertpreview.entity.InputType;
 import com.thinkdifferent.convertpreview.entity.WriteBackResult;
 import com.thinkdifferent.convertpreview.entity.input.Input;
-import com.thinkdifferent.convertpreview.entity.input.InputPath;
 import com.thinkdifferent.convertpreview.service.ConvertService;
 import com.thinkdifferent.convertpreview.service.RabbitMQService;
 import com.thinkdifferent.convertpreview.utils.*;
@@ -127,7 +126,7 @@ public class ConvertServiceImpl implements ConvertService {
         List<String> listJpg = new ArrayList<>();
 
         // 1. 获取输入文件、格式转换、多文件合并
-        File fileOut = mergerInputFile(convertEntity, strDestPathFileName);
+        File fileOut = convertAndMerge(convertEntity, strDestPathFileName);
 
         if (fileOut != null && fileOut.exists()) {
             // 2. 加水印、归档章、页标等
@@ -147,13 +146,16 @@ public class ConvertServiceImpl implements ConvertService {
 
         // 判断是转换还是base64。如果是base64，则返回base64值，不回调；如果是转换，则执行回调。
         CallBackResult callBackResult = new CallBackResult();
+        // 获取回写类型
+        String strWriteBackType = convertEntity.getWriteBackType().name();
         if("base64".equalsIgnoreCase(type)){
             byte[] b = Files.readAllBytes(Paths.get(fileOut.getAbsolutePath()));
             // 文件转换为字节后，转换后的文件即可删除（文件没用了）。
             callBackResult.setFlag(true);
             callBackResult.setBase64(Base64.getEncoder().encodeToString(b));
 
-            FileUtil.del(fileOut);
+            strWriteBackType = "base64";
+
         }else if("stream".equalsIgnoreCase(type)){
             callBackResult.setFlag(true);
 
@@ -174,14 +176,15 @@ public class ConvertServiceImpl implements ConvertService {
 
             callBackResult.setResponse(response);
 
-            FileUtil.del(fileOut);
+            strWriteBackType = "stream";
+
         }else if("convert".equalsIgnoreCase(type)){
             // 4. 回调
             callBackResult = callBack(writeBackResult, convertEntity, listJpg, fileOut);
         }
 
         // 5. 清理临时文件
-        cleanTempFile(convertEntity.getWriteBackType().name(),
+        cleanTempFile(strWriteBackType,
                 convertEntity.getInputType().name(), convertEntity.getInputFiles(),
                 listJpg, fileOut);
 
@@ -221,70 +224,96 @@ public class ConvertServiceImpl implements ConvertService {
      *
      * @param convertEntity       传入参数
      * @param strDestPathFileName 设置合并后的PDF文件的路径和文件名
-     * @return 出入文件，已合并
+     * @return 输出的PDF或OFD文件，已合并
      * @throws IOException err
      */
-    private File mergerInputFile(ConvertEntity convertEntity, String strDestPathFileName) throws Exception {
+    private File convertAndMerge(ConvertEntity convertEntity, String strDestPathFileName) throws Exception {
+        // 输入文件对象数组
         Input[] inputs = convertEntity.getInputFiles();
-        List<File> inputFiles = new ArrayList<>();
+        // 转换后的目标文件File对象List
+        List<File> targetFiles = new ArrayList<>();
+        // 临时文件位置字符串List（包括：url、ftp方式接收的文件（input文件夹中）；各类文件转换ofd过程中生成的pdf文件；pdf、ofd合并时，待合并的文件。)
         List<String> tempFiles = new ArrayList<>();
 
         try {
-            // 单文件转图片特殊处理
+            // 获取配置文件中设置的，本服务支持的图片文件扩展名
+            String strPicType = ConvertConfig.picType;
+            log.info("picType:{}", strPicType);
+            // 图片文件类型转换为数组
+            String[] strsPicType = strPicType.split(",");
+
+            // 单个图片文件转换JPG处理（单独处理）
+            // 如果输入的文件只有一个，则进行直接转换操作。
             if (inputs.length == 1) {
+                // 获取输入文件的File对象
                 File fileInput = inputs[0].checkAndGetInputFile();
+                // 获取输入文件的类型（扩展名）
                 String strInputFileType = FileTypeUtil.getFileType(fileInput);
-                // 单文件转图片
-                if (!StringUtils.equalsAnyIgnoreCase(strInputFileType, "pdf", "ofd")
+                // 如果输入文件的格式在配置的可转换格式列表中，并且，输出格式为“jpg”，则执行图片转JPG功能。
+                if (StringUtils.equalsAnyIgnoreCase(strInputFileType, strsPicType)
                         && "jpg".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
-                    // 将传入的图片文件转换为jpg文件，存放到输出路径中
+                    // 将传入的图片文件转换为jpg文件，存放到输出路径中。返回转换后的JPG文件的路径字符串List。
                     List<String> listJpg = convertJpgUtil.convertPic2Jpg(fileInput.getCanonicalPath(),
                             strDestPathFileName + ".jpg");
 
-                    // 如果生成缩略图【首页缩略图】，则不执行后续水印等操作。
+                    // 如果需要生成【首页缩略图】，则只执行“缩略图”操作，不执行后续水印等操作。
                     if (convertEntity.getThumbnail() != null) {
+                        // 执行缩略图操作，并返回缩略图文件File对象。（不执行后续操作）
                         return convertJpgUtil.getThumbnail(convertEntity, listJpg);
                     } else {
-                        // 图片添加水印
+                        // 图片添加水印（方法中自动根据传入参数，判断是否添加水印）
                         JpgWaterMarkUtil.mark4JpgList(listJpg, convertEntity);
+                        // 返回空值（不执行后续操作）
                         return null;
                     }
                 }
             }
 
-            // 文件格式转换
-            String strPicType = ConvertConfig.picType;
-            log.info("picType:{}", strPicType);
-            String[] picTypes = strPicType.split(",");
+            // 如果输入的文件有多个，或者输入的文件格式不是JPG，则执行文件格式转换操作。
+            convertFileFormat(convertEntity, strDestPathFileName, targetFiles, tempFiles,
+                    strsPicType);
+            // 如果转换后的目标文件只有一个，则直接返回目标文件对象。
+            if (targetFiles.size() == 1) {
+                return targetFiles.get(0);
+            } else if (targetFiles.size() > 1) {
+                // 如果转换后的目标文件有多个，则需要执行“文件合并”
 
-            parseInputFile(convertEntity, strDestPathFileName, inputFiles, tempFiles,
-                    picTypes);
-            if (inputFiles.size() == 1) {
-                // 传入单文件，返回
-                return new File(strDestPathFileName + "." + convertEntity.getOutPutFileType());
-            } else if (inputFiles.size() > 1) {
-                // 文件合并
-                if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
+                if ("pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
+                    // 如果输出文件格式为PDF，则执行PDF合并。
+                    // 声明PDF合并工具对象
                     PDFMergerUtility pdfMerger = new PDFMergerUtility();
                     // 设置合并后的PDF文件的路径和文件名
                     pdfMerger.setDestinationFileName(strDestPathFileName + ".pdf");
-                    for (File file : inputFiles) {
+                    // 循环，处理“目标文件列表”中的所有文件，进行合并
+                    for (File file : targetFiles) {
+                        // 将需合并的文件加入“PDF合并工具”对象
                         pdfMerger.addSource(file);
+                        // 将当前处理的待合并文件路径信息，加入到“临时文件列表”中（后续自动删除）
                         tempFiles.add(file.getAbsolutePath());
                     }
+                    // 所有待合并文件处理完毕后，执行“合并”动作。
                     pdfMerger.mergeDocuments(null);
+                    // 返回合并后的PDF文件对象
                     return new File(pdfMerger.getDestinationFileName());
-                } else if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "ofd")) {
-                    File ofdNoMarkFile = new File(strDestPathFileName + ".ofd");
-                    try (OFDMerger ofdMerger = new OFDMerger(ofdNoMarkFile.toPath())) {
-                        for (File file : inputFiles) {
+
+                } else if ("ofd".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
+                    // 如果输出文件格式为OFD，则执行OFD合并。
+                    File fileOfd = new File(strDestPathFileName + ".ofd");
+                    // 声明OFD合并对象
+                    try (OFDMerger ofdMerger = new OFDMerger(fileOfd.toPath())) {
+                        // 循环，处理“目标文件列表”中的所有文件，进行合并
+                        for (File file : targetFiles) {
+                            // 将需合并的文件加入“OFD合并对象”
                             ofdMerger.add(file.toPath());
+                            // 将当前处理的待合并文件路径信息，加入到“临时文件列表”中（后续自动删除）
                             tempFiles.add(file.getAbsolutePath());
                         }
                     }
-                    return ofdNoMarkFile;
+                    // 返回合并后的OFD文件对象
+                    return fileOfd;
                 } else {
-                    throw new InvalidParameterException("未处理的异常情况");
+                    // 如果输出的目标格式不是PDF或OFD，则抛出参数异常信息
+                    throw new InvalidParameterException("需合并的目标格式暂不支持");
                 }
             }
         } catch (Exception e) {
@@ -292,15 +321,10 @@ public class ConvertServiceImpl implements ConvertService {
             throw e;
         } finally {
             // 清理临时文件
+            // （包括：url、ftp方式接收的文件（input文件夹中）；
+            // 各类文件转换ofd过程中生成的pdf文件；pdf、ofd合并时，待合并的文件。)
             for (String tempFile : tempFiles) {
                 FileUtil.del(tempFile);
-            }
-            // 清理下载文件, 格式转换后的文件, =1时需要返回，在回调完成后清理
-            if (!"path".equalsIgnoreCase(convertEntity.getInputType().name())
-                    && inputFiles.size() > 1) {
-                for (File file : inputFiles) {
-                    FileUtil.del(file);
-                }
             }
         }
 
@@ -313,90 +337,127 @@ public class ConvertServiceImpl implements ConvertService {
      *
      * @param convertEntity       传入参数
      * @param strDestPathFileName 目标文件路径及文件名，不含后缀
-     * @param inputFiles          转换格式后的文件
-     * @param tempFiles           临时的图片文件
+     * @param targetFiles         目标文件File对象List
+     * @param tempFiles           临时文件字符串List（包括：url、ftp方式接收的文件（input文件夹中）；各类文件转换ofd过程中生成的pdf文件；pdf、ofd合并时，待合并的文件。
      * @throws IOException         err
      * @throws DocumentException   err
      */
-    private void parseInputFile(
+    private void convertFileFormat(
             ConvertEntity convertEntity,
             String strDestPathFileName,
-            List<File> inputFiles,
+            List<File> targetFiles,
             List<String> tempFiles,
             String[] strsPicType)
             throws IOException, DocumentException {
+
         // 多文件处理或转单文件转pdf\ofd
         for (int i = 0; i < convertEntity.getInputFiles().length; i++) {
+            // 从输入对象中获取文件（数组中获取每个文件）
             File fileInput = convertEntity.getInputFiles()[i].checkAndGetInputFile();
+            // 判断文件的类型（扩展名）
             String strInputFileType = FileTypeUtil.getFileType(fileInput);
 
+            // 组装要生成的目标文件的路径和文件名（不含扩展名，后续判断目标格式后加入）（此处文件名带有循环变量。如果处理的只是一个文件，则不加入循环变量）
             String strDestFile = convertEntity.getInputFiles().length == 1
                     ? strDestPathFileName : strDestPathFileName + "_" + i;
-            if(!strInputFileType.equalsIgnoreCase(convertEntity.getOutPutFileType())){
-                File tPdfFile = null;
-                List<String> tempJpgs;
 
-                // 1、各种图片转jpg、pdf
+            // 输入的格式不等于输出格式，则进行转换
+            if(!strInputFileType.equalsIgnoreCase(convertEntity.getOutPutFileType())){
+                // 转换后生成的pdf文件File对象
+                File filePdf = null;
+                // 其他格式图片文件，转换后生成的JPG文件路径字符串List
+                List<String> listTempJpg;
+
+                // 如果输入的文件格式是图片格式（配置文件中设置格式列表），则执行图片转jpg、pdf操作
                 if (StringUtils.equalsAnyIgnoreCase(strInputFileType, strsPicType)) {
-                    tempJpgs = convertJpgUtil.convertPic2Jpg(fileInput.getCanonicalPath(), strDestFile + ".jpg");
-                    tempFiles.addAll(tempJpgs);
-                    // 1.1、如果目标格式就是jpg，则pdf、ofd转换跳过。下一循环。
-                    if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "jpg")) {
+                    // 将图片文件转换为JPG格式。返回文件路径字符串List
+                    listTempJpg = convertJpgUtil.convertPic2Jpg(fileInput.getCanonicalPath(), strDestFile + ".jpg");
+
+                    // 如果目标格式就是jpg，则跳过后续处理（pdf、ofd转换），执行下一循环。
+                    if ("jpg".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
                         continue;
                     } else {
-                        // 1.2、jpg文件转pdf（如果输入文件是pdf，不处理）
-                        tPdfFile = convertPdfUtil.convertPic2Pdf(fileInput.getCanonicalPath(),
-                                "jpg", tempJpgs, convertEntity, i);
-                        // 1.3、如果输出格式为pdf，则ofd转换跳过。下一循环。
-                        if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
-                            inputFiles.add(i, tPdfFile);
+                        // 将JPG文件路径字符串List加入到“临时文件列表”
+                        tempFiles.addAll(listTempJpg);
+                        // jpg文件转pdf（自动完成JPG文件列表中所有文件的转换、合并）
+                        filePdf = convertPdfUtil.convertPic2Pdf(
+                                fileInput.getCanonicalPath(),
+                                "jpg",
+                                listTempJpg,
+                                strDestFile,
+                                convertEntity);
+                        // 如果输出格式为pdf，则跳过ofd转换。执行下一循环。
+                        if ("pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
+                            // 将转换好的PDF文件加入到“目标文件列表”
+                            targetFiles.add(i, filePdf);
+                            // 跳过后续操作，执行下一循环。
                             continue;
                         }
                     }
-                } else if(!StringUtils.equalsIgnoreCase(strInputFileType, "ofd")){
-                    // 2、各种非图片文件转pdf
-                    tPdfFile = convertPdfUtil.convertOffice2Pdf(
+                } else if(!"ofd".equalsIgnoreCase(strInputFileType)){
+                    // 如果输入的文件格式不是“ofd”（前面已经判断了、处理了图片格式，此时剩余的格式均为Office相关格式），则可以执行转PDF操作。
+                    // 将传入的文档文件转换为PDF格式，保存到本地的“输出文件夹”中，并按照传入参数为文件命名。
+                    filePdf = convertPdfUtil.convertOffice2Pdf(
                             fileInput.getAbsolutePath(),
                             strDestFile + ".pdf",
                             convertEntity
                     );
-                    if (tPdfFile != null && tPdfFile.exists()
-                            && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
-                        inputFiles.add(i, tPdfFile);
+                    // 如果PDF转换成功（目标文件夹的PDF存在），则将文件信息加入“目标文件列表”，并跳过后续操作。
+                    if (filePdf != null && filePdf.exists()
+                            && "pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
+                        // 将转换好的PDF文件加入到“目标文件列表”
+                        targetFiles.add(i, filePdf);
+                        // 跳过后续操作，执行下一循环。
                         continue;
                     }
 
-                }else if(StringUtils.equalsIgnoreCase(strInputFileType, "ofd")
-                        && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")){
-                    // 3、OFD转PDF
-                    convertOfdUtil.convertOfd2Pdf(fileInput.getAbsolutePath(), strDestFile + ".pdf");
+                }else if("ofd".equalsIgnoreCase(strInputFileType)
+                        && "pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())){
+                    // 如果文件输入格式为OFD，并且输出格式为PDF，则执行：OFD转PDF操作。
+                    // todo 图片水印会跑版。暂时无法解决。
+                    File fileOfd = convertOfdUtil.convertOfd2Pdf(fileInput.getAbsolutePath(), strDestFile + ".pdf");
+                    // 将转换好的OFD文件加入到“目标文件列表”
+                    targetFiles.add(i, fileOfd);
+                    // 跳过后续操作，执行下一循环。
+                    continue;
                 }
 
-                // 4、PDF文件转ofd（如果输入文件是ofd，不处理）
-                if (!StringUtils.equalsIgnoreCase(strInputFileType, "ofd")
-                        && StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "ofd")) {
-
-                    if (tPdfFile != null && tPdfFile.exists()){
+                // 如果输入的文件类型不是OFD，并且，输出文件类型是OFD，则执行PDF文件转OFD（前面的过程，已经把文件处理成了PDF）
+                if (!"ofd".equalsIgnoreCase(strInputFileType)
+                        && "ofd".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
+                    // 如果PDF文件存在，则将文件转换为OFD
+                    if (filePdf != null && filePdf.exists()){
+                        // 声明OFD文件的File对象
                         File ofdFile = new File(strDestFile + ".ofd");
-                        convertOfdUtil.convertPdf2Ofd((tPdfFile == null ? fileInput : tPdfFile).getPath(), ofdFile.getPath());
-                        inputFiles.add(i, ofdFile);
+                        // 获取PDF文件的路径
+                        String strPdfFilePath = (filePdf == null ? fileInput : filePdf).getPath();
+                        // 将PDF文件转换为OFD
+                        convertOfdUtil.convertPdf2Ofd(strPdfFilePath, ofdFile.getPath());
+                        // 将转换后的OFD文件加入“目标文件列表”
+                        targetFiles.add(i, ofdFile);
+                        // 将输入的PDF文件（过程文件）加入“临时文件列表”，后续自动删除
+                        tempFiles.add(strPdfFilePath);
 
-                        // PDF文件转的，移除临时文件
-                        FileUtil.del(tPdfFile);
                         continue;
                     }
                 }
 
             }else{
-                // 5、传入pdf，传出pdf | 传入ofd, 传出ofd,
+                // 如果输入的格式等于输出的格式，则不需要抓换，直接进行文件复制。
+                // 将输入文件复制到目标文件夹（path回写路径，或本地temp文件夹）
+
+                // 如果输入文件存在，则进行文件复制操作。
                 if(fileInput != null && fileInput.exists()){
-                    File copyFile = new File(strDestFile + "." + convertEntity.getOutPutFileType().toLowerCase());
-                    if ((convertEntity.getInputFiles()[i] instanceof InputPath)) {
-                        // 如果是本地文件，复制到输入目录
-                        FileUtil.copy(fileInput, copyFile, true);
-                        inputFiles.add(i, copyFile);
-                    } else {
-                        inputFiles.add(i, fileInput);
+                    // 组装目标文件名、扩展名，并创建File对象。
+                    File destFile = new File(strDestFile + "." + convertEntity.getOutPutFileType().toLowerCase());
+                    // 将输入文件复制到目标文件夹
+                    FileUtil.copy(fileInput, destFile, true);
+                    // 将转换后的OFD文件加入“目标文件列表”
+                    targetFiles.add(i, destFile);
+                    // 如果输入方式不是“path”（本地路径），则将数据文件加入到“临时文件列表”中，等待后续删除。
+                    // （本地路径输入的文件不能删除，是原始文件；url或ftp下载的文件属于临时文件，可以在复制后删除）
+                    if (!"path".equalsIgnoreCase(convertEntity.getInputType().name())) {
+                        tempFiles.add(fileInput.getAbsolutePath());
                     }
                 }
 
@@ -424,10 +485,10 @@ public class ConvertServiceImpl implements ConvertService {
             String strOutPath = null;
             File fileOutMark = null;
             if (Objects.nonNull(fileOutNoMark)) {
-                if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "pdf")) {
+                if ("pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
                     strOutPath = strDestPathFileName + "_wm.pdf";
                     PdfWaterMarkUtil.mark4Pdf(fileOutNoMark.getAbsolutePath(), strOutPath, convertEntity, 0);
-                } else if (StringUtils.equalsIgnoreCase(convertEntity.getOutPutFileType(), "ofd")) {
+                } else if ("ofd".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
                     strOutPath = strDestPathFileName + "_wm.ofd";
                     OfdWaterMarkUtil.mark4Ofd(fileOutNoMark.getAbsolutePath(), strOutPath, convertEntity);
                 } else {
@@ -638,7 +699,7 @@ public class ConvertServiceImpl implements ConvertService {
             // 今天已经转换过的，直接返回
             return new File(strDestPathFileName + ".pdf");
         }
-        return mergerInputFile(convertEntity, strDestPathFileName);
+        return convertAndMerge(convertEntity, strDestPathFileName);
     }
 
     /**

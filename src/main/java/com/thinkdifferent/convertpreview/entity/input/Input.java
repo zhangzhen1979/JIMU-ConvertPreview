@@ -1,13 +1,11 @@
 package com.thinkdifferent.convertpreview.entity.input;
 
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import com.thinkdifferent.convertpreview.config.ConvertConfig;
 import com.thinkdifferent.convertpreview.utils.SystemUtil;
 import org.springframework.util.Assert;
 
 import java.io.File;
-import java.util.Date;
 import java.util.Objects;
 
 /**
@@ -63,7 +61,7 @@ public abstract class Input {
      * @return 父级目录
      */
     protected String getBaseUrl() {
-        return SystemUtil.beautifulDir(ConvertConfig.inPutTempPath) + DateUtil.formatDate(new Date()) + "/";
+        return SystemUtil.beautifulDir(ConvertConfig.inPutTempPath);
     }
 
     /**

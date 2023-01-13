@@ -3,10 +3,12 @@ package com.thinkdifferent.convertpreview.utils;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.crypto.SecureUtil;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.pdf.RandomAccessFileOrArray;
 import com.lowagie.text.pdf.codec.TiffImage;
+import com.thinkdifferent.convertpreview.cache.CacheManager;
 import com.thinkdifferent.convertpreview.config.ConvertConfig;
 import com.thinkdifferent.convertpreview.entity.ConvertEntity;
 import com.thinkdifferent.convertpreview.entity.OutFileEncryptorEntity;
@@ -25,6 +27,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
+import javax.annotation.Resource;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -216,22 +219,19 @@ public class ConvertPdfUtil {
      * @param inputFilePath 传入的文件路径
      * @param inputFileType 传入的文件类型
      * @param listJpg       传入的jpg图片
+     * @param outFilePath   输出文件的文件夹、文件名（无扩展名）
      * @param convertEntity 配置信息
-     * @param intFlieNum    文件顺序号（如果为空，则不加入文件名）
      */
     public File convertPic2Pdf(String inputFilePath, String inputFileType,
-                                      List<String> listJpg, ConvertEntity convertEntity,
-                               Integer intFlieNum)
+                                      List<String> listJpg, String outFilePath,
+                               ConvertEntity convertEntity)
             throws IOException, DocumentException {
         // 文件输出格式
         String outPutFileType = convertEntity.getOutPutFileType();
         File fileReturn = null;
         if ("pdf".equalsIgnoreCase(outPutFileType) || "ofd".equalsIgnoreCase(outPutFileType)) {
             // 将传入的jpg文件转换为pdf、ofd文件，存放到输出路径中
-            String strPdfFilePath = convertEntity.getWriteBack().getOutputPath() + convertEntity.getOutPutFileName() + ".pdf";
-            if(intFlieNum != null){
-                strPdfFilePath = convertEntity.getWriteBack().getOutputPath() + convertEntity.getOutPutFileName() + "_" + intFlieNum + ".pdf";
-            }
+            String strPdfFilePath = outFilePath + ".pdf";
             if ("tif".equalsIgnoreCase(inputFileType)) {
                 if (Objects.isNull(convertEntity.getPngMark()) &&
                         Objects.isNull(convertEntity.getTextMark()) &&
@@ -257,6 +257,10 @@ public class ConvertPdfUtil {
         return fileReturn;
     }
 
+
+    /*************************** Office文件处理相关方法 **************************/
+    @Resource
+    private CacheManager cacheManager;
 
     /**
      * 将输入文件转换为pdf
