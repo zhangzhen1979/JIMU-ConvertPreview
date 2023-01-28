@@ -252,6 +252,9 @@ public class ConvertServiceImpl implements ConvertService {
             if (inputs.length == 1) {
                 // 获取输入文件的File对象
                 File fileInput = inputs[0].checkAndGetInputFile();
+                if(fileInput.length() == 0){
+                    return null;
+                }
                 // 获取输入文件的类型（扩展名）
                 String strInputFileType = FileTypeUtil.getFileType(fileInput);
                 // 如果输入文件的格式在配置的可转换格式列表中，并且，输出格式为“jpg”，则执行图片转JPG功能。
@@ -291,8 +294,10 @@ public class ConvertServiceImpl implements ConvertService {
                     pdfMerger.setDestinationFileName(strDestPathFileName + ".pdf");
                     // 循环，处理“目标文件列表”中的所有文件，进行合并
                     for (File file : targetFiles) {
-                        // 将需合并的文件加入“PDF合并工具”对象
-                        pdfMerger.addSource(file);
+                        if(file.length() > 0){
+                            // 将需合并的文件加入“PDF合并工具”对象
+                            pdfMerger.addSource(file);
+                        }
                         // 将当前处理的待合并文件路径信息，加入到“临时文件列表”中（后续自动删除）
                         tempFiles.add(file.getAbsolutePath());
                     }
@@ -308,8 +313,10 @@ public class ConvertServiceImpl implements ConvertService {
                     try (OFDMerger ofdMerger = new OFDMerger(fileOfd.toPath())) {
                         // 循环，处理“目标文件列表”中的所有文件，进行合并
                         for (File file : targetFiles) {
-                            // 将需合并的文件加入“OFD合并对象”
-                            ofdMerger.add(file.toPath());
+                            if(file.length() > 0){
+                                // 将需合并的文件加入“OFD合并对象”
+                                ofdMerger.add(file.toPath());
+                            }
                             // 将当前处理的待合并文件路径信息，加入到“临时文件列表”中（后续自动删除）
                             tempFiles.add(file.getAbsolutePath());
                         }
@@ -359,6 +366,10 @@ public class ConvertServiceImpl implements ConvertService {
         for (int i = 0; i < convertEntity.getInputFiles().length; i++) {
             // 从输入对象中获取文件（数组中获取每个文件）
             File fileInput = convertEntity.getInputFiles()[i].checkAndGetInputFile();
+            if(fileInput.length() == 0){
+                // 如果文件大小为0，则为空文件，不进行转换；进行下一循环。
+                continue;
+            }
             // 判断文件的类型（扩展名）
             String strInputFileType = FileTypeUtil.getFileType(fileInput);
 
