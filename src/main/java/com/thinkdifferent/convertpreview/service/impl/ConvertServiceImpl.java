@@ -577,7 +577,7 @@ public class ConvertServiceImpl implements ConvertService {
      * @return
      */
     private boolean checkOutFile(File fileOut, ConvertEntity convertEntity) {
-        if (fileOut != null && fileOut.exists()) {
+        if (fileOut != null && fileOut.exists() && fileOut.length() > 0) {
             try {
                 String lowerFileName = fileOut.getName().toLowerCase();
                 if (lowerFileName.endsWith(".pdf")) {
@@ -601,12 +601,14 @@ public class ConvertServiceImpl implements ConvertService {
                         // todo 有密码的文件读取，尚未解决
                     }
                 }
+
+                return true;
             } catch (Exception e) {
                 log.error("回写检查异常", e);
                 return false;
             }
         }
-        return true;
+        return false;
     }
 
 

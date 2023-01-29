@@ -63,6 +63,8 @@ public class InputUrl extends Input {
             String downloadFilePath = getBaseUrl() + strInputFileName;
             FileUtil.del(downloadFilePath);
             // 从指定的URL中将文件读取下载到目标路径
+            log.debug("url:" + url);
+            log.debug("downloadFilePath:" + downloadFilePath);
             HttpUtil.downloadFile(url, downloadFilePath);
             Assert.isTrue(FileUtil.exist(downloadFilePath), this.url + "下载文件失败");
             // log.info("下载【{}】文件【{}】成功", this.url, downloadFilePath);
