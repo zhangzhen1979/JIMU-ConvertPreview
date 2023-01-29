@@ -89,7 +89,7 @@ convert:
   # 转换引擎配置
   engine:
     # 可转换的图片格式
-    picType: tif,tiff,jpg,jpeg,png,bmp,png
+    picType: tif,tiff,jpg,jpeg,png,bmp,png,webp
     localUtil:
       # 使用本地WPS应用转换
       wps:

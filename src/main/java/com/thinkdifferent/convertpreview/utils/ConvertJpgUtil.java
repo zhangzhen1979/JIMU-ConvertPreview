@@ -1,6 +1,7 @@
 package com.thinkdifferent.convertpreview.utils;
 
 import cn.hutool.core.io.FileUtil;
+import com.luciad.imageio.webp.WebPReadParam;
 import com.sun.media.jai.codec.*;
 import com.thinkdifferent.convertpreview.entity.ConvertEntity;
 import com.thinkdifferent.convertpreview.entity.Thumbnail;
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.FileImageInputStream;
 import javax.media.jai.JAI;
 import javax.media.jai.PlanarImage;
 import java.awt.image.BufferedImage;
@@ -33,7 +36,7 @@ public class ConvertJpgUtil {
 
     /**
      * 图片 转  JPG。
-     * 支持输入格式如下：BMP、GIF、FlashPix、JPEG、PNG、PMN、TIFF、WBMP
+     * 支持输入格式如下：BMP、GIF、FlashPix、JPEG、PNG、PMN、TIFF、WBMP；WEBP
      *
      * @param strInputFile  输入文件的路径和文件名
      * @param strOutputFile 输出文件的路径和文件名
@@ -49,77 +52,87 @@ public class ConvertJpgUtil {
         strOutputFile = SystemUtil.beautifulFilePath(strOutputFile);
 
         if(inputFile.length() > 0){
-            try (FileInputStream fis = new FileInputStream(inputFile)){
-                // create file
-                FileUtil.touch(strOutputFile);
-                BufferedImage image = ImageIO.read(fis);
-                if(image != null){
-                    int width = image.getWidth();
-                    int height = image.getHeight();
-
-                    Thumbnails.of(inputFile)
-                            .size(width, height)
-                            .outputFormat("jpg")
-                            .toFile(strOutputFile);
-
-                    image = null;
-                }
-
-                return Collections.singletonList(strOutputFile);
-            } catch (Exception e) {
-                log.error("图片转换为jpg出现问题，使用旧方法", e);
-            }
-
-            // 老办法，解决Thumbnails组件部分格式不兼容的问题。
-            String strFilePrefix = strOutputFile.substring(strOutputFile.lastIndexOf("/") + 1, strOutputFile.lastIndexOf("."));
             String strFileExt = strInputFile.substring(strInputFile.lastIndexOf(".") + 1).toUpperCase();
 
-            @Cleanup FileSeekableStream fileSeekStream = new FileSeekableStream(strInputFile);
-
-            try{
-                ImageDecoder imageDecoder = ImageCodec.createImageDecoder(getPicType(strFileExt), fileSeekStream, null);
-                int intPicCount = imageDecoder.getNumPages();
-                log.info("该" + strFileExt + "文件共有【" + intPicCount + "】页");
-
-                String strJpgPath = "";
-                if (intPicCount == 1) {
-                    // 如果是单页tif文件，则转换的目标文件夹就在指定的位置
-                    strJpgPath = strOutputFile.substring(0, strOutputFile.lastIndexOf("/"));
-                } else {
-                    // 如果是多页tif文件，则在目标文件夹下，按照文件名再创建子目录，将转换后的文件放入此新建的子目录中
-                    strJpgPath = strOutputFile.substring(0, strOutputFile.lastIndexOf("."));
+            if("webp".equalsIgnoreCase(strFileExt)){
+                File fileJpg = webp2Jpg(strInputFile, strOutputFile);
+                if(fileJpg != null && fileJpg.exists() && fileJpg.length() > 0){
+                    return Collections.singletonList(strOutputFile);
                 }
 
-                // 处理目标文件夹，如果不存在则自动创建
-                File fileJpgPath = new File(strJpgPath);
-                if (!fileJpgPath.exists()) {
-                    fileJpgPath.mkdirs();
-                }
+            }else{
+                try (FileInputStream fis = new FileInputStream(inputFile)){
+                    // create file
+                    FileUtil.touch(strOutputFile);
+                    BufferedImage image = ImageIO.read(fis);
+                    if(image != null){
+                        int width = image.getWidth();
+                        int height = image.getHeight();
 
-                PlanarImage in = JAI.create("stream", fileSeekStream);
-                // OutputStream os = null;
-                JPEGEncodeParam param = new JPEGEncodeParam();
+                        Thumbnails.of(inputFile)
+                                .size(width, height)
+                                .outputFormat("jpg")
+                                .toFile(strOutputFile);
 
-                // 循环，处理每页tif文件，转换为jpg
-                for (int i = 0; i < intPicCount; i++) {
-                    String strJpg;
-                    if (intPicCount == 1) {
-                        strJpg = strJpgPath + "/" + strFilePrefix + ".jpg";
-                    } else {
-                        strJpg = strJpgPath + "/" + i + ".jpg";
+                        image = null;
                     }
 
-                    File fileJpg = new File(strJpg);
-                    @Cleanup OutputStream os = new FileOutputStream(strJpg);
-                    ImageEncoder enc = ImageCodec.createImageEncoder("JPEG", os, param);
-                    enc.encode(in);
-
-                    log.info("每页分别保存至： " + fileJpg.getCanonicalPath());
-
-                    listImageFiles.add(strJpg);
+                    return Collections.singletonList(strOutputFile);
+                } catch (Exception e) {
+                    log.error("图片转换为jpg出现问题，使用旧方法", e);
                 }
-            }catch (Exception e){
-                log.error("图片转换为jpg异常：", e);
+
+                // 老办法，解决Thumbnails组件部分格式不兼容的问题。
+                String strFilePrefix = strOutputFile.substring(strOutputFile.lastIndexOf("/") + 1, strOutputFile.lastIndexOf("."));
+
+                @Cleanup FileSeekableStream fileSeekStream = new FileSeekableStream(strInputFile);
+
+                try{
+                    ImageDecoder imageDecoder = ImageCodec.createImageDecoder(getPicType(strFileExt), fileSeekStream, null);
+                    int intPicCount = imageDecoder.getNumPages();
+                    log.info("该" + strFileExt + "文件共有【" + intPicCount + "】页");
+
+                    String strJpgPath = "";
+                    if (intPicCount == 1) {
+                        // 如果是单页tif文件，则转换的目标文件夹就在指定的位置
+                        strJpgPath = strOutputFile.substring(0, strOutputFile.lastIndexOf("/"));
+                    } else {
+                        // 如果是多页tif文件，则在目标文件夹下，按照文件名再创建子目录，将转换后的文件放入此新建的子目录中
+                        strJpgPath = strOutputFile.substring(0, strOutputFile.lastIndexOf("."));
+                    }
+
+                    // 处理目标文件夹，如果不存在则自动创建
+                    File fileJpgPath = new File(strJpgPath);
+                    if (!fileJpgPath.exists()) {
+                        fileJpgPath.mkdirs();
+                    }
+
+                    PlanarImage in = JAI.create("stream", fileSeekStream);
+                    // OutputStream os = null;
+                    JPEGEncodeParam param = new JPEGEncodeParam();
+
+                    // 循环，处理每页tif文件，转换为jpg
+                    for (int i = 0; i < intPicCount; i++) {
+                        String strJpg;
+                        if (intPicCount == 1) {
+                            strJpg = strJpgPath + "/" + strFilePrefix + ".jpg";
+                        } else {
+                            strJpg = strJpgPath + "/" + i + ".jpg";
+                        }
+
+                        File fileJpg = new File(strJpg);
+                        @Cleanup OutputStream os = new FileOutputStream(strJpg);
+                        ImageEncoder enc = ImageCodec.createImageEncoder("JPEG", os, param);
+                        enc.encode(in);
+
+                        log.info("每页分别保存至： " + fileJpg.getCanonicalPath());
+
+                        listImageFiles.add(strJpg);
+                    }
+                }catch (Exception e){
+                    log.error("图片转换为jpg异常：", e);
+                }
+
             }
 
         }
@@ -138,6 +151,29 @@ public class ConvertJpgUtil {
         }
     }
 
+    private File webp2Jpg(String webpPath, String jpgPath) throws IOException {
+        File fileWebp = new File(webpPath);
+        File fileJpg = null;
+        if(fileWebp != null && fileWebp.exists() && fileWebp.length() > 0){
+            ImageReader reader = ImageIO.getImageReadersByMIMEType("image/webp").next();
+            WebPReadParam readParam = new WebPReadParam();
+            readParam.setBypassFiltering(true);
+
+            @Cleanup FileImageInputStream is = new FileImageInputStream(fileWebp);
+            reader.setInput(is);
+
+            try {
+                BufferedImage image = reader.read(0, readParam);
+
+                fileJpg = new File(jpgPath);
+                ImageIO.write(image, "jpg", fileJpg);
+            }catch (Exception e){
+                log.error("Webp图片转换为jpg异常：", e);
+            }
+        }
+
+        return fileJpg;
+    }
 
     /*************************** 图片处理相关方法 **************************/
 

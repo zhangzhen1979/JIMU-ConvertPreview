@@ -95,6 +95,14 @@
             <systemPath>${basedir}/lib/jai_codec-1.1.3.jar</systemPath>
         </dependency>
 
+        <!-- 对webp格式支持 -->
+        <dependency>
+            <groupId>org.sejda.imageio</groupId>
+            <artifactId>webp-imageio</artifactId>
+            <version>0.1.6</version>
+        </dependency>
+
+
         <!-- 引入jodconverter、libreoffice依赖转office文档pdf -->
         <dependency>
             <groupId>org.jodconverter</groupId>
@@ -213,14 +221,6 @@
             <version>1.9.6</version>
         </dependency>
 
-        <!--金山WPS预览服务-->
-        <dependency>
-            <groupId>cn.keking</groupId>
-            <artifactId>office-plugin</artifactId>
-            <version>4.1.0-SNAPSHOT</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/office-plugin-4.1.0-SNAPSHOT.jar</systemPath>
-        </dependency>
         <!--Jacob-->
         <dependency>
             <groupId>com.jacob</groupId>

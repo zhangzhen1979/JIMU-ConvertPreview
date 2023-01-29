@@ -153,39 +153,41 @@ public class ConvertServiceImpl implements ConvertService {
         CallBackResult callBackResult = new CallBackResult();
         // 获取回写类型
         String strWriteBackType = convertEntity.getWriteBackType().name();
-        if("base64".equalsIgnoreCase(type)){
-            byte[] b = Files.readAllBytes(Paths.get(fileOut.getAbsolutePath()));
-            // 文件转换为字节后，转换后的文件即可删除（文件没用了）。
-            callBackResult.setFlag(true);
-            callBackResult.setBase64(Base64.getEncoder().encodeToString(b));
+        if(fileOut != null && fileOut.exists() && fileOut.length() > 0){
+            if("base64".equalsIgnoreCase(type)){
+                byte[] b = Files.readAllBytes(Paths.get(fileOut.getAbsolutePath()));
+                // 文件转换为字节后，转换后的文件即可删除（文件没用了）。
+                callBackResult.setFlag(true);
+                callBackResult.setBase64(Base64.getEncoder().encodeToString(b));
 
-            strWriteBackType = "base64";
+                strWriteBackType = "base64";
 
-        }else if("stream".equalsIgnoreCase(type)){
-            callBackResult.setFlag(true);
+            }else if("stream".equalsIgnoreCase(type)){
+                callBackResult.setFlag(true);
 
-            response.setCharacterEncoding("UTF-8");
+                response.setCharacterEncoding("UTF-8");
 
-            InputStream is = new BufferedInputStream(new FileInputStream(fileOut));
-            byte[] bytes = new byte[1024];
-            //设置响应头参数
-            response.addHeader("Content-Disposition", "inline;filename=" + fileOut.getName());
-            response.setContentType("application/octet-stream");
-            //响应输出流输出
-            OutputStream os = new BufferedOutputStream(response.getOutputStream());
-            while (is.read(bytes) != -1) {
-                os.write(bytes);
+                InputStream is = new BufferedInputStream(new FileInputStream(fileOut));
+                byte[] bytes = new byte[1024];
+                //设置响应头参数
+                response.addHeader("Content-Disposition", "inline;filename=" + fileOut.getName());
+                response.setContentType("application/octet-stream");
+                //响应输出流输出
+                OutputStream os = new BufferedOutputStream(response.getOutputStream());
+                while (is.read(bytes) != -1) {
+                    os.write(bytes);
+                }
+                IOUtils.closeQuietly(os);
+                IOUtils.closeQuietly(is);
+
+                callBackResult.setResponse(response);
+
+                strWriteBackType = "stream";
+
+            }else if("convert".equalsIgnoreCase(type)){
+                // 4. 回调
+                callBackResult = callBack(writeBackResult, convertEntity, listJpg, fileOut);
             }
-            IOUtils.closeQuietly(os);
-            IOUtils.closeQuietly(is);
-
-            callBackResult.setResponse(response);
-
-            strWriteBackType = "stream";
-
-        }else if("convert".equalsIgnoreCase(type)){
-            // 4. 回调
-            callBackResult = callBack(writeBackResult, convertEntity, listJpg, fileOut);
         }
 
         // 5. 清理临时文件

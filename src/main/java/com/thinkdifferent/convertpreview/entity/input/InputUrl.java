@@ -59,43 +59,49 @@ public class InputUrl extends Input {
         // 文件临时存储路径
         if (super.inputFile == null) {
             String strInputFileName = getFileNameFromHeader();
-            // 移除重名文件
-            String downloadFilePath = getBaseUrl() + strInputFileName;
-            FileUtil.del(downloadFilePath);
-            // 从指定的URL中将文件读取下载到目标路径
-            log.debug("url:" + url);
-            log.debug("downloadFilePath:" + downloadFilePath);
-            HttpUtil.downloadFile(url, downloadFilePath);
-            Assert.isTrue(FileUtil.exist(downloadFilePath), this.url + "下载文件失败");
-            // log.info("下载【{}】文件【{}】成功", this.url, downloadFilePath);
-            super.setInputFile(new File(downloadFilePath));
+            if(!StringUtils.isEmpty(strInputFileName)){
+                // 移除重名文件
+                String downloadFilePath = getBaseUrl() + strInputFileName;
+                FileUtil.del(downloadFilePath);
+                // 从指定的URL中将文件读取下载到目标路径
+                log.debug("url:" + url);
+                log.debug("downloadFilePath:" + downloadFilePath);
+                HttpUtil.downloadFile(url, downloadFilePath);
+                Assert.isTrue(FileUtil.exist(downloadFilePath), this.url + "下载文件失败");
+                // log.info("下载【{}】文件【{}】成功", this.url, downloadFilePath);
+                super.setInputFile(new File(downloadFilePath));
+            }
         }
         return super.inputFile;
     }
 
     @SneakyThrows
     private String getFileNameFromHeader() {
-        String fileName = null;
-        URL urlConnection = new URL(this.url);
-        URLConnection uc = urlConnection.openConnection();
+        if(!StringUtils.isEmpty(fileType)){
+            String fileName = null;
+            URL urlConnection = new URL(this.url);
+            URLConnection uc = urlConnection.openConnection();
 
-        String uuid = "";
-        if (this.url.contains("?") && this.url.contains("uuid=")) {
-            // 取UUID
-            String subUuid = this.url.substring(this.url.indexOf("uuid="));
-            uuid = subUuid.substring(5, subUuid.contains("&") ? subUuid.indexOf("&") : subUuid.length());
-        }
+            String uuid = "";
+            if (this.url.contains("?") && this.url.contains("uuid=")) {
+                // 取UUID
+                String subUuid = this.url.substring(this.url.indexOf("uuid="));
+                uuid = subUuid.substring(5, subUuid.contains("&") ? subUuid.indexOf("&") : subUuid.length());
+            }
 
-        String realFileName = "";
-        // 优先从header获取， 获取失败截取http请求最后内容
-        String headerField = uc.getHeaderField("Content-Disposition");
-        if (StringUtils.isNotBlank(headerField)) {
-            fileName = new String(headerField.getBytes(StandardCharsets.ISO_8859_1), "GBK");
-            realFileName = URLDecoder.decode(fileName.substring(fileName.indexOf("filename=") + 9), "UTF-8");
-        } else {
-            realFileName = UUID.randomUUID().toString() + "." + this.fileType;
+            String realFileName = "";
+            // 优先从header获取， 获取失败截取http请求最后内容
+            String headerField = uc.getHeaderField("Content-Disposition");
+            if (StringUtils.isNotBlank(headerField)) {
+                fileName = new String(headerField.getBytes(StandardCharsets.ISO_8859_1), "GBK");
+                realFileName = URLDecoder.decode(fileName.substring(fileName.indexOf("filename=") + 9), "UTF-8");
+            } else {
+                realFileName = UUID.randomUUID().toString() + "." + this.fileType;
+            }
+            return StringUtils.isNotBlank(uuid) ? (uuid + realFileName.substring(realFileName.lastIndexOf("."))) : realFileName;
+
         }
-        return StringUtils.isNotBlank(uuid) ? (uuid + realFileName.substring(realFileName.lastIndexOf("."))) : realFileName;
+        return null;
     }
 
     public String getUrl() {
