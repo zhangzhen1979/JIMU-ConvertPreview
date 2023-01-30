@@ -2,8 +2,8 @@ package com.thinkdifferent.convertpreview.entity.mark;
 
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import com.thinkdifferent.convertpreview.utils.PdfWaterMarkUtil;
 import com.thinkdifferent.convertpreview.utils.WaterMarkUtil;
+import com.thinkdifferent.convertpreview.utils.watermark.PdfWaterMarkUtil;
 import lombok.extern.log4j.Log4j2;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;

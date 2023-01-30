@@ -1,6 +1,7 @@
-package com.thinkdifferent.convertpreview.utils;
+package com.thinkdifferent.convertpreview.utils.watermark;
 
 import com.thinkdifferent.convertpreview.entity.ConvertEntity;
+import com.thinkdifferent.convertpreview.utils.SystemUtil;
 import lombok.Cleanup;
 import lombok.extern.log4j.Log4j2;
 import org.apache.pdfbox.Loader;

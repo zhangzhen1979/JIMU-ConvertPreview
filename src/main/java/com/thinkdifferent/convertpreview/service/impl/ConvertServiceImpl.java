@@ -14,7 +14,18 @@ import com.thinkdifferent.convertpreview.entity.WriteBackResult;
 import com.thinkdifferent.convertpreview.entity.input.Input;
 import com.thinkdifferent.convertpreview.service.ConvertService;
 import com.thinkdifferent.convertpreview.service.RabbitMQService;
-import com.thinkdifferent.convertpreview.utils.*;
+import com.thinkdifferent.convertpreview.utils.Excel2HtmlUtil;
+import com.thinkdifferent.convertpreview.utils.FileTypeUtil;
+import com.thinkdifferent.convertpreview.utils.TDZipUtil;
+import com.thinkdifferent.convertpreview.utils.WriteBackUtil;
+import com.thinkdifferent.convertpreview.utils.convert4jpg.ConvertJpgEnum;
+import com.thinkdifferent.convertpreview.utils.convert4jpg.ConvertJpgUtil;
+import com.thinkdifferent.convertpreview.utils.convert4ofd.ConvertOfdUtil;
+import com.thinkdifferent.convertpreview.utils.convert4pdf.ConvertPdfEnum;
+import com.thinkdifferent.convertpreview.utils.convert4pdf.ConvertPdfUtil;
+import com.thinkdifferent.convertpreview.utils.watermark.JpgWaterMarkUtil;
+import com.thinkdifferent.convertpreview.utils.watermark.OfdWaterMarkUtil;
+import com.thinkdifferent.convertpreview.utils.watermark.PdfWaterMarkUtil;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import net.sf.json.JSONObject;
@@ -135,11 +146,10 @@ public class ConvertServiceImpl implements ConvertService {
 
         if (fileOut != null && fileOut.exists()) {
             // 2. 加水印、归档章、页标等
-            String strOutFile = markFile(convertEntity, strDestPathFileName, fileOut);
+            markFile(convertEntity, strDestPathFileName, fileOut);
             // 2.1 对输出文件加密
-            outFileEncryptor(convertEntity, strOutFile);
+            outFileEncryptor(convertEntity, fileOut.getAbsolutePath());
 
-            fileOut = new File(strOutFile);
             // 3. 回写
             // 3.1 验证转换后文件, 成功后回写
             boolean blnResult = checkOutFile(fileOut, convertEntity);
@@ -263,7 +273,7 @@ public class ConvertServiceImpl implements ConvertService {
                 if (StringUtils.equalsAnyIgnoreCase(strInputFileType, strsPicType)
                         && "jpg".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
                     // 将传入的图片文件转换为jpg文件，存放到输出路径中。返回转换后的JPG文件的路径字符串List。
-                    List<String> listJpg = convertJpgUtil.convertPic2Jpg(fileInput.getCanonicalPath(),
+                    List<String> listJpg = ConvertJpgEnum.convert(fileInput.getCanonicalPath(),
                             strDestPathFileName + ".jpg");
 
                     // 如果需要生成【首页缩略图】，则只执行“缩略图”操作，不执行后续水印等操作。
@@ -362,7 +372,7 @@ public class ConvertServiceImpl implements ConvertService {
             List<File> targetFiles,
             List<String> tempFiles,
             String[] strsPicType)
-            throws IOException, DocumentException {
+            throws Exception {
 
         // 多文件处理或转单文件转pdf\ofd
         for (int i = 0; i < convertEntity.getInputFiles().length; i++) {
@@ -390,7 +400,7 @@ public class ConvertServiceImpl implements ConvertService {
                 if (StringUtils.equalsAnyIgnoreCase(strInputFileType, strsPicType)) {
                     // 将图片文件转换为JPG格式。返回文件路径字符串List
                     if(!"jpg".equalsIgnoreCase(strInputFileType)){
-                        listTempJpg = convertJpgUtil.convertPic2Jpg(fileInput.getAbsolutePath(), strDestFile + ".jpg");
+                        listTempJpg = ConvertJpgEnum.convert(fileInput.getAbsolutePath(), strDestFile + ".jpg");
                     }else{
                         listTempJpg.add(fileInput.getAbsolutePath());
                     }
@@ -406,11 +416,10 @@ public class ConvertServiceImpl implements ConvertService {
                             // 将JPG文件路径字符串List加入到“临时文件列表”
                             tempFiles.addAll(listTempJpg);
                             // jpg文件转pdf（自动完成JPG文件列表中所有文件的转换、合并）
-                            filePdf = convertPdfUtil.convertPic2Pdf(
-                                    fileInput.getCanonicalPath(),
+                            filePdf = ConvertPdfEnum.convert(
                                     "jpg",
                                     listTempJpg,
-                                    strDestFile,
+                                    strDestFile + ".pdf",
                                     convertEntity);
                             // 如果输出格式为pdf，则跳过ofd转换。执行下一循环。
                             if ("pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())
@@ -425,7 +434,8 @@ public class ConvertServiceImpl implements ConvertService {
                 } else if(!"ofd".equalsIgnoreCase(strInputFileType)){
                     // 如果输入的文件格式不是“ofd”（前面已经判断了、处理了图片格式，此时剩余的格式均为Office相关格式），则可以执行转PDF操作。
                     // 将传入的文档文件转换为PDF格式，保存到本地的“输出文件夹”中，并按照传入参数为文件命名。
-                    filePdf = convertPdfUtil.convertOffice2Pdf(
+                    filePdf = ConvertPdfEnum.convert(
+                            FileUtil.getType(fileInput),
                             fileInput.getAbsolutePath(),
                             strDestFile + ".pdf",
                             convertEntity
@@ -471,7 +481,7 @@ public class ConvertServiceImpl implements ConvertService {
                 }
 
             }else{
-                // 如果输入的格式等于输出的格式，则不需要抓换，直接进行文件复制。
+                // 如果输入的格式等于输出的格式，则不需要转换，直接进行文件复制。
                 // 将输入文件复制到目标文件夹（path回写路径，或本地temp文件夹）
 
                 // 如果输入文件存在，则进行文件复制操作。

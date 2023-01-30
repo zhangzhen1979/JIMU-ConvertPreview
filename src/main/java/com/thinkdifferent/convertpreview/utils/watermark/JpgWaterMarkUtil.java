@@ -1,4 +1,4 @@
-package com.thinkdifferent.convertpreview.utils;
+package com.thinkdifferent.convertpreview.utils.watermark;
 
 import com.thinkdifferent.convertpreview.entity.ConvertEntity;
 import lombok.extern.log4j.Log4j2;

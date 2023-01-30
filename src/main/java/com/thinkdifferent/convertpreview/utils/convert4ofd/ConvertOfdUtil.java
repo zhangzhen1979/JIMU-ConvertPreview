@@ -1,4 +1,4 @@
-package com.thinkdifferent.convertpreview.utils;
+package com.thinkdifferent.convertpreview.utils.convert4ofd;
 
 import cn.hutool.core.io.FileUtil;
 import com.thinkdifferent.convertpreview.entity.OutFileEncryptorEntity;
@@ -142,10 +142,15 @@ public class ConvertOfdUtil {
 
             if(!StringUtils.isEmpty(outFileEncryptorEntity.getUserPassWord())){
                 try (OFDEncryptor ofdEncryptor = new OFDEncryptor(pathSource, pathTarget)) {
+                    String strUserName = "admin";
+                    if(!StringUtils.isEmpty(outFileEncryptorEntity.getUserName())){
+                        strUserName = outFileEncryptorEntity.getUserName();
+                    }
+
                     final UserFEKEncryptor encryptor = new UserPasswordEncryptor(
                             // 目前，加密后的OFD建议使用“超越版式办公套件”（不要用数科OFD阅读器，无法打开加密后的OFD）
                             // 此工具个人版仅支持用户名为admin的加密信息。
-                            "admin",
+                            strUserName,
                             outFileEncryptorEntity.getUserPassWord()
                     );
                     ofdEncryptor.addUser(encryptor);

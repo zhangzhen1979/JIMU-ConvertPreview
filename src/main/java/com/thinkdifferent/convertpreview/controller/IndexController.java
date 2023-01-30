@@ -1,7 +1,7 @@
 package com.thinkdifferent.convertpreview.controller;
 
 import com.thinkdifferent.convertpreview.config.SystemConstants;
-import com.thinkdifferent.convertpreview.utils.LocalConvertUtil;
+import com.thinkdifferent.convertpreview.utils.convert4pdf.LocalConvertUtil;
 import com.thinkdifferent.convertpreview.vo.MessageBean;
 import io.swagger.annotations.ApiOperation;
 import net.sf.json.JSONObject;
@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.security.PublicKey;
 import java.util.Collection;
 
 /**
@@ -33,8 +32,8 @@ public class IndexController {
     }
 
     @GetMapping("testJacob")
-    public MessageBean<Boolean> testJacob(@RequestParam("input") String input, @RequestParam("output") String output) throws IOException,
-            InterruptedException {
-        return MessageBean.success(new LocalConvertUtil().process(input, output));
+    public MessageBean<Boolean> testJacob(@RequestParam("input") String input, @RequestParam("output") String output)
+            throws IOException, InterruptedException {
+        return MessageBean.success(LocalConvertUtil.process(input, output));
     }
 }

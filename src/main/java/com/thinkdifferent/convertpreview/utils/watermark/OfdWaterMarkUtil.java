@@ -1,4 +1,4 @@
-package com.thinkdifferent.convertpreview.utils;
+package com.thinkdifferent.convertpreview.utils.watermark;
 
 import cn.hutool.core.lang.PatternPool;
 import cn.hutool.core.util.ReUtil;
