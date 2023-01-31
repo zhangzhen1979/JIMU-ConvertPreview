@@ -33,17 +33,18 @@ public enum ConvertPdfEnum {
     /**
      * 文件转换为PDF
      *
+     * @param strType       输入类型。包括图片文件扩展名（jpg、tif）、转换引擎名称
      * @param objInputFile  输入文件路径
      * @param strOutputFile 输出文件路径
      * @return List<String>    转换后的JPG文件路径List
      */
-    public static File convert(String strInputFileType, Object objInputFile, String strOutputFile,
+    public static File convert(String strType, Object objInputFile, String strOutputFile,
                                ConvertEntity convertEntity)
             throws Exception {
         for (ConvertPdfEnum convertPdfEnum : ConvertPdfEnum.values()) {
             ConvertPdf convertPdfVal = convertPdfEnum.clazzConvertPdf.newInstance();
 
-            if (convertPdfVal.match(strInputFileType)) {
+            if (convertPdfVal.match(strType)) {
                 return convertPdfVal.convert(objInputFile, strOutputFile, convertEntity);
             }
         }

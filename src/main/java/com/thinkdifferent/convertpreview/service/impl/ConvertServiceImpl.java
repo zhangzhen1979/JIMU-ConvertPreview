@@ -4,7 +4,6 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
-import com.lowagie.text.DocumentException;
 import com.thinkdifferent.convertpreview.config.ConvertConfig;
 import com.thinkdifferent.convertpreview.config.SystemConstants;
 import com.thinkdifferent.convertpreview.entity.CallBackResult;
@@ -363,8 +362,7 @@ public class ConvertServiceImpl implements ConvertService {
      * @param strDestPathFileName 目标文件路径及文件名，不含后缀
      * @param targetFiles         目标文件File对象List
      * @param tempFiles           临时文件字符串List（包括：url、ftp方式接收的文件（input文件夹中）；各类文件转换ofd过程中生成的pdf文件；pdf、ofd合并时，待合并的文件。
-     * @throws IOException         err
-     * @throws DocumentException   err
+     * @throws Exception         err
      */
     private void convertFileFormat(
             ConvertEntity convertEntity,
@@ -435,7 +433,7 @@ public class ConvertServiceImpl implements ConvertService {
                     // 如果输入的文件格式不是“ofd”（前面已经判断了、处理了图片格式，此时剩余的格式均为Office相关格式），则可以执行转PDF操作。
                     // 将传入的文档文件转换为PDF格式，保存到本地的“输出文件夹”中，并按照传入参数为文件命名。
                     filePdf = ConvertPdfEnum.convert(
-                            FileUtil.getType(fileInput),
+                            getConvertEngine(),
                             fileInput.getAbsolutePath(),
                             strDestFile + ".pdf",
                             convertEntity
@@ -504,6 +502,23 @@ public class ConvertServiceImpl implements ConvertService {
         }
     }
 
+    /**
+     * 获取当前配置的PDF转换引擎的名称，用于后续判断
+     * @return    转换引擎名称
+     */
+    private String getConvertEngine(){
+        if(ConvertConfig.wpsEnabled){
+            return "WPS";
+        }
+        if(ConvertConfig.officeEnabled){
+            return "OFFICE";
+        }
+        if(ConvertConfig.libreOfficeEnabled){
+            return "LIBRE";
+        }
+
+        return null;
+    }
 
     /**
      * 给文件添加水印
