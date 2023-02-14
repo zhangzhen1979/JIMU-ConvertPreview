@@ -25,7 +25,9 @@ public class ScheduleConfig {
      */
     @Scheduled(cron = "0 0 1 * * ? ")
     public void cleanPdfImages() {
-        String strTargetPath = ConvertConfig.inPutTempPath;
+        String strInputTempPath = ConvertConfig.inPutTempPath;
+        String strOutputTempPath = ConvertConfig.outPutPath;
+        String[] strsTempPaths = {strInputTempPath, strOutputTempPath};
 
         // 当前时间 - 24 * 3
         Calendar calendar1 = Calendar.getInstance();
@@ -33,16 +35,19 @@ public class ScheduleConfig {
         long day3Ago = calendar1.getTime().getTime();
 
         // 可删除的文件
-        File[] files = new File(strTargetPath).listFiles(pathname -> canDelete(pathname, day3Ago));
-        if (Objects.nonNull(files)) {
-            for (File file : files) {
-                try {
-                    file.delete();
-                } catch (Exception e) {
-                    log.error("移除过期文件失败：" + file.getName(), e);
+        for(int i=0;i<strsTempPaths.length;i++){
+            File[] files = new File(strsTempPaths[i]).listFiles(pathname -> canDelete(pathname, day3Ago));
+            if (Objects.nonNull(files)) {
+                for (File file : files) {
+                    try {
+                        file.delete();
+                    } catch (Exception e) {
+                        log.error("移除过期文件失败：" + file.getName(), e);
+                    }
                 }
             }
         }
+
     }
 
     /**
