@@ -193,7 +193,7 @@ public class ConvertController {
             }
 
             String strPath = ConvertConfig.outPutPath;
-            strPath = SystemUtil.beautifulDir(strPath);
+            strPath = SystemUtil.beautifulPath(strPath);
             if (!strPath.endsWith("/")) {
                 strPath = strPath + "/";
             }

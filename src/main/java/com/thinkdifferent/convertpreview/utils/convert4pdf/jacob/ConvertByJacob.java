@@ -121,9 +121,10 @@ public class ConvertByJacob {
                             new Object[]{inputFile, new Variant(false), new Variant(false)}, new int[9])
                     .toDispatch();
             // 转换格式
-            Dispatch.invoke(excel, "ExportAsFixedFormat", Dispatch.Method, new Object[]{new Variant(0), // PDF格式=0
-                    pdfFile, new Variant(0) // 0=标准 (生成的PDF图片不会变模糊) 1=最小文件
-                    // (生成的PDF图片糊的一塌糊涂)
+            Dispatch.invoke(excel, "ExportAsFixedFormat", Dispatch.Method, new Object[]{
+                    new Variant(0), // PDF格式=0
+                    pdfFile,
+                    new Variant(0) // 0=标准 (生成的PDF图片不会变模糊) 1=最小文件(生成的PDF图片糊的一塌糊涂)
             }, new int[1]);
 
             // 这里放弃使用SaveAs

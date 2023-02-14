@@ -81,10 +81,10 @@ convert:
     # pdf 用字体文件路径 仿宋
     font: C:/Windows/Fonts/simfang.ttf
   path:
-    # 接收的输入文件存储的临时文件夹
-    inPutTempPath: E:/temp/input/
-    # 默认本地输出文件所在文件夹
-    outPutPath: E:/temp/output/
+    # 默认本地接收文件夹。必须以“intemp/”结尾。不要配置到存储的根目录！定时任务会定时清空临时文件夹中的内容！！！
+    inPutTempPath: c:/temp/intemp/
+    # 默认本地输出文件夹。必须以“outtemp/”结尾。不要配置到存储的根目录！定时任务会定时清空临时文件夹中的内容！！！
+    outPutPath: c:/temp/outtemp/
 
   # 转换引擎配置
   engine:

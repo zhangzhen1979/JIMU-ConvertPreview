@@ -29,7 +29,7 @@ public class WriteBackPath extends WriteBack {
     @Override
     public String getOutputPath() {
         // 本地路径使用配置的输出路径
-        return SystemUtil.beautifulDir(path);
+        return SystemUtil.beautifulPath(path);
     }
 
     /**

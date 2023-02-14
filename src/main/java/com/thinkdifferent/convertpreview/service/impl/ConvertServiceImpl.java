@@ -13,10 +13,7 @@ import com.thinkdifferent.convertpreview.entity.WriteBackResult;
 import com.thinkdifferent.convertpreview.entity.input.Input;
 import com.thinkdifferent.convertpreview.service.ConvertService;
 import com.thinkdifferent.convertpreview.service.RabbitMQService;
-import com.thinkdifferent.convertpreview.utils.Excel2HtmlUtil;
-import com.thinkdifferent.convertpreview.utils.FileTypeUtil;
-import com.thinkdifferent.convertpreview.utils.TDZipUtil;
-import com.thinkdifferent.convertpreview.utils.WriteBackUtil;
+import com.thinkdifferent.convertpreview.utils.*;
 import com.thinkdifferent.convertpreview.utils.convert4jpg.ConvertJpgEnum;
 import com.thinkdifferent.convertpreview.utils.convert4jpg.ConvertJpgUtil;
 import com.thinkdifferent.convertpreview.utils.convert4ofd.ConvertOfdUtil;
@@ -41,6 +38,7 @@ import org.ofdrw.tool.merge.OFDMerger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
@@ -126,7 +124,7 @@ public class ConvertServiceImpl implements ConvertService {
         long stime = System.currentTimeMillis();
 
         File fileOutputDir = new File(ConvertConfig.outPutPath);
-        if(!fileOutputDir.exists()){
+        if (!fileOutputDir.exists()) {
             fileOutputDir.mkdirs();
         }
 
@@ -162,8 +160,8 @@ public class ConvertServiceImpl implements ConvertService {
         CallBackResult callBackResult = new CallBackResult();
         // 获取回写类型
         String strWriteBackType = convertEntity.getWriteBackType().name();
-        if(fileOut != null && fileOut.exists() && fileOut.length() > 0){
-            if("base64".equalsIgnoreCase(type)){
+        if (fileOut != null && fileOut.exists() && fileOut.length() > 0) {
+            if ("base64".equalsIgnoreCase(type)) {
                 byte[] b = Files.readAllBytes(Paths.get(fileOut.getAbsolutePath()));
                 // 文件转换为字节后，转换后的文件即可删除（文件没用了）。
                 callBackResult.setFlag(true);
@@ -171,7 +169,7 @@ public class ConvertServiceImpl implements ConvertService {
 
                 strWriteBackType = "base64";
 
-            }else if("stream".equalsIgnoreCase(type)){
+            } else if ("stream".equalsIgnoreCase(type)) {
                 callBackResult.setFlag(true);
 
                 response.setCharacterEncoding("UTF-8");
@@ -193,7 +191,7 @@ public class ConvertServiceImpl implements ConvertService {
 
                 strWriteBackType = "stream";
 
-            }else if("convert".equalsIgnoreCase(type)){
+            } else if ("convert".equalsIgnoreCase(type)) {
                 // 4. 回调
                 callBackResult = callBack(writeBackResult, convertEntity, listJpg, fileOut);
             }
@@ -263,7 +261,7 @@ public class ConvertServiceImpl implements ConvertService {
             if (inputs.length == 1) {
                 // 获取输入文件的File对象
                 File fileInput = inputs[0].checkAndGetInputFile();
-                if(fileInput.length() == 0){
+                if (fileInput.length() == 0) {
                     return null;
                 }
                 // 获取输入文件的类型（扩展名）
@@ -293,7 +291,18 @@ public class ConvertServiceImpl implements ConvertService {
                     strsPicType);
             // 如果转换后的目标文件只有一个，则直接返回目标文件对象。
             if (targetFiles.size() == 1) {
-                return targetFiles.get(0);
+                File outFile = targetFiles.get(0);
+                // 双层PDF 目前只支持处理单个文件
+                if ("pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
+                    if (FileUtil.exist(outFile)) {
+                        // 双层PDF
+                        if (!CollectionUtils.isEmpty(convertEntity.getContexts())) {
+                            // 双层PDF修改
+                            DoubleLayerPdfUtil.addText(outFile, convertEntity.getContexts());
+                        }
+                    }
+                }
+                return outFile;
             } else if (targetFiles.size() > 1) {
                 // 如果转换后的目标文件有多个，则需要执行“文件合并”
 
@@ -305,7 +314,7 @@ public class ConvertServiceImpl implements ConvertService {
                     pdfMerger.setDestinationFileName(strDestPathFileName + ".pdf");
                     // 循环，处理“目标文件列表”中的所有文件，进行合并
                     for (File file : targetFiles) {
-                        if(file.length() > 0){
+                        if (file.length() > 0) {
                             // 将需合并的文件加入“PDF合并工具”对象
                             pdfMerger.addSource(file);
                         }
@@ -324,7 +333,7 @@ public class ConvertServiceImpl implements ConvertService {
                     try (OFDMerger ofdMerger = new OFDMerger(fileOfd.toPath())) {
                         // 循环，处理“目标文件列表”中的所有文件，进行合并
                         for (File file : targetFiles) {
-                            if(file.length() > 0){
+                            if (file.length() > 0) {
                                 // 将需合并的文件加入“OFD合并对象”
                                 ofdMerger.add(file.toPath());
                             }
@@ -362,7 +371,7 @@ public class ConvertServiceImpl implements ConvertService {
      * @param strDestPathFileName 目标文件路径及文件名，不含后缀
      * @param targetFiles         目标文件File对象List
      * @param tempFiles           临时文件字符串List（包括：url、ftp方式接收的文件（input文件夹中）；各类文件转换ofd过程中生成的pdf文件；pdf、ofd合并时，待合并的文件。
-     * @throws Exception         err
+     * @throws Exception err
      */
     private void convertFileFormat(
             ConvertEntity convertEntity,
@@ -376,7 +385,7 @@ public class ConvertServiceImpl implements ConvertService {
         for (int i = 0; i < convertEntity.getInputFiles().length; i++) {
             // 从输入对象中获取文件（数组中获取每个文件）
             File fileInput = convertEntity.getInputFiles()[i].checkAndGetInputFile();
-            if(fileInput.length() == 0){
+            if (fileInput.length() == 0) {
                 // 如果文件大小为0，则为空文件，不进行转换；进行下一循环。
                 continue;
             }
@@ -388,7 +397,7 @@ public class ConvertServiceImpl implements ConvertService {
                     ? strDestPathFileName : strDestPathFileName + "_" + i;
 
             // 输入的格式不等于输出格式，则进行转换
-            if(!strInputFileType.equalsIgnoreCase(convertEntity.getOutPutFileType())){
+            if (!strInputFileType.equalsIgnoreCase(convertEntity.getOutPutFileType())) {
                 // 转换后生成的pdf文件File对象
                 File filePdf = null;
                 // 其他格式图片文件，转换后生成的JPG文件路径字符串List
@@ -397,9 +406,9 @@ public class ConvertServiceImpl implements ConvertService {
                 // 如果输入的文件格式是图片格式（配置文件中设置格式列表），则执行图片转jpg、pdf操作
                 if (StringUtils.equalsAnyIgnoreCase(strInputFileType, strsPicType)) {
                     // 将图片文件转换为JPG格式。返回文件路径字符串List
-                    if(!"jpg".equalsIgnoreCase(strInputFileType)){
+                    if (!"jpg".equalsIgnoreCase(strInputFileType)) {
                         listTempJpg = ConvertJpgEnum.convert(fileInput.getAbsolutePath(), strDestFile + ".jpg");
-                    }else{
+                    } else {
                         listTempJpg.add(fileInput.getAbsolutePath());
                     }
 
@@ -410,7 +419,7 @@ public class ConvertServiceImpl implements ConvertService {
                         // 跳过后续操作，执行下一循环。
                         continue;
                     } else {
-                        if(listTempJpg != null){
+                        if (listTempJpg != null) {
                             // 将JPG文件路径字符串List加入到“临时文件列表”
                             tempFiles.addAll(listTempJpg);
                             // jpg文件转pdf（自动完成JPG文件列表中所有文件的转换、合并）
@@ -429,15 +438,23 @@ public class ConvertServiceImpl implements ConvertService {
                             }
                         }
                     }
-                } else if(!"ofd".equalsIgnoreCase(strInputFileType)){
+                } else if (!"ofd".equalsIgnoreCase(strInputFileType)) {
                     // 如果输入的文件格式不是“ofd”（前面已经判断了、处理了图片格式，此时剩余的格式均为Office相关格式），则可以执行转PDF操作。
                     // 将传入的文档文件转换为PDF格式，保存到本地的“输出文件夹”中，并按照传入参数为文件命名。
-                    filePdf = ConvertPdfEnum.convert(
-                            getConvertEngine(),
-                            fileInput.getAbsolutePath(),
-                            strDestFile + ".pdf",
-                            convertEntity
-                    );
+                    if(!"pdf".equalsIgnoreCase(strInputFileType)){
+                        filePdf = ConvertPdfEnum.convert(
+                                getConvertEngine(),
+                                fileInput.getAbsolutePath(),
+                                strDestFile + ".pdf",
+                                convertEntity
+                        );
+                    }else{
+                        // 组装目标文件名、扩展名，并创建File对象。
+                        filePdf = new File(strDestFile + ".pdf");
+                        // 将输入文件复制到目标文件夹
+                        FileUtil.copy(fileInput, filePdf, true);
+                    }
+
                     // 如果PDF转换成功（目标文件夹的PDF存在），则将文件信息加入“目标文件列表”，并跳过后续操作。
                     if (filePdf != null && filePdf.exists()
                             && "pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
@@ -447,8 +464,8 @@ public class ConvertServiceImpl implements ConvertService {
                         continue;
                     }
 
-                }else if("ofd".equalsIgnoreCase(strInputFileType)
-                        && "pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())){
+                } else if ("ofd".equalsIgnoreCase(strInputFileType)
+                        && "pdf".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
                     // 如果文件输入格式为OFD，并且输出格式为PDF，则执行：OFD转PDF操作。
                     // todo 图片水印会跑版。暂时无法解决。
                     File fileOfd = convertOfdUtil.convertOfd2Pdf(fileInput.getAbsolutePath(), strDestFile + ".pdf");
@@ -462,7 +479,7 @@ public class ConvertServiceImpl implements ConvertService {
                 if (!"ofd".equalsIgnoreCase(strInputFileType)
                         && "ofd".equalsIgnoreCase(convertEntity.getOutPutFileType())) {
                     // 如果PDF文件存在，则将文件转换为OFD
-                    if (filePdf != null && filePdf.exists()){
+                    if (filePdf != null && filePdf.exists()) {
                         // 声明OFD文件的File对象
                         File ofdFile = new File(strDestFile + ".ofd");
                         // 获取PDF文件的路径
@@ -478,12 +495,12 @@ public class ConvertServiceImpl implements ConvertService {
                     }
                 }
 
-            }else{
+            } else {
                 // 如果输入的格式等于输出的格式，则不需要转换，直接进行文件复制。
                 // 将输入文件复制到目标文件夹（path回写路径，或本地temp文件夹）
 
                 // 如果输入文件存在，则进行文件复制操作。
-                if(fileInput != null && fileInput.exists()){
+                if (fileInput != null && fileInput.exists()) {
                     // 组装目标文件名、扩展名，并创建File对象。
                     File destFile = new File(strDestFile + "." + convertEntity.getOutPutFileType().toLowerCase());
                     // 将输入文件复制到目标文件夹
@@ -498,22 +515,25 @@ public class ConvertServiceImpl implements ConvertService {
                 }
 
             }
-
         }
     }
 
     /**
      * 获取当前配置的PDF转换引擎的名称，用于后续判断
-     * @return    转换引擎名称
+     *
+     * @return 转换引擎名称
      */
-    private String getConvertEngine(){
-        if(ConvertConfig.wpsEnabled){
+    private String getConvertEngine() {
+        if (ConvertConfig.wpsEnabled) {
             return "WPS";
         }
-        if(ConvertConfig.officeEnabled){
+        if (ConvertConfig.officeEnabled) {
             return "OFFICE";
         }
-        if(ConvertConfig.libreOfficeEnabled){
+        if (ConvertConfig.wpsPreviewEnabled) {
+            return "WPSSERVER";
+        }
+        if (ConvertConfig.libreOfficeEnabled) {
             return "LIBRE";
         }
 
@@ -705,7 +725,7 @@ public class ConvertServiceImpl implements ConvertService {
     /**
      * 文件预览
      *
-     * @param input 输入文件
+     * @param input  输入文件
      * @param params 其他参数
      * @return 转换后的pdf文件
      */
@@ -726,7 +746,7 @@ public class ConvertServiceImpl implements ConvertService {
             // 7z 解压, 返回解压后的文件夹
             return TDZipUtil.unzip(input.getInputFile(),
                     ConvertConfig.outPutPath + DateUtil.today(),
-                    params.getOrDefault("zip.password",""));
+                    params.getOrDefault("zip.password", ""));
         }
 
         // 默认PDF预览

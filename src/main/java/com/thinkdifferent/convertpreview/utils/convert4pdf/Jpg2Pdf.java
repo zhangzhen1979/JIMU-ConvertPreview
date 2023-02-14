@@ -7,9 +7,7 @@ import com.lowagie.text.Image;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfWriter;
 import com.thinkdifferent.convertpreview.entity.ConvertEntity;
-import com.thinkdifferent.convertpreview.utils.DoubleLayerPdfUtil;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.util.CollectionUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,8 +21,8 @@ public class Jpg2Pdf extends ConvertPdf {
     public File convert(Object objInputFile, String strOutputFile, ConvertEntity convertEntity)
             throws IOException {
 
-        if(objInputFile != null){
-            List<String> listJpgFile = (List<String>)objInputFile;
+        if (objInputFile != null) {
+            List<String> listJpgFile = (List<String>) objInputFile;
             log.info("jpg {} 转pdf {}", String.join(" ", listJpgFile), strOutputFile);
             Document document = null;
             FileOutputStream fos = null;
@@ -42,7 +40,7 @@ public class Jpg2Pdf extends ConvertPdf {
 
                 // 循环，读取每个文件，添加到pdf的document中。
                 for (String strJpgFile : listJpgFile) {
-                    try{
+                    try {
                         // 获取图片的宽高
                         Image image = Image.getInstance(strJpgFile);
                         float floatImageHeight = image.getScaledHeight();
@@ -55,7 +53,7 @@ public class Jpg2Pdf extends ConvertPdf {
                         //新建一页添加图片
                         document.newPage();
                         document.add(image);
-                    }catch (Exception imgExp){
+                    } catch (Exception imgExp) {
                         log.error(imgExp);
                         continue;
                     }
@@ -63,44 +61,31 @@ public class Jpg2Pdf extends ConvertPdf {
 
                 fos.flush();
 
-            }catch (Exception e){
+            } catch (Exception e) {
                 log.error(e);
-            }finally {
+            } finally {
                 try {
-                    if (document != null && document.isOpen()){
+                    if (document != null && document.isOpen()) {
                         document.close();
                     }
-                }catch (Exception e){
+                } catch (Exception e) {
                     log.error(e);
                 }
 
                 try {
-                    if(fos != null){
+                    if (fos != null) {
                         fos.close();
                     }
-                    if(filePdf.length() == 0){
+                    if (filePdf.length() == 0) {
                         FileUtil.del(new File(strOutputFile));
                     }
-                }catch (Exception e){
+                } catch (Exception e) {
                     log.error(e);
                 }
 
-
             }
-
-
-            if(filePdf.exists()){
-                // 双层PDF
-                if (!CollectionUtils.isEmpty(convertEntity.getContexts())) {
-                    // 双层PDF修改
-                    DoubleLayerPdfUtil.addText(filePdf, convertEntity.getContexts());
-                }
-            }
-
             return filePdf;
-
         }
-
         return null;
     }
 

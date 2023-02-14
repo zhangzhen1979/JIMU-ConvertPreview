@@ -53,6 +53,7 @@ public class OnlinePreviewController {
      * @param fileType 文件类型， http格式必传
      * @param params   其他参数, 如：pdf\ofd 用户名密码
      * @param model    model，非必传， pdf officePicture compress ofd
+     * @param keyword  pdf高亮关键词，支持持单个词语
      * @return ftl文件名
      */
     @RequestMapping("/onlinePreview")
@@ -60,9 +61,13 @@ public class OnlinePreviewController {
                                 @RequestParam(value = "fileType", required = false, defaultValue = "") String fileType,
                                 @RequestParam(value = "params", required = false) Map<String, String> params,
                                 @RequestParam(value = "outType", required = false, defaultValue = "") String outType,
+                                @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
                                 Model model) {
         model.addAllAttributes(getDefaultModelParams());
         try {
+            if (filePath.contains(" ")) {
+                filePath = filePath.replaceAll(" ", "+").replaceAll("\n", "");
+            }
             filePath = Base64.decodeStr(filePath);
             Input input = InputType.convert(filePath, fileType);
             if (!input.exists()) {
@@ -80,6 +85,7 @@ public class OnlinePreviewController {
             if (StringUtils.equalsAnyIgnoreCase(fileType, "ofd", "xls", "xlsx")) {
                 outType = FILE_PREVIEW_MAPPING.getOrDefault(fileType, "pdf");
             }
+            model.addAttribute("keyword", keyword);
             // 不同模板参数不同
             MODEL_PARAMS_MAPPING.getOrDefault(outType, MODEL_PARAMS_MAPPING.get(PDF_PREVIEW))
                     .config(model, convertFile);
@@ -126,12 +132,12 @@ public class OnlinePreviewController {
     /**
      * 默认的model参数
      */
-    private Map<String,Object> getDefaultModelParams(){
-        if (CollectionUtil.isEmpty(DEFAULT_MODEL_PARAMS)){
-            if (StringUtils.isBlank(watermarkText)){
+    private Map<String, Object> getDefaultModelParams() {
+        if (CollectionUtil.isEmpty(DEFAULT_MODEL_PARAMS)) {
+            if (StringUtils.isBlank(watermarkText)) {
                 watermarkText = cn.hutool.extra.spring.SpringUtil.getProperty("convert.preview.watermarkTxt");
             }
-            if (StringUtils.isBlank(ConvertConfig.blnChangeType)){
+            if (StringUtils.isBlank(ConvertConfig.blnChangeType)) {
                 ConvertConfig.blnChangeType = cn.hutool.extra.spring.SpringUtil.getProperty("convert.preview.blnChange");
             }
             DEFAULT_MODEL_PARAMS = new HashMap() {{
@@ -160,7 +166,8 @@ public class OnlinePreviewController {
         }
         return DEFAULT_MODEL_PARAMS;
     }
-    private Map<String, Object> DEFAULT_MODEL_PARAMS ;
+
+    private Map<String, Object> DEFAULT_MODEL_PARAMS;
 
     /**
      * 文件类型及默认预览页面
@@ -191,6 +198,13 @@ public class OnlinePreviewController {
                         "/api/download?urlPath=" + aes.encryptHex(convertFile.getCanonicalPath()));
             } else {
                 model.addAttribute("pdfUrl", OnlinePreviewController.aes.encryptHex(convertFile.getCanonicalPath()));
+
+
+//                String pdfUrl = model.getAttribute("pdfUrl") + "";
+//                String downloadUrl = "/api/download?urlPath=" + pdfUrl;
+//                model.addAttribute("tempUrl", "/pdfjs/web/viewer.html?file=" + URLEncoder.encode(
+//                        downloadUrl, "utf-8") + "&keyword=" + URLEncoder.encode(keyword, "utf-8"));
+//                model.addAttribute("downloadUrl", downloadUrl);
             }
         });
         put(PICTURE_PREVIEW, (ModelParams) (model, convertFile) -> {

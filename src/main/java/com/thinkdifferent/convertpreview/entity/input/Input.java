@@ -61,7 +61,7 @@ public abstract class Input {
      * @return 父级目录
      */
     protected String getBaseUrl() {
-        return SystemUtil.beautifulDir(ConvertConfig.inPutTempPath);
+        return SystemUtil.beautifulPath(ConvertConfig.inPutTempPath);
     }
 
     /**

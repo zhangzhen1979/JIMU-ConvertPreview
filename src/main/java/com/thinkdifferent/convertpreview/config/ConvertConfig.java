@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Component;
 
-//@Configuration
 @Component
 @RefreshScope
 public class ConvertConfig {
@@ -15,6 +14,10 @@ public class ConvertConfig {
 
     @Value("${convert.path.inPutTempPath:}")
     public void setInPutTempPath(String inPutTempPath) {
+        inPutTempPath = SystemUtil.beautifulPath(inPutTempPath);
+        if(inPutTempPath.endsWith("intemp/")){
+            inPutTempPath = inPutTempPath + "intemp/";
+        }
         ConvertConfig.inPutTempPath = inPutTempPath;
     }
 
@@ -22,7 +25,11 @@ public class ConvertConfig {
 
     @Value("${convert.path.outPutPath:}")
     public void setOutPutPath(String outPutPath) {
-        ConvertConfig.outPutPath = SystemUtil.beautifulDir(outPutPath);
+        outPutPath = SystemUtil.beautifulPath(outPutPath);
+        if(outPutPath.endsWith("outtemp/")){
+            outPutPath = outPutPath + "outtemp/";
+        }
+        ConvertConfig.outPutPath = SystemUtil.beautifulPath(outPutPath);
     }
 
     public static String picType;
@@ -72,6 +79,16 @@ public class ConvertConfig {
     @Value("${convert.engine.localUtil.office.runType:}")
     public void setOfficeRunType(String officeRunType) {
         ConvertConfig.officeRunType = officeRunType;
+    }
+
+    /**
+     * wps 中台转换
+     */
+    public static Boolean wpsPreviewEnabled;
+
+    @Value("${convert.engine.wpsPreview.enabled:}")
+    public void setWpsPreviewEnabled(Boolean wpsPreviewEnabled) {
+        ConvertConfig.wpsPreviewEnabled = wpsPreviewEnabled;
     }
 
     public static Boolean libreOfficeEnabled;

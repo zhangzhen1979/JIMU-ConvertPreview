@@ -34,7 +34,7 @@ public class SystemUtil {
      * @param path 原始路径
      * @return 美化后的路径
      */
-    public static String beautifulDir(String path) {
+    public static String beautifulPath(String path) {
         path = _beautifulPath(path);
         if (!path.endsWith("/")) {
             path = path + "/";
@@ -95,7 +95,7 @@ public class SystemUtil {
      */
     public static File png2pdf(Map<String, String> mapBase64s, File inputPdf, String uuid) throws Exception{
         // 创建临时文件
-        String secretPdfPath = SystemUtil.beautifulDir(SystemConstants.INPUT_FILE_PATH) + "temp" + File.separator
+        String secretPdfPath = SystemUtil.beautifulPath(SystemConstants.INPUT_FILE_PATH) + "temp" + File.separator
                 + uuid + ".pdf";
         FileUtil.touch(secretPdfPath);
         @Cleanup PDDocument document = Loader.loadPDF(inputPdf);
