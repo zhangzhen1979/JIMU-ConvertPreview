@@ -208,10 +208,10 @@ jodconverter:
 {
   "inputType": "path",
   "inputFiles": [
-      {
+      {
           "inputFile": "D:/cvtest/001.docx",
           "inputFileType": "docx"
-      }
+      }
   ],
   "outPutFileName": "001-online",
   "outPutFileType": "pdf",
