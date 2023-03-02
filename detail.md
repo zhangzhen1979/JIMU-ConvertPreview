@@ -31,17 +31,12 @@
 
 转换后输出格式为：PDF、OFD、JPG。
 
-## PDF脱敏
-
-V0.7.0 : 新增PDF脱敏部分，前端内容已合并至ecology中
 
 # 配置说明
 
 ## 转换引擎
 
 本系统支持转换引擎包括如下内容：（必须选其一，否则无法完成文档格式转换）
-
-- WPS 预览服务。推荐。需要Linux服务器部署。（支持各种格式转换）
 
 - WPS本地软件（推荐Jacob方式单线程调用）。推荐。需要Windows环境部署。（支持Word、Excel、PowerPoint格式转换，速度快）
 
@@ -212,9 +207,14 @@ jodconverter:
 ```json
 {
   "inputType": "path",
-  "inputFile": "D:/cvtest/001.tif",
+  "inputFiles": [
+      {
+          "inputFile": "D:/cvtest/001.docx",
+          "inputFileType": "docx"
+      }
+  ],
   "outPutFileName": "001-online",
-  "outPutFileType": "jpg",
+  "outPutFileType": "pdf",
   "outEncry": {
     "username": "zhang3",
     "userPassword": "zhang3pwd",
