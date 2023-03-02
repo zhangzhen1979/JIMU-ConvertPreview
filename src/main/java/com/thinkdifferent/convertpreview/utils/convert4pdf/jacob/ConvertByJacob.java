@@ -275,9 +275,6 @@ public class ConvertByJacob {
             if (Objects.nonNull(vsd)) {
                 Dispatch.call(vsd, "Close");
             }
-            if (Objects.nonNull(documents)) {
-                Dispatch.call(documents, "Close");
-            }
             if (Objects.nonNull(app)) {
                 app.invoke("Quit");
             }

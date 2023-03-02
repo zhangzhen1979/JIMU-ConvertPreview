@@ -190,7 +190,7 @@ public class ConvertEntity {
 
             outFileEncryptorEntity.setEncry(true);
             // 原有通用字段
-            // 用户名。PDF有效。OFD暂为固定值admin，以兼容【超越版式办公套件】
+            // 用户名。PDF、OFD共用。为兼容【超越版式办公套件】，OFD文件建议传入固定值admin
             outFileEncryptorEntity.setUserName(joOutEncry.optString("username", ""));
             // 用户密码。PDF、OFD共用
             outFileEncryptorEntity.setUserPassWord(joOutEncry.optString("userPassword", ""));
@@ -199,7 +199,7 @@ public class ConvertEntity {
             // 是否可以复制。PDF、OFD均有效。
             outFileEncryptorEntity.setCopy(joOutEncry.optBoolean("copy", false));
             // 是否可编辑。PDF、OFD均有效。
-            outFileEncryptorEntity.setModify(joOutEncry.optBoolean("modigy", false));
+            outFileEncryptorEntity.setModify(joOutEncry.optBoolean("modify", false));
             // 是否可打印。PDF、OFD均有效。
             outFileEncryptorEntity.setPrint(joOutEncry.optBoolean("print", false));
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
-    <title>PDF图片预览</title>
+    <title>预览</title>
     <script src="/js/lazyload.js"></script>
     <#include "commonHeader.ftl">
     <style>
@@ -16,7 +16,8 @@
         }
 
         .img-area {
-            text-align: center
+            text-align: center;
+            height: 100%;
         }
 
     </style>
@@ -27,11 +28,15 @@
         <div class="img-area">
             <img class="my-photo" alt="loading" data-src="${img}" src="/images/loading.gif">
         </div>
+        <br/>
     </#list>
 </div>
+<#if "false" == blnExcel && "true" == blnChangeType >
 <img src="/images/pdf.svg" width="63" height="63" style="position: fixed; cursor: pointer; top: 40%; right: 48px;
      z-index: 999;" alt="使用PDF预览" title="使用PDF预览" onclick="changePreviewType('pdf')"/>
+</#if>
 <script>
+    document.body.parentNode.style.overflowX= "hidden"
     window.onload = function () {
         /*初始化水印*/
         initWaterMark();
@@ -46,8 +51,8 @@
 
     function changePreviewType(previewType) {
         var url = window.location.href;
-        if (url.indexOf("outType=jpg") !== -1) {
-            url = url.replace("outType=jpg", "outType=pdf");
+        if (url.indexOf("outType=officePicture") !== -1) {
+            url = url.replace("outType=officePicture", "outType=pdf");
         } else {
             url = url + "&outType=pdf";
         }

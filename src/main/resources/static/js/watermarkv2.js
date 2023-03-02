@@ -1,7 +1,7 @@
 function watermark(settings) {
     //默认设置
     var defaultSettings = {
-        watermarl_element: "body",
+        watermark_element: "body",
         watermark_txt: "",
         watermark_img: '',
         watermark_x: 20, //水印起始位置x轴坐标
@@ -16,7 +16,8 @@ function watermark(settings) {
         watermark_font: '微软雅黑', //水印字体
         watermark_width: 210, //水印宽度
         watermark_height: 80, //水印长度
-        watermark_angle: 15 //水印倾斜度数
+        watermark_angle: 15, //水印倾斜度数
+        watermark_div_class: 'watermarkCls' // 水印class名称
     };
 //采用配置项替换默认值，作用类似jquery.extend
     if (arguments.length === 1 && typeof arguments[0] === "object") {
@@ -29,10 +30,15 @@ function watermark(settings) {
         }
     }
 
-    var oTemp = document.createDocumentFragment();
+    // var oTemp = document.createDocumentFragment();
+    var div = document.createElement("div");
+    //为div创建属性class = "test"
+    var divattr = document.createAttribute("class");
+    divattr.value = defaultSettings.watermark_div_class;
+    //把属性class = "test"添加到div
+    div.setAttributeNode(divattr);
 
-
-    var maskElement = document.getElementById(defaultSettings.watermarl_element) || document.body;
+    var maskElement = document.getElementById(defaultSettings.watermark_element) || document.body;
 
 //获取页面最大宽度
     var page_width = Math.max(maskElement.scrollWidth, maskElement.clientWidth);
@@ -88,15 +94,18 @@ function watermark(settings) {
             mask_div.style.width = defaultSettings.watermark_width + 'px';
             mask_div.style.height = defaultSettings.watermark_height + 'px';
             mask_div.style.display = "block";
-            oTemp.appendChild(mask_div);
+            div.appendChild(mask_div);
         }
-        ;
     }
-    ;
-    maskElement.appendChild(oTemp);
+
+    maskElement.appendChild(div);
+
+    while (document.getElementsByClassName(defaultSettings.watermark_div_class).length > 1) {
+        document.getElementsByClassName(defaultSettings.watermark_div_class)[0].remove()
+    }
 
     var remove = function (settings) {
-        maskElement.removeChild(oTemp);
+        maskElement.removeChild(div);
     }
 }
 

@@ -55,7 +55,7 @@ public class LocalConvertUtil {
                 } else {
                     String strAppName = getUseAppName(strInputFileType);
 
-                    if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "doc", "docx", "txt")) {
+                    if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "doc", "docx", "txt", "rtf")) {
                         if ("jacob".equalsIgnoreCase(ConvertConfig.wpsRunType) || "jacob".equalsIgnoreCase(ConvertConfig.officeRunType)) {
                             intReturn = ConvertByJacob.doc2PDF(strAppName, strOfficeFile, strPdfFile);
                         } else if ("exe".equalsIgnoreCase(ConvertConfig.wpsRunType) || "exe".equalsIgnoreCase(ConvertConfig.officeRunType)) {

@@ -6,11 +6,12 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
- * guava 缓存，只支持一种过期时间
+ * guava 缓存，只支持一种过期时间, 默认8H过期
+ *
  * @author ltian
  * @version 1.0
  * @date 2022/5/26 14:42
@@ -20,7 +21,8 @@ import java.util.concurrent.TimeUnit;
 @Conditional(LocalEnabled.class)
 public class GuavaCacheServiceImpl implements CacheService {
 
-    Cache<String, Object> cache = CacheBuilder.newBuilder().expireAfterWrite(24 * 60 * 60, TimeUnit.SECONDS).build();
+    Cache<String, Object> cache = CacheBuilder.newBuilder()
+            .expireAfterWrite(Duration.ofHours(8)).build();
 
     /**
      * 存储值

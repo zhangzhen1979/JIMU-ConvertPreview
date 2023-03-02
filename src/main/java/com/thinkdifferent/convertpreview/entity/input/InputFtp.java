@@ -87,13 +87,19 @@ public class InputFtp extends Input {
     @Override
     public File getInputFile() {
         if (super.inputFile == null) {
-            // FTP 格式，需要下载文件
-            String strInputFileName = filePath.substring(filePath.lastIndexOf("/") + 1);
-            // 检查目标文件夹中是否有重名文件，如果有，先删除。
-            FileUtil.del(getBaseUrl() + strInputFileName);
-            // ftp 下载文件
-            FtpUtil.downloadFile(this, new File(getBaseUrl() + strInputFileName));
-            super.setInputFile(new File(getBaseUrl() + strInputFileName));
+            // 判断缓存中是否存在
+            super.inputFile = super.getCacheFile(this.filePath);
+            if (super.inputFile == null) {
+                // FTP 格式，需要下载文件
+                String strInputFileName = filePath.substring(filePath.lastIndexOf("/") + 1);
+                // 检查目标文件夹中是否有重名文件，如果有，先删除。
+                FileUtil.del(getBaseUrl() + strInputFileName);
+                // ftp 下载文件
+                FtpUtil.downloadFile(this, new File(getBaseUrl() + strInputFileName));
+                super.setInputFile(new File(getBaseUrl() + strInputFileName));
+                super.addCache(this.filePath, getBaseUrl() + strInputFileName);
+            }
+
         }
         return super.inputFile;
     }

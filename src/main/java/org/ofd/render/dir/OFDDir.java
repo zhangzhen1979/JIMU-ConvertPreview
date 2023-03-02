@@ -1,10 +1,10 @@
 package org.ofd.render.dir;
 
 
+import cn.hutool.core.io.FileUtil;
 import org.ofd.render.utils.ZipUtil;
 import org.ofdrw.core.basicStructure.ofd.OFD;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -180,10 +180,7 @@ public class OFDDir implements DirCollect {
             if (fileName == null || fileName.trim().length() == 0) {
                 throw new IllegalArgumentException("OFD文件名（fileName）不能为空");
             }
-            Path target = Paths.get(fileName);
-            if (Files.exists(target)) {
-                Files.delete(target);
-            }
+            FileUtil.del(fileName);
 
             Path basePath = Paths.get(base);
             if (Files.notExists(basePath)) {
@@ -202,7 +199,7 @@ public class OFDDir implements DirCollect {
                 try (Stream<Path> walk = Files.walk(tmpPath)) {
                     walk.sorted(Comparator.reverseOrder())
                             .map(Path::toFile)
-                            .forEach(File::delete);
+                            .forEach(FileUtil::del);
                 }
             }
         }

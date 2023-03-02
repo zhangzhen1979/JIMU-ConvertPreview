@@ -13,7 +13,7 @@ import java.util.Objects;
 @Component
 public class CacheManager {
     /**
-     * 默认过期时间，s
+     * 默认过期时间，s, 本地缓存无法生效
      */
     private static final long DEFAULT_EXPIRE_SECONDS = 60 * 60L;
     @Resource

@@ -2,7 +2,7 @@ package com.thinkdifferent.convertpreview.entity.mark;
 
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import com.thinkdifferent.convertpreview.utils.WaterMarkUtil;
+import com.thinkdifferent.convertpreview.utils.watermark.JpgWaterMarkUtil;
 import com.thinkdifferent.convertpreview.utils.watermark.PdfWaterMarkUtil;
 import lombok.extern.log4j.Log4j2;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -389,7 +389,7 @@ public class TextMark {
      * @param alpha        透明度
      */
     public void mark4Jpg(String strInputJpg, String strOutPutJpg, TextMark textMark, float alpha) throws IOException {
-        WaterMarkUtil.markImageByText(textMark.waterMarkText,
+        JpgWaterMarkUtil.markImageByText(textMark.waterMarkText,
                 strInputJpg, strOutPutJpg,
                 textMark.getDegree(),
                 alpha,

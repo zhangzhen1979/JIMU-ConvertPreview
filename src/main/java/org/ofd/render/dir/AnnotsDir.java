@@ -26,8 +26,7 @@ public class AnnotsDir implements DirCollect {
 
 	@Override
 	public Path collect(String base) throws IOException {
-		// TODO Auto-generated method stub
-		
+
         Path path = Paths.get(base, "Annots");
         path = Files.createDirectories(path);
         String dir = path.toAbsolutePath().toString();

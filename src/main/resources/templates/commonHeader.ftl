@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/js/bs/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="/js/bs/css/bootstrap.css"/>
 <script src="/js/jquery-3.0.0.min.js" type="text/javascript"></script>
 <script src="/js/jquery.form.min.js" type="text/javascript"></script>
 <script src="/js/bs/js/bootstrap.js" type="text/javascript"></script>
@@ -129,9 +129,7 @@
     window.onhelp = function () {
         return false;
     }
-</script>
 
-<script>
     /**
      * 初始化水印
      */
@@ -146,6 +144,9 @@
         } else if (watermarkTxt !== '') {
             watermark({
                 watermark_txt: '${watermarkTxt}',
+                watermark_alpha: ${watermarkAlpha}, //水印透明度
+                watermark_fontsize: '${watermarkFontsize}', //水印字体大小
+                watermark_angle: ${watermarkAngle}, //水印倾斜度数
             });
         }
     }

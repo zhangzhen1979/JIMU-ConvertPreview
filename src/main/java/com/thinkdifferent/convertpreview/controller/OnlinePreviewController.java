@@ -7,12 +7,14 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.symmetric.AES;
 import com.thinkdifferent.convertpreview.config.ConvertConfig;
+import com.thinkdifferent.convertpreview.consts.ConfigConstants;
 import com.thinkdifferent.convertpreview.entity.InputType;
 import com.thinkdifferent.convertpreview.entity.input.Input;
 import com.thinkdifferent.convertpreview.service.ConvertService;
 import com.thinkdifferent.convertpreview.utils.SpringUtil;
 import com.thinkdifferent.convertpreview.utils.convert4pdf.ConvertPdfUtil;
 import lombok.extern.log4j.Log4j2;
+import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,11 +51,12 @@ public class OnlinePreviewController {
     /**
      * 预览
      *
-     * @param filePath 文件路径, base64格式，支持本地路径、http、ftp
-     * @param fileType 文件类型， http格式必传
-     * @param params   其他参数, 如：pdf\ofd 用户名密码
-     * @param model    model，非必传， pdf officePicture compress ofd
-     * @param keyword  pdf高亮关键词，支持持单个词语
+     * @param filePath  文件路径, base64格式，支持本地路径、http、ftp
+     * @param fileType  文件类型， http格式必传
+     * @param params    其他参数, 如：pdf\ofd 用户名密码
+     * @param model     model，非必传， pdf officePicture compress ofd
+     * @param keyword   pdf高亮关键词，支持持单个词语
+     * @param waterMark 水印配置，json, base64，
      * @return ftl文件名
      */
     @RequestMapping("/onlinePreview")
@@ -61,9 +64,11 @@ public class OnlinePreviewController {
                                 @RequestParam(value = "fileType", required = false, defaultValue = "") String fileType,
                                 @RequestParam(value = "params", required = false) Map<String, String> params,
                                 @RequestParam(value = "outType", required = false, defaultValue = "") String outType,
+                                @RequestParam(value = "watermark", required = false, defaultValue = "") String waterMark,
                                 @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
                                 Model model) {
         model.addAllAttributes(getDefaultModelParams());
+        File inputFile = null;
         try {
             if (filePath.contains(" ")) {
                 filePath = filePath.replaceAll(" ", "+").replaceAll("\n", "");
@@ -75,7 +80,8 @@ public class OnlinePreviewController {
                 model.addAttribute("msg", "文件下载失败");
                 return NOT_SUPPORT;
             }
-            fileType = FileUtil.extName(input.getInputFile());
+            inputFile = input.getInputFile();
+            fileType = FileUtil.extName(inputFile);
             File convertFile = convertService.filePreview(input, params);
             Assert.isTrue(convertFile.exists(), "转换失败");
             // 根据输出类型选择不同的模板
@@ -86,15 +92,53 @@ public class OnlinePreviewController {
                 outType = FILE_PREVIEW_MAPPING.getOrDefault(fileType, "pdf");
             }
             model.addAttribute("keyword", keyword);
+            // 水印
+            addWaterMark(model, waterMark);
             // 不同模板参数不同
             MODEL_PARAMS_MAPPING.getOrDefault(outType, MODEL_PARAMS_MAPPING.get(PDF_PREVIEW))
                     .config(model, convertFile);
             return outType;
         } catch (Exception e) {
             log.error("预览文件异常", e);
-            model.addAttribute("fileType", fileType);
+            model.addAttribute("fileType",
+                    Objects.isNull(inputFile) || inputFile.length() == 0 ? "文件内容为空，" : ("类型(" + fileType + ")"));
             model.addAttribute("msg", "该文件不允许预览");
             return NOT_SUPPORT;
+        }
+    }
+
+    /**
+     * 添加水印信息
+     *
+     * @param model
+     * @param waterMark
+     */
+    private void addWaterMark(Model model, String waterMark) {
+        if (StringUtils.isBlank(waterMark)) {
+            return;
+        }
+        waterMark = Base64.decodeStr(waterMark);
+        JSONObject joWaterMark = JSONObject.fromObject(waterMark);
+        if (StringUtils.isNotBlank(joWaterMark.optString("content"))) {
+            model.addAttribute("watermarkImage", "");
+        }
+        model.addAttribute("watermarkTxt", joWaterMark.optString("content", watermarkText));
+        model.addAttribute("watermarkAngle", joWaterMark.optDouble("rotate", 10));
+        // 字体
+        String font = joWaterMark.optString("font");
+        String[] splits;
+        if (StringUtils.isNotBlank(font) && (splits = font.split(" ")).length == 3) {
+            model.addAttribute("watermarkFontsize", splits[1]);
+        }
+        model.addAttribute("watermarkAngle", joWaterMark.optString("rotate"));
+        // 透明度
+        String fillStyle = joWaterMark.optString("fillstyle");
+        if (StringUtils.isNotBlank(fillStyle)) {
+            fillStyle = fillStyle.substring(fillStyle.indexOf("("), fillStyle.indexOf(")"));
+            String[] split = fillStyle.split(",");
+            if (split.length == 4) {
+                model.addAttribute("watermarkAlpha", split[3]);
+            }
         }
     }
 
@@ -141,18 +185,18 @@ public class OnlinePreviewController {
                 ConvertConfig.blnChangeType = cn.hutool.extra.spring.SpringUtil.getProperty("convert.preview.blnChange");
             }
             DEFAULT_MODEL_PARAMS = new HashMap() {{
-                put("baseUrl", com.thinkdifferent.convertpreview.consts.ConfigConstants.baseUrl);
+                put("baseUrl", ConfigConstants.baseUrl);
                 put("watermarkImage", getWatermarkImage());
                 put("watermarkTxt", watermarkText);
+                put("watermarkFontsize", "18px");
+                put("watermarkAlpha", 0.2);
+                put("watermarkAngle", "10");
                 put("watermarkXSpace", 10);
                 put("watermarkYSpace", 10);
                 put("watermarkFont", "微软雅黑");
-                put("watermarkFontsize", "18px");
                 put("watermarkColor", "black");
-                put("watermarkAlpha", 0.2);
                 put("watermarkWidth", "240");
                 put("watermarkHeight", "80");
-                put("watermarkAngle", "10");
                 put("pdfPresentationModeDisable", "true");
                 put("pdfOpenFileDisable", "true");
                 put("pdfPrintDisable", "true");
@@ -174,8 +218,8 @@ public class OnlinePreviewController {
      */
     private static final Map<String, String> FILE_PREVIEW_MAPPING = new HashMap() {{
         put("pdf", PICTURE_PREVIEW);
-        put("xls", PICTURE_PREVIEW);
-        put("xlsx", PICTURE_PREVIEW);
+        put("xls", PDF_PREVIEW);
+        put("xlsx", PDF_PREVIEW);
         // put("png", PICTURE_PREVIEW);
         put("ofd", OFD_PREVIEW);
         // 压缩文件预览
@@ -191,20 +235,13 @@ public class OnlinePreviewController {
      */
     private static final Map<String, ModelParams> MODEL_PARAMS_MAPPING = new HashMap() {{
         put(PDF_PREVIEW, (ModelParams) (model, convertFile) -> {
-            if (StringUtils.equalsAnyIgnoreCase(FileUtil.extName(convertFile), "xls", "xlsx")) {
+            if (StringUtils.equalsAnyIgnoreCase(FileUtil.extName(convertFile), "xls", "xlsx", "html")) {
                 // excel转html, 直接返回
                 model.addAttribute("blnExcel", "true");
                 model.addAttribute("htmlUrl",
                         "/api/download?urlPath=" + aes.encryptHex(convertFile.getCanonicalPath()));
             } else {
                 model.addAttribute("pdfUrl", OnlinePreviewController.aes.encryptHex(convertFile.getCanonicalPath()));
-
-
-//                String pdfUrl = model.getAttribute("pdfUrl") + "";
-//                String downloadUrl = "/api/download?urlPath=" + pdfUrl;
-//                model.addAttribute("tempUrl", "/pdfjs/web/viewer.html?file=" + URLEncoder.encode(
-//                        downloadUrl, "utf-8") + "&keyword=" + URLEncoder.encode(keyword, "utf-8"));
-//                model.addAttribute("downloadUrl", downloadUrl);
             }
         });
         put(PICTURE_PREVIEW, (ModelParams) (model, convertFile) -> {
@@ -235,7 +272,7 @@ public class OnlinePreviewController {
     private static final AES aes = SecureUtil.aes();
     private static String strWatermarkImage;
 
-    @Value("${convert.preview.watermarkTxt:默认水印}")
+    @Value("${convert.preview.watermarkTxt:}")
     private String watermarkText;
     @Value("${convert.preview.watermarkImage:}")
     private String watermarkImage;

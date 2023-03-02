@@ -8,7 +8,6 @@ import com.thinkdifferent.convertpreview.entity.PdfEntity;
 import lombok.Cleanup;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -98,7 +97,7 @@ public class SystemUtil {
         String secretPdfPath = SystemUtil.beautifulPath(SystemConstants.INPUT_FILE_PATH) + "temp" + File.separator
                 + uuid + ".pdf";
         FileUtil.touch(secretPdfPath);
-        @Cleanup PDDocument document = Loader.loadPDF(inputPdf);
+        @Cleanup PDDocument document = PDDocument.load(inputPdf);
         @Cleanup PDDocument newDocument = new PDDocument();
         // 获取原PDF页数
         int totalNum = document.getNumberOfPages();

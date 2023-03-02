@@ -1,8 +1,9 @@
 package com.thinkdifferent.convertpreview.config;
 
+import cn.hutool.core.io.FileUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,7 +18,7 @@ import java.util.Objects;
  * @date 2023/1/30 15:49
  */
 @Slf4j
-@Configuration
+@Component
 public class ScheduleConfig {
 
     /**
@@ -27,7 +28,7 @@ public class ScheduleConfig {
     public void cleanPdfImages() {
         String strInputTempPath = ConvertConfig.inPutTempPath;
         String strOutputTempPath = ConvertConfig.outPutPath;
-        String[] strsTempPaths = {strInputTempPath, strOutputTempPath};
+        String[] strTempPaths = {strInputTempPath, strOutputTempPath};
 
         // 当前时间 - 24 * 3
         Calendar calendar1 = Calendar.getInstance();
@@ -35,12 +36,12 @@ public class ScheduleConfig {
         long day3Ago = calendar1.getTime().getTime();
 
         // 可删除的文件
-        for(int i=0;i<strsTempPaths.length;i++){
-            File[] files = new File(strsTempPaths[i]).listFiles(pathname -> canDelete(pathname, day3Ago));
+        for (String strTempPath : strTempPaths) {
+            File[] files = new File(strTempPath).listFiles(pathname -> canDelete(pathname, day3Ago));
             if (Objects.nonNull(files)) {
                 for (File file : files) {
                     try {
-                        file.delete();
+                        FileUtil.del(file);
                     } catch (Exception e) {
                         log.error("移除过期文件失败：" + file.getName(), e);
                     }

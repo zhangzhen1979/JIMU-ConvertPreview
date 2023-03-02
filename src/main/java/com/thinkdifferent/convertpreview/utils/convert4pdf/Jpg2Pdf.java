@@ -11,15 +11,13 @@ import lombok.extern.log4j.Log4j2;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.List;
 
 @Log4j2
 public class Jpg2Pdf extends ConvertPdf {
 
     @Override
-    public File convert(Object objInputFile, String strOutputFile, ConvertEntity convertEntity)
-            throws IOException {
+    public File convert(Object objInputFile, String strOutputFile, ConvertEntity convertEntity) {
 
         if (objInputFile != null) {
             List<String> listJpgFile = (List<String>) objInputFile;
@@ -40,22 +38,25 @@ public class Jpg2Pdf extends ConvertPdf {
 
                 // 循环，读取每个文件，添加到pdf的document中。
                 for (String strJpgFile : listJpgFile) {
-                    try {
-                        // 获取图片的宽高
-                        Image image = Image.getInstance(strJpgFile);
-                        float floatImageHeight = image.getScaledHeight();
-                        float floatImageWidth = image.getScaledWidth();
-                        // 设置页面宽高与图片一致
-                        Rectangle rectangle = new Rectangle(floatImageWidth, floatImageHeight);
-                        document.setPageSize(rectangle);
-                        // 图片居中
-                        image.setAlignment(Element.ALIGN_CENTER);
-                        //新建一页添加图片
-                        document.newPage();
-                        document.add(image);
-                    } catch (Exception imgExp) {
-                        log.error(imgExp);
-                        continue;
+                    File fileJpg = new File(strJpgFile);
+                    if(fileJpg != null && fileJpg.exists() && fileJpg.length() > 0){
+                        try {
+                            // 获取图片的宽高
+                            Image image = Image.getInstance(strJpgFile);
+                            float floatImageHeight = image.getScaledHeight();
+                            float floatImageWidth = image.getScaledWidth();
+                            // 设置页面宽高与图片一致
+                            Rectangle rectangle = new Rectangle(floatImageWidth, floatImageHeight);
+                            document.setPageSize(rectangle);
+                            // 图片居中
+                            image.setAlignment(Element.ALIGN_CENTER);
+                            //新建一页添加图片
+                            document.newPage();
+                            document.add(image);
+                        } catch (Exception imgExp) {
+                            log.error(imgExp);
+                            continue;
+                        }
                     }
                 }
 

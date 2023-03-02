@@ -4,7 +4,6 @@ import com.thinkdifferent.convertpreview.entity.ConvertEntity;
 import com.thinkdifferent.convertpreview.utils.SystemUtil;
 import lombok.Cleanup;
 import lombok.extern.log4j.Log4j2;
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -34,7 +33,7 @@ public class PdfWaterMarkUtil {
         strTargetPdf = SystemUtil.beautifulFilePath(strTargetPdf);
 
         //打开pdf文件
-        @Cleanup PDDocument pdDocument = Loader.loadPDF(fileInputPdf);
+        @Cleanup PDDocument pdDocument = PDDocument.load(fileInputPdf);
         pdDocument.setAllSecurityToBeRemoved(true);
 
         PDExtendedGraphicsState pdExtGfxState = new PDExtendedGraphicsState();

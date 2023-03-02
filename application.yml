@@ -69,11 +69,16 @@ base:
 # 本服务设置
 convert:
   preview:
+    # 默认文件预览方式：pdf | img， 默认 img
+    type: img
+    # 是否显示JPG/PDF切换按钮: true | false, 默认 true
+    blnChange: true
+    # 图片水印地址, 优先级比文字水印高
+    #    watermarkImage: watermark/watermark.png
     # 文字水印内容
     watermarkTxt: 文字水印
-    # 图片水印地址, 优先级比文字水印高
-    watermarkImage: watermark/watermark.png
-  # 重试功能需启用MQ才有效
+
+  # 转换重试功能需启用MQ才有效
   retry:
     # 最大重试次数（0-8）, 0标识不重试, 若异常情况只记录日志， 大于1（最大8）：标识失败进行重试的次数, 将会在以下时间重试（5min, 10min, 30min, 1h, 2h, 4h, 8h, 16h）
     max: 3
@@ -89,23 +94,23 @@ convert:
   # 转换引擎配置
   engine:
     # 可转换的图片格式
-    picType: tif,tiff,jpg,jpeg,png,bmp,png,webp
+    picType: tif,tiff,png,jpg,jpeg,bmp,psd,sgi,pcx,webp,batik,icns,pnm,pict,tga,iff,hdr,gif
     localUtil:
       # 使用本地WPS应用转换
       wps:
         # 是否启用
         enabled: true
         # 文件格式
-        fileType: txt,csv,doc,docx,xls,xlsx,ppt,pptx
+        fileType: txt,csv,doc,docx,xls,xlsx,ppt,pptx,rtf
         # 运行类型：exe/jacob
         runType: jacob
 
       # 使用本地Office应用转换的文件格式。
       office:
         # 是否启用
-        enabled: true
+        enabled: false
         # 文件格式
-        fileType:
+        fileType: txt,csv,doc,docx,xls,xlsx,ppt,pptx,vsd,vsdx
         # 运行类型：exe/jacob
         runType: jacob
 
@@ -114,7 +119,7 @@ jodconverter:
     # 是否启用LibrOffice引擎。使用其他引擎时，此项必须设置为false
     enabled: false
     # libreOffice根目录
-    office-home: D:/LibreOffice
+    office-home: c:/LibreOffice
     # 端口（线程）
     portNumbers: 8001,8002,8003
     # LibreOffice进程重启前的最大进程数

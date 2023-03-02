@@ -1,6 +1,7 @@
 package org.ofd.render;
 
 
+import lombok.extern.log4j.Log4j2;
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.ttf.CmapLookup;
 import org.apache.fontbox.ttf.TrueTypeFont;
@@ -36,8 +37,6 @@ import org.ofdrw.core.pageDescription.clips.Clips;
 import org.ofdrw.core.pageDescription.color.color.CT_Color;
 import org.ofdrw.core.text.CT_CGTransform;
 import org.ofdrw.core.text.TextCode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import java.awt.geom.*;
@@ -47,9 +46,9 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+@Log4j2
 public class OFDPageDrawer extends PDFGraphicsStreamEngine {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private GeneralPath linePath = new GeneralPath();
     private int clipWindingRule = -1;
 
@@ -534,7 +533,7 @@ public class OFDPageDrawer extends PDFGraphicsStreamEngine {
         try {
             spaceWidthText = font.getSpaceWidth() * glyphSpaceToTextSpaceFactor;
         } catch (Throwable exception) {
-            logger.error(exception.getMessage(), exception);
+            log.error(exception.getMessage(), exception);
         }
 
         if (spaceWidthText == 0) {
@@ -592,27 +591,24 @@ public class OFDPageDrawer extends PDFGraphicsStreamEngine {
             transform.rotate(Math.toRadians(angle), textPosition.getWidth(),
                     textPosition.getHeight());
 
-            if (angle == 0)
-			{
-				$textCode.setX(0d);
-				$textCode.setY((double)fontSize);
-				$textObj.setBoundary(
-								textPosition.getX() / PX2MM,
-						Math.abs(
-								textPosition.getY() / PX2MM
-										- fontSize),
-						textRenderingMatrix.getScaleX()
-								/ PX2MM,
-						dyDisplay).setFont(fontInt)
-						.setSize((double)fontSize);
-			}
-			else
-			{
-				$textCode.setX(0d);
-				$textCode.setY(0d);
-				$textObj.setBoundary(0, 0, textPosition.getX(),
-						textPosition.getY()).setFont(fontInt).setSize(fontSize / (double)PX2MM);
-			}
+            if (angle == 0) {
+                $textCode.setX(0d);
+                $textCode.setY((double) fontSize);
+                $textObj.setBoundary(
+                        textPosition.getX() / PX2MM,
+                        Math.abs(
+                                textPosition.getY() / PX2MM
+                                        - fontSize),
+                        textRenderingMatrix.getScaleX()
+                                / PX2MM,
+                        dyDisplay).setFont(fontInt)
+                        .setSize((double) fontSize);
+            } else {
+                $textCode.setX(0d);
+                $textCode.setY(0d);
+                $textObj.setBoundary(0, 0, textPosition.getX(),
+                        textPosition.getY()).setFont(fontInt).setSize(fontSize / (double) PX2MM);
+            }
 
         }
 
@@ -629,7 +625,7 @@ public class OFDPageDrawer extends PDFGraphicsStreamEngine {
             try {
                 $cmap = ttf.getUnicodeCmapLookup();
             } catch (Exception e) {
-                //logger.warn("加载字体异常",e);
+                //log.warn("加载字体异常",e);
             }
             /**
              * 存在cmap,从cmap中获取glyphId,否则code即为glyphId<br>
@@ -792,13 +788,13 @@ public class OFDPageDrawer extends PDFGraphicsStreamEngine {
             if (is != null) {
                 fontBytes = IOUtils.toByteArray(is);
             } else {
-                logger.error("生成字体文件异常:" + font.getClass());
+                log.error("生成字体文件异常:" + font.getClass());
             }
         } catch (Exception e) {
-            logger.error("生成字体文件异常:" + font.getName(), e);
+            log.error("生成字体文件异常:" + font.getName(), e);
         } finally {
-			IOUtils.closeQuietly(is);
-		}
+            IOUtils.closeQuietly(is);
+        }
         return fontBytes;
     }
 
@@ -886,19 +882,19 @@ public class OFDPageDrawer extends PDFGraphicsStreamEngine {
     }
 
     /**
-	 * 添加字符变换
-	 * 
-	 * @param text
-	 */
-	private void addCGTransform(String text) {
-		int total = text.length();
+     * 添加字符变换
+     *
+     * @param text
+     */
+    private void addCGTransform(String text) {
+        int total = text.length();
         CT_CGTransform cgTransform = new CT_CGTransform();
         cgTransform.setCodePosition(0);
         cgTransform.setGlyphCount(total);
         cgTransform.setCodeCount(total);
         cgTransform.setGlyphs(new ST_Array($glyphs.toArray(new String[$glyphs.size()])));
         $textObj.addCGTransform(cgTransform);
-	}
+    }
 
     /**
      * 转换为rgb

@@ -81,16 +81,6 @@ public class ConvertConfig {
         ConvertConfig.officeRunType = officeRunType;
     }
 
-    /**
-     * wps 中台转换
-     */
-    public static Boolean wpsPreviewEnabled;
-
-    @Value("${convert.engine.wpsPreview.enabled:}")
-    public void setWpsPreviewEnabled(Boolean wpsPreviewEnabled) {
-        ConvertConfig.wpsPreviewEnabled = wpsPreviewEnabled;
-    }
-
     public static Boolean libreOfficeEnabled;
 
     @Value("${jodconverter.local.enabled:}")

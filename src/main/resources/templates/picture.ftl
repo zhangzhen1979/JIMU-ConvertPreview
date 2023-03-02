@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title>图片预览</title>
+    <meta charset="utf-8"/>
+    <title>预览</title>
     <link rel="stylesheet" href="/css/viewer.min.css">
     <script src="/js/viewer.min.js"></script>
     <#include "commonHeader.ftl">
@@ -10,8 +10,21 @@
         body {
             background-color: #404040;
         }
-        #image { width: 800px; margin: 0 auto; font-size: 0;}
-        #image li {  display: inline-block;width: 50px;height: 50px; margin-left: 1%; padding-top: 1%;}
+
+        #image {
+            height: 100%;
+            margin: 0 auto;
+            font-size: 0;
+        }
+
+        #image li {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            margin-left: 1%;
+            padding-top: 1%;
+        }
+
         /*#dowebok li img { width: 200%;}*/
     </style>
 </head>
@@ -19,12 +32,12 @@
 
 <ul id="image">
     <#list imgUrls as img>
-<#--        <#if img?contains("http://") || img?contains("https://")>-->
-            <#assign img="${img}">
-<#--        <#else>-->
-<#--            <#assign img="${baseUrl}${img}">-->
-<#--        </#if>-->
-        <li><img id="${img}"  url="${img}" src="${img}" width="1px" height="1px"></li>
+    <#--        <#if img?contains("http://") || img?contains("https://")>-->
+        <#assign img="${img}">
+    <#--        <#else>-->
+    <#--            <#assign img="${baseUrl}${img}">-->
+    <#--        </#if>-->
+        <li><img id="${img}" url="${img}" src="${img}" width="1px" height="1px"></li>
     </#list>
 </ul>
 
@@ -34,12 +47,12 @@
         navbar: false,
         button: false,
         backdrop: false,
-        loop : true
+        loop: true
     });
     document.getElementById("${currentUrl}").click();
 
     /*初始化水印*/
-    window.onload = function() {
+    window.onload = function () {
         initWaterMark();
     }
 </script>

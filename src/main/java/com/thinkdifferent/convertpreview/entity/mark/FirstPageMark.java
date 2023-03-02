@@ -2,8 +2,8 @@ package com.thinkdifferent.convertpreview.entity.mark;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.map.MapUtil;
-import com.thinkdifferent.convertpreview.utils.WaterMarkUtil;
 import com.thinkdifferent.convertpreview.utils.XHTMLToImage;
+import com.thinkdifferent.convertpreview.utils.watermark.JpgWaterMarkUtil;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import net.sf.json.JSONObject;
@@ -372,7 +372,7 @@ public class FirstPageMark {
         File filePng = firstPageMark.getMarkFile();
 
         if (filePng.exists()) {
-            WaterMarkUtil.markImageByImage(filePng.getAbsolutePath(),
+            JpgWaterMarkUtil.markImageByImage(filePng.getAbsolutePath(),
                     strInputJpg, strOutputJpg,
                     0,
                     intIconLocateX, intIconLocateY,

@@ -9,7 +9,6 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.thinkdifferent.convertpreview.entity.Context;
 import lombok.Cleanup;
 import lombok.extern.log4j.Log4j2;
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -59,7 +58,7 @@ public class DoubleLayerPdfUtil {
 
         File tempFile = new File(path + UUID.randomUUID() + basePdfFile.getName().substring(basePdfFile.getName().lastIndexOf(".")));
         // FileUtils.moveFile();
-        @Cleanup PDDocument document = Loader.loadPDF(basePdfFile);
+        @Cleanup PDDocument document = PDDocument.load(basePdfFile);
         document.setAllSecurityToBeRemoved(true);
 
         for (Context context : contexts) {

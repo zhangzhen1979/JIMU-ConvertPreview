@@ -7,7 +7,7 @@ public class OutFileEncryptorEntity {
      */
     private Boolean encry;
     /**
-     * 用户名。PDF有效。OFD暂为固定值admin，以兼容【超越版式办公套件】
+     * 用户名。PDF、OFD共用。为兼容【超越版式办公套件】，OFD文件建议传入固定值admin
      */
     private String userName;
     /**

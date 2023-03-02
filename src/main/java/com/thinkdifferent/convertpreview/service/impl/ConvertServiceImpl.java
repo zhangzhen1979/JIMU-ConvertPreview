@@ -15,7 +15,7 @@ import com.thinkdifferent.convertpreview.service.ConvertService;
 import com.thinkdifferent.convertpreview.service.RabbitMQService;
 import com.thinkdifferent.convertpreview.utils.*;
 import com.thinkdifferent.convertpreview.utils.convert4jpg.ConvertJpgEnum;
-import com.thinkdifferent.convertpreview.utils.convert4jpg.ConvertJpgUtil;
+import com.thinkdifferent.convertpreview.utils.convert4jpg.JpgUtil;
 import com.thinkdifferent.convertpreview.utils.convert4ofd.ConvertOfdUtil;
 import com.thinkdifferent.convertpreview.utils.convert4pdf.ConvertPdfEnum;
 import com.thinkdifferent.convertpreview.utils.convert4pdf.ConvertPdfUtil;
@@ -27,7 +27,6 @@ import lombok.extern.log4j.Log4j2;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.bouncycastle.crypto.CryptoException;
@@ -57,7 +56,7 @@ import java.util.stream.Collectors;
 public class ConvertServiceImpl implements ConvertService {
 
     @Autowired(required = false)
-    private ConvertJpgUtil convertJpgUtil;
+    private JpgUtil jpgUtil;
     @Autowired(required = false)
     private ConvertPdfUtil convertPdfUtil;
     @Autowired(required = false)
@@ -193,7 +192,7 @@ public class ConvertServiceImpl implements ConvertService {
 
             } else if ("convert".equalsIgnoreCase(type)) {
                 // 4. 回调
-                callBackResult = callBack(writeBackResult, convertEntity, listJpg, fileOut);
+                callBackResult = writeBack(writeBackResult, convertEntity, listJpg, fileOut);
             }
         }
 
@@ -252,7 +251,6 @@ public class ConvertServiceImpl implements ConvertService {
         try {
             // 获取配置文件中设置的，本服务支持的图片文件扩展名
             String strPicType = ConvertConfig.picType;
-            log.info("picType:{}", strPicType);
             // 图片文件类型转换为数组
             String[] strsPicType = strPicType.split(",");
 
@@ -276,12 +274,12 @@ public class ConvertServiceImpl implements ConvertService {
                     // 如果需要生成【首页缩略图】，则只执行“缩略图”操作，不执行后续水印等操作。
                     if (convertEntity.getThumbnail() != null) {
                         // 执行缩略图操作，并返回缩略图文件File对象。（不执行后续操作）
-                        return convertJpgUtil.getThumbnail(convertEntity, listJpg);
+                        return jpgUtil.getThumbnail(convertEntity, listJpg);
                     } else {
                         // 图片添加水印（方法中自动根据传入参数，判断是否添加水印）
                         JpgWaterMarkUtil.mark4JpgList(listJpg, convertEntity);
-                        // 返回空值（不执行后续操作）
-                        return null;
+                        // 返回转换后的JPG文件（临时文件）
+                        return new File(strDestPathFileName + ".jpg");
                     }
                 }
             }
@@ -530,9 +528,6 @@ public class ConvertServiceImpl implements ConvertService {
         if (ConvertConfig.officeEnabled) {
             return "OFFICE";
         }
-        if (ConvertConfig.wpsPreviewEnabled) {
-            return "WPSSERVER";
-        }
         if (ConvertConfig.libreOfficeEnabled) {
             return "LIBRE";
         }
@@ -598,7 +593,7 @@ public class ConvertServiceImpl implements ConvertService {
      * @return 回调结果
      */
     @NotNull
-    private CallBackResult callBack(WriteBackResult writeBackResult, ConvertEntity convertEntity, List<String> listJpg, File fileOut) {
+    private CallBackResult writeBack(WriteBackResult writeBackResult, ConvertEntity convertEntity, List<String> listJpg, File fileOut) {
         if (writeBackResult.isFlag()) {
             writeBackResult.setFile(Objects.isNull(fileOut) ?
                     Objects.requireNonNull(listJpg).stream().map(f -> new File(f).getName()).collect(Collectors.joining(",")) :
@@ -630,17 +625,18 @@ public class ConvertServiceImpl implements ConvertService {
                 if (lowerFileName.endsWith(".pdf")) {
                     if (convertEntity.getOutFileEncryptorEntity() != null
                             && convertEntity.getOutFileEncryptorEntity().getEncry()) {
-                        try (PDDocument doc = Loader.loadPDF(fileOut, convertEntity.getOutFileEncryptorEntity().getUserPassWord())) {
+                        try (PDDocument doc = PDDocument.load(fileOut, convertEntity.getOutFileEncryptorEntity().getUserPassWord())) {
                             log.info("转换PDF完成，共{}页", doc.getPages().getCount());
                         }
                     } else {
-                        try (PDDocument doc = Loader.loadPDF(fileOut)) {
+                        try (PDDocument doc = PDDocument.load(fileOut)) {
                             log.info("转换PDF完成，共{}页", doc.getPages().getCount());
                         }
                     }
 
                 } else if (lowerFileName.endsWith("ofd")) {
-                    if (StringUtils.isEmpty(convertEntity.getOutFileEncryptorEntity().getUserPassWord())) {
+                    if (convertEntity.getOutFileEncryptorEntity() == null ||
+                            StringUtils.isEmpty(convertEntity.getOutFileEncryptorEntity().getUserPassWord())) {
                         try (OFDReader ofdReader = new OFDReader(Paths.get(fileOut.getCanonicalPath()))) {
                             log.info("转换OFD完成，共{}页", ofdReader.getPageList().size());
                         }
@@ -695,18 +691,32 @@ public class ConvertServiceImpl implements ConvertService {
      * @return JSON格式的返回结果
      */
     private static CallBackResult callBack(String strCallBackURL, Map<String, String> mapWriteBackHeaders,
-                                           WriteBackResult writeBackResult, String
-                                                   outPutFileName) {
+                                           WriteBackResult writeBackResult, String outPutFileName) {
         log.info("回调文件{}, url:{}, header:【{}】, params:【{}】 ", outPutFileName, strCallBackURL,
                 StringUtils.join(mapWriteBackHeaders), StringUtils.join(writeBackResult));
         if (StringUtils.isBlank(strCallBackURL)) {
-            log.info("回调{}地址为空，跳过", outPutFileName);
+            log.info("文件{}回调地址为空，跳过", outPutFileName);
             return new CallBackResult(true, "回调地址为空，跳过");
+        }
+
+        // 回调路径预处理，截取?后的部分
+        Map<String, Object> mapParams = writeBackResult.bean2Map();
+        if(strCallBackURL.indexOf("?") > -1){
+            String strInputParams = strCallBackURL.substring(strCallBackURL.indexOf("?") + 1);
+            String[] strsParams = strInputParams.split("&");
+            for (int i = 0; i < strsParams.length; i++) {
+                String[] p = strsParams[i].split("=");
+                if (p.length == 2) {
+                    mapParams.put(p[0], p[1]);
+                }
+            }
+
+            strCallBackURL = strCallBackURL.substring(0, strCallBackURL.indexOf("?"));
         }
 
         //发送get请求并接收响应数据
         try (HttpResponse httpResponse = HttpUtil.createGet(strCallBackURL)
-                .addHeaders(mapWriteBackHeaders).form(writeBackResult.bean2Map())
+                .addHeaders(mapWriteBackHeaders).form(mapParams)
                 .execute()) {
             String body = httpResponse.body();
             log.info("回调请求地址:{}, 请求体:{},状态码：{}，结果：{}", strCallBackURL, writeBackResult, httpResponse.isOk(), body);

@@ -58,18 +58,22 @@ public class InputUrl extends Input {
     public File getInputFile() {
         // 文件临时存储路径
         if (super.inputFile == null) {
-            String strInputFileName = getFileNameFromHeader();
-            if(!StringUtils.isEmpty(strInputFileName)){
-                // 移除重名文件
-                String downloadFilePath = getBaseUrl() + strInputFileName;
-                FileUtil.del(downloadFilePath);
-                // 从指定的URL中将文件读取下载到目标路径
-                log.debug("url:" + url);
-                log.debug("downloadFilePath:" + downloadFilePath);
-                HttpUtil.downloadFile(url, downloadFilePath);
-                Assert.isTrue(FileUtil.exist(downloadFilePath), this.url + "下载文件失败");
-                // log.info("下载【{}】文件【{}】成功", this.url, downloadFilePath);
-                super.setInputFile(new File(downloadFilePath));
+            // 判断缓存中是否存在
+            super.inputFile = super.getCacheFile(this.url);
+            if (super.inputFile == null) {
+                String strInputFileName = getFileNameFromHeader();
+                if (!StringUtils.isEmpty(strInputFileName)) {
+                    // 移除重名文件
+                    String downloadFilePath = getBaseUrl() + strInputFileName;
+                    FileUtil.del(downloadFilePath);
+                    // 从指定的URL中将文件读取下载到目标路径
+                    log.debug("url:" + url + " ;downloadFilePath:" + downloadFilePath);
+                    HttpUtil.downloadFile(url, downloadFilePath);
+                    Assert.isTrue(FileUtil.exist(downloadFilePath), this.url + "下载文件失败");
+                    // log.info("下载【{}】文件【{}】成功", this.url, downloadFilePath);
+                    super.setInputFile(new File(downloadFilePath));
+                    super.addCache(this.url, downloadFilePath);
+                }
             }
         }
         return super.inputFile;
@@ -77,7 +81,7 @@ public class InputUrl extends Input {
 
     @SneakyThrows
     private String getFileNameFromHeader() {
-        if(!StringUtils.isEmpty(fileType)){
+        if (!StringUtils.isEmpty(fileType)) {
             String fileName = null;
             URL urlConnection = new URL(this.url);
             URLConnection uc = urlConnection.openConnection();

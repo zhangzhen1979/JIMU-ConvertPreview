@@ -4,7 +4,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import springfox.documentation.oas.annotations.EnableOpenApi;
@@ -17,7 +16,6 @@ import java.util.Properties;
 @EnableAsync(proxyTargetClass = true)
 @EnableScheduling
 @EnableConfigurationProperties
-@ComponentScan(value = {"com.thinkdifferent.convertpreview"})
 public class ConvertPreviewApplication {
 
     public static void main(String[] args) {

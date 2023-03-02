@@ -1,5 +1,6 @@
 package com.thinkdifferent.convertpreview.utils.convert4jpg;
 
+import cn.hutool.core.io.FileUtil;
 import com.thinkdifferent.convertpreview.utils.SystemUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.Assert;
@@ -16,10 +17,13 @@ import java.util.List;
  * @date 2023-1-30 11:31:21
  */
 public enum ConvertJpgEnum {
-    // 常见图片格式
-    IMG(Img2Jpg.class),
-    // WEBP格式
-    WEBP(Webp2Jpg.class),
+    // ImgUtil可处理格式
+    TIF(ImgUtil2Jpg.class),
+    GIF(ImgUtil2Jpg.class),
+    JPG(ImgUtil2Jpg.class),
+    JPEG(ImgUtil2Jpg.class),
+    // 其他常见图片格式
+    IMG(Twelemonkey2Jpg.class),
     ;
 
     private final Class<? extends ConvertJpg> clazzConvertJpg;
@@ -43,6 +47,14 @@ public enum ConvertJpgEnum {
         strOutputFile = SystemUtil.beautifulFilePath(strOutputFile);
 
         if(inputFile.length() > 0) {
+            String strJpgPath = strOutputFile.substring(0, strOutputFile.lastIndexOf("/"));
+            // 处理目标文件夹，如果不存在则自动创建
+            File fileJpgPath = new File(strJpgPath);
+            if (!fileJpgPath.exists()) {
+                fileJpgPath.mkdirs();
+            }
+            FileUtil.touch(strOutputFile);
+
             for (ConvertJpgEnum convertJpgEnum : ConvertJpgEnum.values()) {
                 ConvertJpg convertJpgVal = convertJpgEnum.clazzConvertJpg.newInstance();
                 String strFileExt = strInputFile.substring(strInputFile.lastIndexOf(".") + 1).toUpperCase();

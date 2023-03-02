@@ -8,7 +8,6 @@ import com.thinkdifferent.convertpreview.entity.OutFileEncryptorEntity;
 import lombok.Cleanup;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.encryption.*;
 import org.apache.pdfbox.rendering.ImageType;
@@ -36,8 +35,8 @@ public class ConvertPdfUtil {
     /**
      * PDF加密，设置权限
      *
-     * @param strPdfFilePath           输出的pdf文件路径和文件名
-     * @param outFileEncryptorEntity   输出文件加密对象
+     * @param strPdfFilePath         输出的pdf文件路径和文件名
+     * @param outFileEncryptorEntity 输出文件加密对象
      * @return
      * @throws IOException
      */
@@ -45,10 +44,10 @@ public class ConvertPdfUtil {
         File filePdf = new File(strPdfFilePath);
         String strPdfEnc = strPdfFilePath + "_enc.pdf";
 
-        if(outFileEncryptorEntity != null && outFileEncryptorEntity.getEncry()) {
+        if (outFileEncryptorEntity != null && outFileEncryptorEntity.getEncry()) {
             File fileSource = new File(strPdfFilePath);
 
-            @Cleanup PDDocument pdDocument = Loader.loadPDF(fileSource);
+            @Cleanup PDDocument pdDocument = PDDocument.load(fileSource);
             // 读取加密的PDF，需要传入密码
 //            @Cleanup PDDocument pdDocument = Loader.loadPDF(fileSource, "123");
 
@@ -72,10 +71,10 @@ public class ConvertPdfUtil {
 
             String strOwnerPwd = "";
             String strUserPwd = "";
-            if(!StringUtils.isEmpty(outFileEncryptorEntity.getOwnerPassword())){
+            if (!StringUtils.isEmpty(outFileEncryptorEntity.getOwnerPassword())) {
                 strOwnerPwd = outFileEncryptorEntity.getOwnerPassword();
             }
-            if(!StringUtils.isEmpty(outFileEncryptorEntity.getUserPassWord())){
+            if (!StringUtils.isEmpty(outFileEncryptorEntity.getUserPassWord())) {
                 strUserPwd = outFileEncryptorEntity.getUserPassWord();
             }
             StandardProtectionPolicy standardProtectionPolicy = new StandardProtectionPolicy(
@@ -92,7 +91,7 @@ public class ConvertPdfUtil {
             pdDocument.save(strPdfEnc);
 
             File filePdfEnc = new File(strPdfEnc);
-            if(filePdfEnc.exists()){
+            if (filePdfEnc.exists()) {
                 log.debug("加密后的PDF文件改名，文件{}到{}", strPdfEnc, strPdfFilePath);
                 FileUtil.rename(filePdfEnc, strPdfFilePath, true);
             }
@@ -104,8 +103,9 @@ public class ConvertPdfUtil {
 
     /**
      * 获取PDF文件首页JPG图片
-     * @param strInputPDF   输入的PDF文件路径和文件名
-     * @param strOutputJpg  输出的JPG文件路径和文件名
+     *
+     * @param strInputPDF  输入的PDF文件路径和文件名
+     * @param strOutputJpg 输出的JPG文件路径和文件名
      * @return 转换成功的JPG文件File对象
      */
     public File getFirstJpgFromPdf(String strInputPDF, String strOutputJpg) throws IOException {
@@ -113,7 +113,7 @@ public class ConvertPdfUtil {
         File filePdf = new File(strInputPDF);
 
         // 打开来源 使用pdfbox中的方法
-        PDDocument pdfDocument = Loader.loadPDF(filePdf);
+        PDDocument pdfDocument = PDDocument.load(filePdf);
         PDFRenderer pdfRenderer = new PDFRenderer(pdfDocument);
 
         // 以300 dpi 读取存入 BufferedImage 对象
@@ -124,7 +124,7 @@ public class ConvertPdfUtil {
         //文件储存对象
         File fileThumbnail = new File(strOutputJpg);
         // ImageIO.write(FrameToBufferedImage(frame), "jpg", outPut);
-        ImageIO.write(buffImage, "jpg",fileThumbnail);
+        ImageIO.write(buffImage, "jpg", fileThumbnail);
 
         // 关闭文档
         pdfDocument.close();
@@ -138,7 +138,8 @@ public class ConvertPdfUtil {
     }
 
     /**
-     *  pdf文件转换成jpg图片集
+     * pdf文件转换成jpg图片集
+     *
      * @param pdfFile pdf文件
      * @return 图片访问集合
      */
@@ -147,15 +148,16 @@ public class ConvertPdfUtil {
         String imageFileSuffix = ".jpg";
 
         try {
-            @Cleanup PDDocument doc = Loader.loadPDF(pdfFile);
+            @Cleanup PDDocument doc = PDDocument.load(pdfFile);
             int pageCount = doc.getNumberOfPages();
             PDFRenderer pdfRenderer = new PDFRenderer(doc);
 
             String folder = ConvertConfig.outPutPath + DateUtil.today();
             String imageFilePath;
             for (int pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-                imageFilePath = folder + File.separator + pageIndex + imageFileSuffix;
-                if (!FileUtil.exist(imageFilePath)){
+                imageFilePath =
+                        folder + File.separator + FileUtil.mainName(pdfFile) + File.separator + pageIndex + imageFileSuffix;
+                if (!FileUtil.exist(imageFilePath)) {
                     BufferedImage image = pdfRenderer.renderImageWithDPI(pageIndex, 105, ImageType.RGB);
                     ImgUtil.write(image, FileUtil.file(imageFilePath));
                 }

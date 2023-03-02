@@ -1,7 +1,7 @@
 package com.thinkdifferent.convertpreview.entity.mark;
 
 import cn.hutool.core.map.MapUtil;
-import com.thinkdifferent.convertpreview.utils.WaterMarkUtil;
+import com.thinkdifferent.convertpreview.utils.watermark.JpgWaterMarkUtil;
 import lombok.extern.log4j.Log4j2;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -259,7 +259,7 @@ public class PngMark {
      * @param pngMark  图片水印对象
      */
     public void mark4Jpg(String strInputJpg, String strOutPutJpg, PngMark pngMark) throws Exception {
-        WaterMarkUtil.markImageByImage(pngMark.waterMarkFile,
+        JpgWaterMarkUtil.markImageByImage(pngMark.waterMarkFile,
                 strInputJpg, strOutPutJpg,
                 0,
                 (int)pngMark.getLocateX(), (int)pngMark.getLocateY(),
