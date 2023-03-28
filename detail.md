@@ -31,17 +31,13 @@
 
 转换后输出格式为：PDF、OFD、JPG。
 
-## PDF脱敏
 
-V0.7.0 : 新增PDF脱敏部分，前端内容已合并至ecology中
 
 # 配置说明
 
 ## 转换引擎
 
 本系统支持转换引擎包括如下内容：（必须选其一，否则无法完成文档格式转换）
-
-- WPS 预览服务。推荐。需要Linux服务器部署。（支持各种格式转换）
 
 - WPS本地软件（推荐Jacob方式单线程调用）。推荐。需要Windows环境部署。（支持Word、Excel、PowerPoint格式转换，速度快）
 
@@ -124,7 +120,7 @@ convert:
     # 默认文件预览方式：pdf | img， 默认 img
     type: img
     # 是否显示JPG/PDF切换按钮: true | false, 默认 true
-    blnChange: true
+    blnChange: false
     # 图片水印地址, 优先级比文字水印高
     #    watermarkImage: watermark/watermark.png
     # 文字水印内容
@@ -142,29 +138,32 @@ convert:
     inPutTempPath: D:/cvtest/input/
     # 默认本地输出文件所在文件夹
     outPutPath: D:/cvtest/output/
+    # 清理临时目录的间隔时间，单位：天（正整数）, 默认：1
+    cleanUnit: 1
 
   # 转换引擎配置
   engine:
     # 可转换的图片格式
-    picType: tif,tiff,jpg,jpeg,png,bmp,png
-    localUtil:
-      # 使用本地WPS应用转换
-      wps:
-        # 是否启用
-        enabled: true
-        # 文件格式
-        fileType: txt,csv,doc,docx,xls,xlsx,ppt,pptx
-        # 运行类型：exe/jacob。推荐jacob（单线程）
-        runType: jacob
+    picType: tif,tiff,png,jpg,jpeg,bmp,psd,sgi,pcx,webp,batik,icns,pnm,pict,tga,iff,hdr,gif
+  g
+localUtil:
+  # 使用本地WPS应用转换
+  wps:
+    # 是否启用
+    enabled: true
+    # 文件格式
+    fileType: txt,csv,doc,docx,xls,xlsx,ppt,pptx,rtf
+    # 运行类型：exe/jacob。推荐jacob（单线程）
+    runType: jacob
 
-      # 使用本地Office应用转换的文件格式。
-      office:
-        # 是否启用
-        enabled: true
-        # 文件格式(比WPS多支持Visio文件格式)
-        fileType: vsd,vsdx
-        # 运行类型：exe/jacob。推荐jacob（单线程）
-        runType: jacob
+  # 使用本地Office应用转换的文件格式。
+  office:
+    # 是否启用
+    enabled: false
+    # 文件格式(比WPS多支持Visio文件格式)
+    fileType: txt,csv,doc,docx,xls,xlsx,ppt,pptx,vsd,vsdx
+    # 运行类型：exe/jacob。推荐jacob（单线程）
+    runType: jacob
 
 jodconverter:
   local:
@@ -193,7 +192,8 @@ jodconverter:
 - 本服务设置：根据本服务所在服务器的实际情况，修改本地文件输出路径。
 - 重试机制： 依赖RabbitMQ, 只有在RabbitMQ启动得到情况下才会生效
 - jodconverter设置：重点修改“office-home”的值，**一定要写LibreOffice在本服务器中安装的路径**。
-- 归档章电子签验证： 依赖契约锁服务，非必须配置的情况下启用
+
+
 
 # 使用说明
 
@@ -244,8 +244,8 @@ jodconverter:
   "firstPageMark": {
     "base64": "adffadsr2r234234234234234=",
     "template": "gdz.html",
-    "pngWidth": "810",
-    "pngHeight": "250",
+    "pngWidth": 810,
+    "pngHeight": 250,
     "locate": "TR",
     "data": {
       "tableWidth": "800px",
@@ -462,39 +462,6 @@ url、ftp方式配置内容与【输入信息】章节中说明一致。
 - alpha：非必填，透明度，传入文件为PDF/OFD时有效。默认值“1f”。浮点小数，添加的值必须以“f”结尾。如果需要给PDF、OFD文件添加透明水印，则此处透明度设置为“0f”。
 - pageNum：非必填，生成页码。true为生成；false或不填写此项，则不生成。
 
-### 首页水印
-
-可以设置输出的Jpg/Pdf文件首页水印，如下：
-
-- base64：可选项。此参数传入base64后的html模板的字符串。采用前端业务系统生成HTML模板时，可使用此参数；如果使用转换服务内置的模板文件，则不需要传输此参数。参数传入示例如下：
-
-```json
-"firstPageMark": {
-    "base64": "assdffafadsfadfadfadaf=",
-    "pngWidth": "810",
-    "pngHeight": "250",
-    "locate": "TR"
-},
-```
-
-- template：HTML模板文件名（文件存放于“watermark”文件夹中）。
-- pngWidth：生成的png的宽度。此处设置的宽度为图片的“像素”值，需要略大于下面“data”中的“tableWidth”的值（给表格的边框留出空间）。
-- pngHeight：生成的png的高度。此处设置的高度为图片的“像素”值，需要略大于下面“data”中的“tdHeight”值的 2 倍（给表格的边框留出空间）。
-- locate：图片位置。如果不设置此项，或者留空，则默认位置为【顶部居中】（TM）；如果设置位置值，则在指定位置添加页码。
-  - TR：顶部靠右。Top Right。
-  - TM：顶部居中。Top Middle。
-  - TL：顶部靠左。Top Left。
-  - CR：中心靠右。Center Right。
-  - C：中心。Center
-  - CL：中心靠左。Center Left。
-  - BR：底部靠右。Bottom Right。
-  - BM：底部居中。Bottom Middle。
-  - BL：底部靠左。Bottom Left。
-- data：需要替换的字段和数据。key：模板HTML中需要替换的字段名；value：模板HTML中需要替换的字段值。
-  - tableWidth：表宽度。必须写单位px！此内容会替换模板中CSS的设置。
-  - tdWidth：单元格宽度。必须写单位px！需要根据模板中每行单元格的个数，计算单个单元格的宽度。即，表宽度=单元格宽度*单元格个数。此内容会替换模板中CSS的设置。
-  - tdHeight：单元格高度。必须写单位px！需要根据模板中行数，计算单个单元格的高度。即，单元格高度 = （pngHeight - 10 ）/ 行数。此内容会替换模板中CSS的设置。
-  - fontSize：字体大小。必须写单位px！此内容会替换模板中CSS的设置。
 
 
 ### 输出信息
@@ -568,15 +535,15 @@ url、ftp方式配置内容与【输入信息】章节中说明一致。
 
 ```json
 "context": [
-    {
-        "pageIndex": 0,
-        "text": "第一页内容",
-        "rect": {
-            "x": 185,
-            "y": 78,
-            "width": 238,
-            "height": 24
-        }
+    {
+        "pageIndex": 0,
+        "text": "第一页内容",
+        "rect": {
+            "x": 185,
+            "y": 78,
+            "width": 238,
+            "height": 24
+        }
     },
     {
         "pageIndex": 1,
@@ -597,11 +564,11 @@ url、ftp方式配置内容与【输入信息】章节中说明一致。
 
 ### 回写信息
 
-本服务支持以下回写方式：文件路径（path）、http协议上传（url）、FTP服务上传（ftp）、Ecology接口回写（ecology）。
+本服务支持以下回写方式：文件路径（path）、服务器端路径（local）、http协议上传（url）、FTP服务上传（ftp）。
 
 注意：返回Base64接口无此部分回写信息。
 
-当使用文件路径（Path）方式回写时，配置如下：
+当使用文件路径（path）方式回写时，配置如下：
 
 ```json
 "writeBackType": "path",
@@ -613,15 +580,25 @@ url、ftp方式配置内容与【输入信息】章节中说明一致。
 - writeBackType：必填，值为“path”。
 - writeBack：必填。JSON对象，path方式中，key为“path”，value为MP4文件回写的路径。
 
+当使用服务器端路径（local）方式回写时，配置如下：
+
+```json
+"writeBackType": "local",
+```
+
+-
+
+writeBackType：必填，值为“local”。此时，系统自动获取配置文件中【convert.path.outPutPath】设置的路径，将转换后的文件存储在“输出文件夹”中；以待前端系统下载。前端系统访问本服务的“/outfile/文件名”url即可下载。例如：http://127.0.0.1:8080/outfile/cs-alpha0.pdf
+
 当使用http协议上传（url）方式回写时，配置如下：
 
 ```json
 "writeBackType": "url",
 "writeBack": {
-    "url": "http://localhost/uploadfile.do"
+    "url": "http://localhost/uploadfile.do"
 },
 "writeBackHeaders": {
-    "Authorization": "Bearer da3efcbf-0845-4fe3-8aba-ee040be542c0"
+    "token": "da3efcbf-0845-4fe3-8aba-ee040be542c0"
 },
 ```
 
@@ -652,24 +629,7 @@ url、ftp方式配置内容与【输入信息】章节中说明一致。
   - password：ftp服务的密码。
   - filepath：文件所在的路径。
 
-当使用Ecology接口（ecology）方式回写时，配置如下：
 
-```json
-"writeBackType": "ecology",
-"writeBack": {
-    "address": "http://10.115.92.26",
-    "api": "/api/doc/upload/uploadFile2Doc",
-    "category": "123",
-    "appId": "EEAA5436-7577-4BE0-8C6C-89E9D88805EA"
-}
-```
-
-- writeBackType：必填，值为“ecology”。
-- writeBack：必填。JSON对象。
-  - address：ecology服务的访问地址
-  - api：文件上传接口的api地址
-  - category：Ecology中存储此类文件的“文档目录”的ID
-  - appId: ecology系统发放的授权许可证(appid)
 
 ### 回调信息
 
@@ -680,13 +640,14 @@ url、ftp方式配置内容与【输入信息】章节中说明一致。
 ```json
 "callBackURL": "http://10.11.12.13/callback.do",
 "callBackHeaders": {
-"Authorization": "Bearer da3efcbf-0845-4fe3-8aba-ee040be542c0"
+    "token": "da3efcbf-0845-4fe3-8aba-ee040be542c0"
 },
 ```
 
 - callBackURL：回调接口的URL。回调接口需要接收两个参数：
   - file：处理后的文件名。本例为“001-online.jpg”（如果使用ecology方式回写，则此处回传上传接口返回的id）。
   - flag：处理后的状态，值为：success 或 error。
+  - pageNum：转换后文件的页数。
 - callBackHeaders：如果回调接口需要在请求头中加入认证信息等，可以在此处设置请求头的参数和值。
 
 接口url示例：
@@ -797,10 +758,10 @@ convert2base64s接口返回信息示例如下：
 
 ```json
 {
-    "inputType": "path",
-    "inputFile": "D:/cvtest/001.tif",
-    "outPutFileName": "001-online",
-    "outPutFileType": "pdf"
+  "inputType": "path",
+  "inputFile": "D:/cvtest/001.tif",
+  "outPutFileName": "001-online",
+  "outPutFileType": "pdf"
 }
 ```
 
@@ -817,8 +778,8 @@ convert2base64s接口返回信息示例如下：
 可以设置输出的Jpg/Pdf/Ofd文件的文件名（无扩展名）和输出的文件类型，如下：
 
 ```json
-    "outPutFileName": "001-online",
-    "outPutFileType": "jpg",
+"outPutFileName": "001-online",
+"outPutFileType": "jpg",
 ```
 
 - outPutFileName：必填，为文件生成后的文件名（无扩展名）。
@@ -827,6 +788,8 @@ convert2base64s接口返回信息示例如下：
 ### 返回信息
 
 convert2stream接口将转换后的文件输出到Http响应信息中，以文件流方式返回。
+
+
 
 ## 预览接口（页面）说明
 
@@ -839,9 +802,17 @@ convert2stream接口将转换后的文件输出到Http响应信息中，以文�
 - filePath: base64格式后的文件路径。支持以下方式传入文件路径
   - 本地文件：C:/a.doc
   - http链接：http://ip:port/download/fileId
+    - md5: 非必须，用于区分文件是否是同一个，优先级较高
+    - uuid: 非必须，用于区分文件是否是同一个，优先级较低
   - ftp路径：ftp://username:password@ip:port/dir/file.doc
 - fileType: 文件类型，即文件的扩展名。
 - keyword：检索词。如果使用pdf方式预览，可以支持单个词高亮显示。
+- watermark：base64格式后的水印信息。json格式，支持以下配置
+  - content: 文字水印内容，优先级比application.yml配置要高
+  - rotate: 旋转角度，默认30
+  - opacity: 透明度，默认0.8
+  - fontsize: 字体大小，默认18
+  - color： 文字水印颜色，默认灰色，#cfcfcf
 
 请求结果：html页面，需通过浏览器进行预览。
 

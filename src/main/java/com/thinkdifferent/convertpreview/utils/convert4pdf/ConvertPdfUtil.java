@@ -1,6 +1,5 @@
 package com.thinkdifferent.convertpreview.utils.convert4pdf;
 
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.FileUtil;
 import com.thinkdifferent.convertpreview.config.ConvertConfig;
@@ -20,6 +19,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -144,6 +144,9 @@ public class ConvertPdfUtil {
      * @return 图片访问集合
      */
     public List<String> pdf2jpg(File pdfFile) {
+        if (FileUtil.extName(pdfFile).equals("jpg")) {
+            return Collections.singletonList(FileUtil.getCanonicalPath(pdfFile));
+        }
         List<String> imageUrls = new ArrayList<>();
         String imageFileSuffix = ".jpg";
 
@@ -152,7 +155,7 @@ public class ConvertPdfUtil {
             int pageCount = doc.getNumberOfPages();
             PDFRenderer pdfRenderer = new PDFRenderer(doc);
 
-            String folder = ConvertConfig.outPutPath + DateUtil.today();
+            String folder = ConvertConfig.outPutPath;
             String imageFilePath;
             for (int pageIndex = 0; pageIndex < pageCount; pageIndex++) {
                 imageFilePath =

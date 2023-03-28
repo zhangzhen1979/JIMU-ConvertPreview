@@ -72,7 +72,7 @@ convert:
     # 默认文件预览方式：pdf | img， 默认 img
     type: img
     # 是否显示JPG/PDF切换按钮: true | false, 默认 true
-    blnChange: true
+    blnChange: false
     # 图片水印地址, 优先级比文字水印高
     #    watermarkImage: watermark/watermark.png
     # 文字水印内容

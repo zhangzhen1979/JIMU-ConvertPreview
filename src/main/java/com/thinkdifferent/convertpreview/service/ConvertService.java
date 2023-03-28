@@ -29,7 +29,8 @@ public interface ConvertService {
      *
      * @param input   输入文件
      * @param params
+     * @param outType 预览的类型 pdf 或 officePicture
      * @return 转换后的pdf文件
      */
-    File filePreview(Input input, Map<String, String> params) throws Exception;
+    File filePreview(Input input, Map<String, String> params, String outType) throws Exception;
 }

@@ -1,5 +1,6 @@
 package com.thinkdifferent.convertpreview.entity;
 
+import com.thinkdifferent.convertpreview.config.ConvertConfig;
 import com.thinkdifferent.convertpreview.entity.writeback.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.Assert;
@@ -17,6 +18,8 @@ import java.util.Objects;
 public enum WriteBackType {
     // 路径回写
     PATH(WriteBackPath.class),
+    // 服务端路径回写
+    LOCAL(WriteBackPath.class),
     // 接口回写
     URL(WriteBackUrl.class),
     // FTP 回写
@@ -43,6 +46,12 @@ public enum WriteBackType {
         Assert.isTrue(writeBackParams instanceof Map, "回写信息格式错误");
 
         WriteBack writeBack = this.clazzWriteBack.newInstance().of((Map<String, Object>) writeBackParams);
+
+        if (LOCAL.equals(this)) {
+            // 服务端路径回写，添加服务端输出文件夹
+            ((WriteBackPath) writeBack).setPath(ConvertConfig.outPutPath);
+        }
+
         if (URL.equals(this)) {
             // URL 请求添加请求头
             ((WriteBackUrl) writeBack).setWriteBackHeaders((Map) parameters.get("writeBackHeaders"));

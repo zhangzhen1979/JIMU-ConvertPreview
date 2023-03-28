@@ -1,6 +1,7 @@
 package com.thinkdifferent.convertpreview.utils;
 
 import cn.hutool.core.io.FileUtil;
+import lombok.Cleanup;
 import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
@@ -128,7 +129,7 @@ public class Excel2HtmlUtil {
                 InputStream inputStream = new FileInputStream(excelFile)
         ) {
             // 创建工作簿
-            Workbook workbook = WorkbookFactory.create(inputStream);
+            @Cleanup Workbook workbook = WorkbookFactory.create(inputStream);
             // Excel类型
             if (workbook instanceof HSSFWorkbook) {
                 // 2003

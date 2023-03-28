@@ -2,13 +2,21 @@
 
 文档格式转换：本服务用于将常见的文件转换为Pdf、Ofd文件，也可转换为Jpg格式图片。支持path、url方式获取源文件；支持对文件加图片水印、文字水印；支持path、ftp、url方式回写文件。
 
-在线预览（开发中，逐步更新）：支持以下格式文件的在线预览；支持以PDF或JPG方式在线预览；支持预览页面中加入文字水印、图片水印。
+在线预览：支持以下格式文件的在线预览；支持以PDF或JPG方式在线预览；支持预览页面中加入文字水印、图片水印。
 
 本服务支持的输入格式为：
 
-- 图片格式：BMP、GIF、FlashPix、JPEG、PNG、PMN、TIFF、WBMP
+- 图片格式：tif、png、jpg、bmp、psd、sgi、pcx、webp、batik、icns、pnm、pict、tga、iff、hdr、gif
 
-- Office系列：doc、docx、xls、xlsx、ppt、pptx
+- Office系列：
+  
+  - Word：doc、docx
+  
+  - Excel：xls、xlsx
+  
+  - PowerPoint：ppt、pptx
+  
+  - Visio：vsd、vsdx
 
 - OpenOffice系列：odt、odp、ods
 

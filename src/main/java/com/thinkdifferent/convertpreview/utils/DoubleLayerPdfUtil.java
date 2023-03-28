@@ -99,7 +99,7 @@ public class DoubleLayerPdfUtil {
             contentStream.close();
         }
         document.save(tempFile);
-        FileUtil.rename(tempFile, basePdfFile.getPath(), true);
+        FileUtil.rename(tempFile, basePdfFile.getName(), true);
 
     }
 

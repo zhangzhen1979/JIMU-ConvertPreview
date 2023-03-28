@@ -1,5 +1,6 @@
 package org.ofdrw.crypto.integrity;
 
+import lombok.Cleanup;
 import org.apache.commons.io.FileUtils;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
@@ -56,7 +57,7 @@ public class OFDIntegrityVerifier {
             workDir = Files.createTempDirectory("ofd-tmp-");
             // 解压文档，到临时的工作目录
             ZipUtil.unZipFiles(in.toFile(), workDir.toAbsolutePath() + File.separator);
-            OFDDir ofdDir = new OFDDir(workDir.toAbsolutePath());
+            @Cleanup OFDDir ofdDir = new OFDDir(workDir.toAbsolutePath());
             // a) 读取完整性保护描述文件
             // 此处如果文件不存在会抛出FNE异常
             final Path ofdEntriesPath = ofdDir.getFile(OFDDir.OFDEntriesFileName);

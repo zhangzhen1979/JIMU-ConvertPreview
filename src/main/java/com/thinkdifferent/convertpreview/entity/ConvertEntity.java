@@ -174,7 +174,7 @@ public class ConvertEntity {
 
         // 首页水印（归档章）
         if(parameters.get("firstPageMark") != null){
-            entity.setFirstPageMark(FirstPageMark.get((Map<String,String>)parameters.get("firstPageMark")));
+            entity.setFirstPageMark(FirstPageMark.get((Map<String,Object>)parameters.get("firstPageMark")));
         }
 
         // 转换出来的文件名（不包含扩展名）（"001-online"）
@@ -233,7 +233,7 @@ public class ConvertEntity {
 
         // 缩略图设置
         entity.setThumbnail(Thumbnail.convert(parameters));
-        // 文件回写方式（回写路径[path]/回写接口[api]/ftp回写[ftp]）
+        // 文件回写方式（回写路径[path]/服务端路径[local]/回写接口[api]/ftp回写[ftp]）
         entity.setWriteBackType(WriteBackType.valueOf(MapUtil.getStr(parameters, "writeBackType", "path").toUpperCase()));
         // 回写信息配置
         entity.setWriteBack(entity.getWriteBackType().convert(parameters));

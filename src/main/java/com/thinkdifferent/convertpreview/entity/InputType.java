@@ -39,7 +39,7 @@ public enum InputType {
 
     /**
      * @param inputPath 输入的文件路径
-     * @param strExt 文件扩展名
+     * @param strExt    文件扩展名
      * @return 输入对象
      */
     @SneakyThrows
@@ -50,6 +50,11 @@ public enum InputType {
             if (input.matchInput(inputPath)) {
                 return input.of(inputPath, strExt);
             }
+        }
+        if (inputPath.contains("+")) {
+            // 替换+号，浏览器自己转换的
+            inputPath = inputPath.replace("+", " ");
+            return convert(inputPath, strExt);
         }
         throw new IllegalArgumentException("no match input type : " + inputPath);
     }

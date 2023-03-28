@@ -134,7 +134,6 @@ public class XHTMLToImage {
         if (args.length != 2) {
             inputFilename = "d:/gdz.html";
             outputFilename = "d:/gdz.png";
-            System.out.println("Usage : XHTMLToImage INPUTFILE.xhtml OUTPUTFILE.png <width> <height>");
         } else {
             inputFilename = args[0];
             outputFilename = args[1];
@@ -166,7 +165,7 @@ public class XHTMLToImage {
      * @return 转化后的字符串
      */
     private static String file2String(File file, String encoding) throws IOException {
-        StringWriter writer = new StringWriter();
+        @Cleanup StringWriter writer = new StringWriter();
         @Cleanup InputStreamReader reader = (encoding == null || "".equals(encoding.trim())) ?
                 new InputStreamReader(new FileInputStream(file), encoding) :
                 new InputStreamReader(new FileInputStream(file));

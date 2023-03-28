@@ -52,6 +52,10 @@ public class FirstPageMark {
      */
     private int pngHeight;
     /**
+     * 图片尺寸单位，是否为“厘米”
+     */
+    private Boolean isCm;
+    /**
      * 水印文件对象
      */
     private File markFile;
@@ -73,6 +77,14 @@ public class FirstPageMark {
             markFile = getMarkPng();
         }
         return markFile;
+    }
+
+    public Boolean getCm() {
+        return isCm;
+    }
+
+    public void setCm(Boolean cm) {
+        isCm = cm;
     }
 
     public void setMarkFile(File markFile) {
@@ -127,7 +139,7 @@ public class FirstPageMark {
         this.locate = locate;
     }
 
-    public static FirstPageMark get(Map<String, String> mapMark) {
+    public static FirstPageMark get(Map<String, Object> mapMark) {
         FirstPageMark firstPageMark = new FirstPageMark();
 
         firstPageMark.setBase64(MapUtil.getStr(mapMark, "base64", null));
@@ -136,8 +148,19 @@ public class FirstPageMark {
                         "/watermark/" +
                         MapUtil.getStr(mapMark, "template", "")
         );
-        firstPageMark.setPngWidth(MapUtil.getInt(mapMark, "pngWidth", 0));
-        firstPageMark.setPngHeight(MapUtil.getInt(mapMark, "pngHeight", 0));
+
+        double dblPngWidth = MapUtil.getDouble(mapMark, "pngWidth", 0d);
+        double dblPngHeight = MapUtil.getDouble(mapMark, "pngHeight", 0d);
+
+        int intPngWidth = (int)dblPngWidth;
+        int intPngHeight = (int)dblPngHeight;
+        if(mapMark.containsKey("isCm") && MapUtil.getBool(mapMark, "isCm")){
+            intPngWidth = (int)Math.round(dblPngWidth / 2.54 * 400) + 6;
+            intPngHeight = (int)Math.round(dblPngHeight / 2.54 * 400) + 6;
+        }
+
+        firstPageMark.setPngWidth(intPngWidth);
+        firstPageMark.setPngHeight(intPngHeight);
         firstPageMark.setLocate(MapUtil.getStr(mapMark, "locate", "TC"));
 
         if (mapMark.containsKey("data")) {

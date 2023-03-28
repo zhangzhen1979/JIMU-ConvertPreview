@@ -61,10 +61,11 @@ public class WriteBackUrl extends WriteBack {
     @Override
     public WriteBackResult writeBack(String outPutFileType, File fileOut, List<String> listJpg) {
         if ("jpg".equalsIgnoreCase(outPutFileType)) {
-            for (String strJpg : listJpg) {
-                return WriteBackUtil.writeBack2Api(strJpg, url, writeBackHeaders);
+            if(listJpg != null && listJpg.size() > 0){
+                return WriteBackUtil.writeBack2Api(listJpg.get(0), url, writeBackHeaders);
+            }else{
+                return new WriteBackResult(false, "输出格式为jpg但无数据");
             }
-            return new WriteBackResult(false, "输出格式为jpg但无数据");
         } else {
             // pdf 和 ofd 的都走这里
             return WriteBackUtil.writeBack2Api(fileOut.getCanonicalPath(), url, writeBackHeaders);

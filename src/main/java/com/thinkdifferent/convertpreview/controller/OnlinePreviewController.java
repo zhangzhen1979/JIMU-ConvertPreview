@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -57,6 +58,7 @@ public class OnlinePreviewController {
      * @param model     model，非必传， pdf officePicture compress ofd
      * @param keyword   pdf高亮关键词，支持持单个词语
      * @param waterMark 水印配置，json, base64，
+     * @param md5       文件MD5，判断是否是同一个文件
      * @return ftl文件名
      */
     @RequestMapping("/onlinePreview")
@@ -66,6 +68,7 @@ public class OnlinePreviewController {
                                 @RequestParam(value = "outType", required = false, defaultValue = "") String outType,
                                 @RequestParam(value = "watermark", required = false, defaultValue = "") String waterMark,
                                 @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
+                                @RequestParam(value = "md5", required = false) String md5,
                                 Model model) {
         model.addAllAttributes(getDefaultModelParams());
         File inputFile = null;
@@ -73,7 +76,12 @@ public class OnlinePreviewController {
             if (filePath.contains(" ")) {
                 filePath = filePath.replaceAll(" ", "+").replaceAll("\n", "");
             }
-            filePath = Base64.decodeStr(filePath);
+            if (Pattern.matches(base64Pattern, filePath)) {
+                filePath = Base64.decodeStr(filePath);
+            }
+            if (StringUtils.startsWithAny(filePath, "http://", "https://") && StringUtils.isNotBlank(md5)) {
+                filePath += "&md5=" + md5;
+            }
             Input input = InputType.convert(filePath, fileType);
             if (!input.exists()) {
                 model.addAttribute("fileType", fileType);
@@ -82,21 +90,28 @@ public class OnlinePreviewController {
             }
             inputFile = input.getInputFile();
             fileType = FileUtil.extName(inputFile);
-            File convertFile = convertService.filePreview(input, params);
-            Assert.isTrue(convertFile.exists(), "转换失败");
             // 根据输出类型选择不同的模板
             if (StringUtils.isBlank(outType)) {
                 outType = ConvertConfig.previewType;
             }
-            if (StringUtils.equalsAnyIgnoreCase(fileType, "ofd", "xls", "xlsx")) {
+            if (FILE_PREVIEW_MAPPING.keySet().contains(fileType.toLowerCase())) {
                 outType = FILE_PREVIEW_MAPPING.getOrDefault(fileType, "pdf");
             }
+            File convertFile = convertService.filePreview(input, params, FILE_CONVERT_MAPPING.getOrDefault(fileType, outType));
+            Assert.isTrue(convertFile.exists(), "转换失败");
+
             model.addAttribute("keyword", keyword);
             // 水印
             addWaterMark(model, waterMark);
             // 不同模板参数不同
+//            if (outType.equalsIgnoreCase(PICTURE_PREVIEW) && )
             MODEL_PARAMS_MAPPING.getOrDefault(outType, MODEL_PARAMS_MAPPING.get(PDF_PREVIEW))
                     .config(model, convertFile);
+            // 模型预览
+            if (Objects.nonNull(model.getAttribute("imgUrls"))
+                    && ((List) model.getAttribute("imgUrls")).size() == 1) {
+                return PICTURE_ONE_PREVIEW;
+            }
             return outType;
         } catch (Exception e) {
             log.error("预览文件异常", e);
@@ -123,13 +138,15 @@ public class OnlinePreviewController {
             model.addAttribute("watermarkImage", "");
         }
         model.addAttribute("watermarkTxt", joWaterMark.optString("content", watermarkText));
-        model.addAttribute("watermarkAngle", joWaterMark.optDouble("rotate", 10));
+        // 旋转角度
+        model.addAttribute("watermarkAngle", joWaterMark.optDouble("rotate", 30));
         // 字体
         String font = joWaterMark.optString("font");
         String[] splits;
         if (StringUtils.isNotBlank(font) && (splits = font.split(" ")).length == 3) {
             model.addAttribute("watermarkFontsize", splits[1]);
         }
+        // 旋转角度
         model.addAttribute("watermarkAngle", joWaterMark.optString("rotate"));
         // 透明度
         String fillStyle = joWaterMark.optString("fillstyle");
@@ -139,6 +156,18 @@ public class OnlinePreviewController {
             if (split.length == 4) {
                 model.addAttribute("watermarkAlpha", split[3]);
             }
+        }
+        // 2023年3月21日 颜色 #fff
+        if (StringUtils.isNotBlank(joWaterMark.optString("color"))) {
+            model.addAttribute("watermarkColor", joWaterMark.optString("color"));
+        }
+        // 透明度 0.8
+        if (StringUtils.isNotBlank(joWaterMark.optString("opacity"))) {
+            model.addAttribute("watermarkAlpha", joWaterMark.optString("opacity"));
+        }
+        // 字体大小
+        if (StringUtils.isNotBlank(joWaterMark.optString("fontsize"))) {
+            model.addAttribute("watermarkFontsize", joWaterMark.optString("fontsize") + "px");
         }
     }
 
@@ -184,17 +213,17 @@ public class OnlinePreviewController {
             if (StringUtils.isBlank(ConvertConfig.blnChangeType)) {
                 ConvertConfig.blnChangeType = cn.hutool.extra.spring.SpringUtil.getProperty("convert.preview.blnChange");
             }
-            DEFAULT_MODEL_PARAMS = new HashMap() {{
+            DEFAULT_MODEL_PARAMS = new HashMap<String, Object>() {{
                 put("baseUrl", ConfigConstants.baseUrl);
                 put("watermarkImage", getWatermarkImage());
                 put("watermarkTxt", watermarkText);
                 put("watermarkFontsize", "18px");
-                put("watermarkAlpha", 0.2);
-                put("watermarkAngle", "10");
+                put("watermarkAlpha", 0.8);
+                put("watermarkAngle", "30");
                 put("watermarkXSpace", 10);
                 put("watermarkYSpace", 10);
                 put("watermarkFont", "微软雅黑");
-                put("watermarkColor", "black");
+                put("watermarkColor", "gray");
                 put("watermarkWidth", "240");
                 put("watermarkHeight", "80");
                 put("pdfPresentationModeDisable", "true");
@@ -213,13 +242,33 @@ public class OnlinePreviewController {
 
     private Map<String, Object> DEFAULT_MODEL_PARAMS;
 
+
+    /**
+     * 默认文件转换类型
+     */
+    private static final Map<String, String> FILE_CONVERT_MAPPING = new HashMap<String, String>() {{
+        put("xls", PDF_PREVIEW);
+        put("xlsx", PDF_PREVIEW);
+        put("ppt", PDF_PREVIEW);
+        put("pptx", PDF_PREVIEW);
+        put("doc", PDF_PREVIEW);
+        put("docx", PDF_PREVIEW);
+        put("rtf", PDF_PREVIEW);
+        put("vsd", PDF_PREVIEW);
+        put("vsdx", PDF_PREVIEW);
+    }};
+
     /**
      * 文件类型及默认预览页面
      */
-    private static final Map<String, String> FILE_PREVIEW_MAPPING = new HashMap() {{
-        put("pdf", PICTURE_PREVIEW);
+    private static final Map<String, String> FILE_PREVIEW_MAPPING = new HashMap<String, String>() {{
+        // put("pdf", PICTURE_PREVIEW);
         put("xls", PDF_PREVIEW);
         put("xlsx", PDF_PREVIEW);
+//        put("ppt", PDF_PREVIEW);
+//        put("pptx", PDF_PREVIEW);
+//        put("doc", PDF_PREVIEW);
+//        put("docx", PDF_PREVIEW);
         // put("png", PICTURE_PREVIEW);
         put("ofd", OFD_PREVIEW);
         // 压缩文件预览
@@ -228,13 +277,14 @@ public class OnlinePreviewController {
         put("rar", COMPRESS_PREVIEW);
         put("jar", COMPRESS_PREVIEW);
         put("tar", COMPRESS_PREVIEW);
+        // 图片
     }};
 
     /**
      * 模板及参数处理页面
      */
-    private static final Map<String, ModelParams> MODEL_PARAMS_MAPPING = new HashMap() {{
-        put(PDF_PREVIEW, (ModelParams) (model, convertFile) -> {
+    private static final Map<String, ModelParams> MODEL_PARAMS_MAPPING = new HashMap<String, ModelParams>() {{
+        put(PDF_PREVIEW, (model, convertFile) -> {
             if (StringUtils.equalsAnyIgnoreCase(FileUtil.extName(convertFile), "xls", "xlsx", "html")) {
                 // excel转html, 直接返回
                 model.addAttribute("blnExcel", "true");
@@ -244,26 +294,25 @@ public class OnlinePreviewController {
                 model.addAttribute("pdfUrl", OnlinePreviewController.aes.encryptHex(convertFile.getCanonicalPath()));
             }
         });
-        put(PICTURE_PREVIEW, (ModelParams) (model, convertFile) -> {
+        put(PICTURE_PREVIEW, (model, convertFile) -> {
             // 图片预览
             List<String> jpgUrl = SpringUtil.getClass(ConvertPdfUtil.class).pdf2jpg(convertFile)
                     .stream()
                     .map(str -> "/api/download?urlPath=" + OnlinePreviewController.aes.encryptHex(str))
                     .collect(Collectors.toList());
             model.addAttribute("imgUrls", jpgUrl);
-            model.addAttribute("currentUrl", jpgUrl.get(0));
+            model.addAttribute("currentUrl", jpgUrl.size() > 0 ? jpgUrl.get(0) : "");
         });
-        put(COMPRESS_PREVIEW, (ModelParams) (model, convertFile) -> {
+        put(COMPRESS_PREVIEW, (model, convertFile) -> {
             String strFileTree = Objects.isNull(convertFile) ? "{}" : com.thinkdifferent.convertpreview.utils.FileUtil.fileTree(convertFile);
             model.addAttribute("fileTree", strFileTree);
         });
-        put(OFD_PREVIEW, (ModelParams) (model, convertFile) -> {
-            model.addAttribute("currentUrl",
-                    "/api/download?urlPath=" + OnlinePreviewController.aes.encryptHex(convertFile.getPath()));
-        });
+        put(OFD_PREVIEW, (model, convertFile) -> model.addAttribute("currentUrl",
+                "/api/download?urlPath=" + OnlinePreviewController.aes.encryptHex(convertFile.getPath())));
     }};
 
     private static final String PICTURE_PREVIEW = "officePicture";
+    private static final String PICTURE_ONE_PREVIEW = "picture";
     private static final String PDF_PREVIEW = "pdf";
     private static final String NOT_SUPPORT = "fileNotSupported";
     private static final String COMPRESS_PREVIEW = "compress";
@@ -284,4 +333,6 @@ public class OnlinePreviewController {
         void config(Model model, File convertFile) throws IOException;
     }
 
+    private static final String base64Pattern = "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{4}|[A-Za-z0-9+/]{3}=|[A-Za-z0-9" +
+            "+/]{2}==)$";
 }

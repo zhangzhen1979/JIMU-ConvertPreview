@@ -63,16 +63,28 @@ public class InputUrl extends Input {
             if (super.inputFile == null) {
                 String strInputFileName = getFileNameFromHeader();
                 if (!StringUtils.isEmpty(strInputFileName)) {
-                    // 移除重名文件
+                    // 判断文件是否存在
                     String downloadFilePath = getBaseUrl() + strInputFileName;
-                    FileUtil.del(downloadFilePath);
+                    File fileDownload = new File(downloadFilePath);
+                    if(fileDownload != null &&
+                            fileDownload.exists()){
+                        if(fileDownload.length()==0){
+                            // 如果文件大小为0，则删除，重新下载
+                            FileUtil.del(downloadFilePath);
+                        }else {
+                            super.setInputFile(fileDownload);
+                            super.addCache(this.url, downloadFilePath);
+                            return super.inputFile;
+                        }
+                    }
                     // 从指定的URL中将文件读取下载到目标路径
                     log.debug("url:" + url + " ;downloadFilePath:" + downloadFilePath);
                     HttpUtil.downloadFile(url, downloadFilePath);
                     Assert.isTrue(FileUtil.exist(downloadFilePath), this.url + "下载文件失败");
                     // log.info("下载【{}】文件【{}】成功", this.url, downloadFilePath);
-                    super.setInputFile(new File(downloadFilePath));
+                    super.setInputFile(fileDownload);
                     super.addCache(this.url, downloadFilePath);
+
                 }
             }
         }
@@ -82,15 +94,22 @@ public class InputUrl extends Input {
     @SneakyThrows
     private String getFileNameFromHeader() {
         if (!StringUtils.isEmpty(fileType)) {
-            String fileName = null;
+            String fileName;
             URL urlConnection = new URL(this.url);
             URLConnection uc = urlConnection.openConnection();
 
             String uuid = "";
-            if (this.url.contains("?") && this.url.contains("uuid=")) {
-                // 取UUID
-                String subUuid = this.url.substring(this.url.indexOf("uuid="));
-                uuid = subUuid.substring(5, subUuid.contains("&") ? subUuid.indexOf("&") : subUuid.length());
+            String md5 = "";
+            if (this.url.contains("?")) {
+                if (this.url.contains("md5=")) {
+                    // 取md5作为文件名
+                    md5 = this.url.substring(this.url.indexOf("md5="));
+                    md5 = md5.substring(4, md5.contains("&") ? md5.indexOf("&") : md5.length());
+                } else if (this.url.contains("uuid=")) {
+                    // 取UUID
+                    String subUuid = this.url.substring(this.url.indexOf("uuid="));
+                    uuid = subUuid.substring(5, subUuid.contains("&") ? subUuid.indexOf("&") : subUuid.length());
+                }
             }
 
             String realFileName = "";
@@ -102,7 +121,8 @@ public class InputUrl extends Input {
             } else {
                 realFileName = UUID.randomUUID().toString() + "." + this.fileType;
             }
-            return StringUtils.isNotBlank(uuid) ? (uuid + realFileName.substring(realFileName.lastIndexOf("."))) : realFileName;
+            return StringUtils.isNotBlank(md5) ? (md5 + realFileName.substring(realFileName.lastIndexOf("."))) :
+                    (StringUtils.isNotBlank(uuid) ? (uuid + realFileName.substring(realFileName.lastIndexOf("."))) : realFileName);
 
         }
         return null;

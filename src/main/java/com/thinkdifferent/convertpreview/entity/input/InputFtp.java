@@ -52,14 +52,14 @@ public class InputFtp extends Input {
         Assert.hasText(inputPath, "路径不能为空");
         Assert.isTrue(inputPath.startsWith("ftp://"), "FTP文件格式错误");
         InputFtp inputFtp = new InputFtp();
-        // 解析路径，获取host\端口\路径\文件名
+        // 解析路径，获取host\端口\路径\文件名  ftp://OA:Abc@456@192.168.1.1/
         String subFtpFilePath = inputPath.substring(6);
         // 用户、密码
         if (subFtpFilePath.contains("@")) {
             inputFtp.setUsername(subFtpFilePath.substring(0, subFtpFilePath.indexOf(":")));
-            inputFtp.setPassword(subFtpFilePath.substring(subFtpFilePath.indexOf(":") + 1, subFtpFilePath.indexOf("@")));
+            inputFtp.setPassword(subFtpFilePath.substring(subFtpFilePath.indexOf(":") + 1, subFtpFilePath.lastIndexOf("@")));
             // 获取完用户密码后, 重新截取
-            subFtpFilePath = subFtpFilePath.substring(subFtpFilePath.indexOf("@") + 1);
+            subFtpFilePath = subFtpFilePath.substring(subFtpFilePath.lastIndexOf("@") + 1);
         } else {
             // 匿名登录
             inputFtp.setUsername("anonymous");
@@ -90,14 +90,22 @@ public class InputFtp extends Input {
             // 判断缓存中是否存在
             super.inputFile = super.getCacheFile(this.filePath);
             if (super.inputFile == null) {
-                // FTP 格式，需要下载文件
-                String strInputFileName = filePath.substring(filePath.lastIndexOf("/") + 1);
-                // 检查目标文件夹中是否有重名文件，如果有，先删除。
-                FileUtil.del(getBaseUrl() + strInputFileName);
+                // 判断文件是否存在
+                String downloadFilePath = filePath.substring(filePath.lastIndexOf("/") + 1);
+                File fileDownload = new File(downloadFilePath);
+                if (fileDownload != null &&
+                        fileDownload.exists() &&
+                        fileDownload.length() > 0) {
+                    super.setInputFile(fileDownload);
+                    return super.inputFile;
+                }
+
+                // 如果文件大小为0，则删除，重新下载
+                FileUtil.del(getBaseUrl() + downloadFilePath);
                 // ftp 下载文件
-                FtpUtil.downloadFile(this, new File(getBaseUrl() + strInputFileName));
-                super.setInputFile(new File(getBaseUrl() + strInputFileName));
-                super.addCache(this.filePath, getBaseUrl() + strInputFileName);
+                FtpUtil.downloadFile(this, new File(getBaseUrl() + downloadFilePath));
+                super.setInputFile(new File(getBaseUrl() + downloadFilePath));
+                super.addCache(this.filePath, getBaseUrl() + downloadFilePath);
             }
 
         }

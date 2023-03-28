@@ -38,7 +38,7 @@ public class ImgUtil2Jpg extends ConvertJpg {
         try {
 
             File fileImg = new File(strInputFile);
-            ImageInputStream isb = ImageIO.createImageInputStream(fileImg);
+            @Cleanup ImageInputStream isb = ImageIO.createImageInputStream(fileImg);
             Iterator<ImageReader> iterator = ImageIO.getImageReaders(isb);
             if (iterator == null || !iterator.hasNext()) {
                 throw new IOException("Image file format not supported by ImageIO: ");

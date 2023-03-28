@@ -3,13 +3,17 @@ package com.thinkdifferent.convertpreview.utils;
 import com.thinkdifferent.convertpreview.entity.WriteBackResult;
 import com.thinkdifferent.convertpreview.entity.writeback.WriteBack;
 import lombok.Cleanup;
+import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.ofdrw.reader.OFDReader;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -27,11 +31,30 @@ public class WriteBackUtil {
      * @param listJpg        jpg list
      * @return jo
      */
+    @SneakyThrows
     public static WriteBackResult writeBack(WriteBack writeBack, String outPutFileType, File fileOut, List<String> listJpg) {
         if (Objects.isNull(writeBack)) {
             return new WriteBackResult(true);
         }
         WriteBackResult writeBackResult = writeBack.writeBack(outPutFileType, fileOut, listJpg);
+
+        if(!listJpg.isEmpty()){
+            writeBackResult.setPageNum((long)listJpg.size());
+        }else{
+            if("jpg".equalsIgnoreCase(outPutFileType)){
+                writeBackResult.setPageNum(1l);
+            }else if("pdf".equalsIgnoreCase(outPutFileType)){
+                try (PDDocument doc = PDDocument.load(fileOut)) {
+                    writeBackResult.setPageNum((long)doc.getPages().getCount());
+                }
+
+            }else if("ofd".equalsIgnoreCase(outPutFileType)){
+                try (OFDReader ofdReader = new OFDReader(Paths.get(fileOut.getCanonicalPath()))) {
+                    writeBackResult.setPageNum((long)ofdReader.getPageList().size());
+                }
+            }
+        }
+
         log.info("回写结果：{}", writeBackResult);
         return writeBackResult;
     }
@@ -117,7 +140,7 @@ public class WriteBackUtil {
         @Cleanup BufferedReader reader = new BufferedReader(inputStreamReader);
 
         String strLine;
-        StringBuffer sbLine = new StringBuffer();
+        StringBuilder sbLine = new StringBuilder();
         while ((strLine = reader.readLine()) != null) {
             sbLine.append(strLine);
         }

@@ -19,6 +19,10 @@ public class WriteBackResult extends SimpleResult {
      * 文件路径
      */
     private String file;
+    /**
+     * 文件总页数
+     */
+    private Long pageNum;
 
     public WriteBackResult() {
         super.setFlag(false);
@@ -51,6 +55,7 @@ public class WriteBackResult extends SimpleResult {
                 "flag=" + super.isFlag() +
                 ", message='" + super.getMessage() + '\'' +
                 ", file='" + file + '\'' +
+                ", pageNum='" + pageNum + '\'' +
                 '}';
     }
 }
