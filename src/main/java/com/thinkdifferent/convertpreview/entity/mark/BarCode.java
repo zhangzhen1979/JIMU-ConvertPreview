@@ -2,11 +2,14 @@ package com.thinkdifferent.convertpreview.entity.mark;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.map.MapUtil;
-import com.thinkdifferent.convertpreview.utils.XHTMLToImage;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.itextpdf.text.pdf.qrcode.EncodeHintType;
 import com.thinkdifferent.convertpreview.utils.watermark.JpgWaterMarkUtil;
 import lombok.Cleanup;
 import lombok.Data;
-import net.sf.json.JSONObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -20,30 +23,33 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * 首页水印（归档章）
+ * 条码/二维码
  *
  * @author ltian
  * @version 1.0
  * @date 2022/4/13 15:35
  */
 @Data
-public class FirstPageMark {
+public class BarCode {
 
     /**
-     * 水印html字符串的base64值
+     * 条码/二维码的编码
      */
-    private String base64;
+    private String code;
     /**
-     * 水印模板路径和文件名
+     * 编码中的文字内容
      */
-    private String template;
+    private String context;
+    /**
+     * 是否在首页添加（否：所有页面添加）
+     */
+    private Boolean isFirstPage;
+
     /**
      * 水印图片宽度
      */
@@ -60,25 +66,16 @@ public class FirstPageMark {
      * 水印位置
      */
     private String locate;
-    /**
-     * 需替换参数
-     */
-    private Map<String, String> data;
-
 
     private static int dpi = 400;
     private static float scale = 0.5f;
 
+    public static BarCode get(Map<String, Object> mapMark) {
+        BarCode barCode = new BarCode();
 
-    public static FirstPageMark get(Map<String, Object> mapMark) {
-        FirstPageMark firstPageMark = new FirstPageMark();
-
-        firstPageMark.setBase64(MapUtil.getStr(mapMark, "base64", null));
-        firstPageMark.setTemplate(
-                System.getProperty("user.dir") +
-                        "/watermark/" +
-                        MapUtil.getStr(mapMark, "template", "")
-        );
+        barCode.setCode(MapUtil.getStr(mapMark, "code", "QR_CODE"));
+        barCode.setContext(MapUtil.getStr(mapMark, "context", ""));
+        barCode.setIsFirstPage(MapUtil.getBool(mapMark, "isFirstPage", true));
 
         double dblPngWidth = MapUtil.getDouble(mapMark, "pngWidth", 1d);
         double dblPngHeight = MapUtil.getDouble(mapMark, "pngHeight", 1d);
@@ -88,63 +85,78 @@ public class FirstPageMark {
             intPngWidth = (int)Math.round(dblPngWidth / 2.54 * dpi);
             intPngHeight = (int)Math.round(dblPngHeight / 2.54 * dpi);
         }
+        barCode.setPngWidth(intPngWidth);
+        barCode.setPngHeight(intPngHeight);
+        barCode.setIsCm(true);
+        barCode.setLocate(MapUtil.getStr(mapMark, "locate", "TL"));
 
-        firstPageMark.setPngWidth(intPngWidth);
-        firstPageMark.setPngHeight(intPngHeight);
-        firstPageMark.setIsCm(MapUtil.getBool(mapMark, "isCm", false));
-        firstPageMark.setLocate(MapUtil.getStr(mapMark, "locate", "TC"));
-
-        if (mapMark.containsKey("data")) {
-            // 兼容非 str value
-            JSONObject data = JSONObject.fromObject(mapMark.get("data"));
-            Map<String, String> mapData = new HashMap<>(data.size());
-            data.forEach((k, v) -> mapData.put((String) k, v.toString()));
-            firstPageMark.setData(mapData);
-        }
-
-        return StringUtils.isNotBlank(firstPageMark.getBase64()) || StringUtils.isNotBlank(MapUtil.getStr(mapMark, "template")) ?
-                firstPageMark : null;
+        return barCode;
     }
 
     /**
-     * 根据传入的“归档章对象”中的信息，生成水印PNG文件
+     * 根据传入的信息，生成二维码/条码水印PNG文件
      *
      * @return 水印图片
      * @throws IOException err
      */
-    public File getMarkPng() throws IOException {
-        // 生成归档章png图片
+    public File getMarkPng() throws IOException, WriterException {
+        // 生成二维码/条码png图片
         // 搞个临时文件名
         String uuid = UUID.randomUUID().toString();
         String path = System.getProperty("user.dir") + "/watermark/";
         String pngPathFile = path + uuid + ".png";
 
-        // 判断一下，用base64直接传过来的，还是要用本地html模板
-        String strHtmlPath = "";
-        String strHtml = "";
-        if (!StringUtils.isEmpty(this.getBase64())) {
-            // 如果是base64，则转换为字符串，存成utf-8编码的html文件
-            byte[] bytes = Base64.getDecoder().decode(this.getBase64());
-            strHtml = new String(bytes, StandardCharsets.UTF_8);
-        } else {
-            // 如果是用本地html模板，则读取模板html
-            strHtmlPath = this.getTemplate();
-        }
+        if (!StringUtils.isEmpty(this.getCode()) &&
+                !StringUtils.isEmpty(this.getContext()) ) {
+            BufferedImage bufferedImage = createBarCodeBufferdImage(this.getCode(), this.getContext(),
+                    this.getPngWidth(), this.getPngHeight());
+            File filePng = new File(pngPathFile);
+            boolean blnFlag = ImageIO.write(bufferedImage, "png", filePng);
+            if(blnFlag){
+                bufferedImage = null;
+            }
 
-        // 将html转换为png
-        return XHTMLToImage.convertToImage(strHtmlPath, strHtml, pngPathFile,
-                this.getPngWidth(), this.getPngHeight(), this.getData());
+            return filePng;
+        }else{
+            return null;
+        }
     }
 
 
     /**
-     * PDF文件中加入首页水印
+     * 生成二维码/条码
+     *
+     * @param code 编码格式
+     * @param contents 二维码的内容
+     * @param width 二维码图片宽度
+     * @param height 二维码图片高度
+     */
+    public BufferedImage createBarCodeBufferdImage(String code, String contents,
+                                                   int width, int height) throws WriterException {
+        Hashtable hints= new Hashtable();
+        hints.put(EncodeHintType.CHARACTER_SET, "utf-8");
+        BitMatrix bitMatrix = new MultiFormatWriter().encode(
+                contents, BarcodeFormat.valueOf(code), width, height, hints);
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                image.setRGB(x, y, bitMatrix.get(x, y) ? 0xFF000000 : 0xFFFFFFFF);
+            }
+        }
+
+        return image;
+    }
+
+
+
+    /**
+     * PDF文件中加入水印
      *
      * @param pdExtGfxState
      * @param contentStream
      * @param pdDocument    PDF文档对象
      * @param page          PDF页面对象
-     * @param firstPageMark 归档章水印对象
+     * @param barCode       二维码/条码对象
      * @param modifyX
      * @throws IOException
      */
@@ -152,9 +164,9 @@ public class FirstPageMark {
                          PDPageContentStream contentStream,
                          PDDocument pdDocument,
                          PDPage page,
-                         FirstPageMark firstPageMark,
+                         BarCode barCode,
                          float modifyX,
-                         float alpha) throws IOException {
+                         float alpha) throws IOException, WriterException {
         // 获取归档章png图片
         File filePng = getMarkPng();
 
@@ -163,20 +175,18 @@ public class FirstPageMark {
             double doublePageWidthMm = page.getMediaBox().getWidth() / 72 * 25.4;
             double doublePageHeightMm = page.getMediaBox().getHeight() / 72 * 25.4;
             // 获取水印图片高度、宽度（px）
-            int intPngWidthPx = firstPageMark.getPngWidth();
+            int intPngWidthPx = barCode.getPngWidth();
             double dblPngWidthMm = Math.round(intPngWidthPx * 100 / dpi * 2.54 * 10)/100.0;
-
-            int intPngHeightPx = firstPageMark.getPngHeight();
+            int intPngHeightPx = barCode.getPngHeight();
             double dblPngHeightMm = Math.round(intPngHeightPx * 100 / dpi * 2.54 * 10)/100.0;
-
 
             float floatIconLocateX = 0f;
             float floatIconLocateY = 0f;
 
-            switch (firstPageMark.getLocate().toUpperCase()){
+            switch (barCode.getLocate().toUpperCase()){
                 case "TL":
                     floatIconLocateX = 3;
-                    floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm) * scale + 3);
+                    floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale + 3);
                     break;
                 case "TM":
                     floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm ) * scale * 0.5 );
@@ -235,16 +245,16 @@ public class FirstPageMark {
      *
      * @param ofdDoc        OFD页面对象
      * @param pageSize      页面尺寸对象
-     * @param firstPageMark 首页水印对象
+     * @param barCode       二维码/条码对象
      * @param intPageNum    当前处理的页码
      * @throws IOException
      */
     public void mark4Ofd(OFDDoc ofdDoc,
                          ST_Box pageSize,
-                         FirstPageMark firstPageMark,
+                         BarCode barCode,
                          int intPageNum,
-                         float alpha) throws IOException {
-        // 生成归档章png图片
+                         float alpha) throws IOException, WriterException {
+        // 生成png图片
         File filePng = getMarkPng();
 
         if (filePng != null && filePng.exists()) {
@@ -252,17 +262,14 @@ public class FirstPageMark {
             double dblPageWidth = pageSize.getWidth();
             double dblPageHeight = pageSize.getHeight();
             // 获取水印图片高度、宽度
-            int intPngWidth = firstPageMark.getPngWidth();
-            int intPngHeight = firstPageMark.getPngHeight();
+            int intPngWidth = barCode.getPngWidth();
+            int intPngHeight = barCode.getPngHeight();
 
             float floatIconLocateX = (float) (dblPageWidth - intPngWidth / 12) / 2;
             float floatIconLocateY = (float) (dblPageHeight - intPngHeight / 12 - 5);
 
-            switch (firstPageMark.getLocate().toUpperCase()){
+            switch (barCode.getLocate().toUpperCase()){
                 case "TR":
-                    floatIconLocateX = (float) (dblPageWidth - intPngWidth / 12 - 5);
-                    break;
-                case "TM":
                     floatIconLocateX = (float) (dblPageWidth - intPngWidth / 12 - 5);
                     break;
                 case "TL":
@@ -316,10 +323,10 @@ public class FirstPageMark {
      *
      * @param strInputJpg   输入的JPG文件
      * @param strOutputJpg  输出的JPG文件
-     * @param firstPageMark 归档章对象
+     * @param barCode       二维码/条码对象
      */
     public void mark4Jpg(String strInputJpg, String strOutputJpg,
-                         FirstPageMark firstPageMark) throws Exception {
+                         BarCode barCode) throws Exception {
         File fileSourceImg = new File(strInputJpg);
         @Cleanup FileInputStream input = new FileInputStream(fileSourceImg);
         BufferedImage buffSourceImg = ImageIO.read(input);
@@ -328,8 +335,8 @@ public class FirstPageMark {
         int intImageWidth = buffImg.getWidth();
 
         // 获取水印图片高度、宽度
-        int intPngWidth = firstPageMark.getPngWidth();
-        int intPngHeight = firstPageMark.getPngHeight();
+        int intPngWidth = barCode.getPngWidth();
+        int intPngHeight = barCode.getPngHeight();
 
         // 计算水印图片在右上角的坐标
         int intIconLocateX = (intImageWidth - intPngWidth) / 2;

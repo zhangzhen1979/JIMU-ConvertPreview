@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.thinkdifferent</groupId>
     <artifactId>convertpreview</artifactId>
-    <version>1.2.21</version>
+    <version>1.3.0</version>
     <name>convertpreview</name>
     <description>Convert File to JPG/PDF/OFD and Preview</description>
     <properties>
@@ -366,6 +366,22 @@
             <artifactId>sevenzipjbinding-all-platforms</artifactId>
             <version>16.02-2.01</version>
         </dependency>
+
+
+
+        <!-- https://mvnrepository.com/artifact/com.google.zxing/core -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.1</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.google.zxing/javase -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.1</version>
+        </dependency>
+
     </dependencies>
 
     <dependencyManagement>

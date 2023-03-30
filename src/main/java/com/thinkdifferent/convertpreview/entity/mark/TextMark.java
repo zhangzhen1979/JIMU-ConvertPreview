@@ -4,6 +4,7 @@ import cn.hutool.core.map.MapUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.thinkdifferent.convertpreview.utils.watermark.JpgWaterMarkUtil;
 import com.thinkdifferent.convertpreview.utils.watermark.PdfWaterMarkUtil;
+import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -33,6 +34,7 @@ import java.util.Map;
  * 文字水印
  */
 @Log4j2
+@Data
 public class TextMark {
     /**
      * 水印内容
@@ -54,46 +56,6 @@ public class TextMark {
      * 字体颜色
      */
     private String fontColor;
-
-    public String getWaterMarkText() {
-        return waterMarkText;
-    }
-
-    public void setWaterMarkText(String waterMarkText) {
-        this.waterMarkText = waterMarkText;
-    }
-
-    public Integer getDegree() {
-        return degree;
-    }
-
-    public void setDegree(Integer degree) {
-        this.degree = degree;
-    }
-
-    public Integer getFontSize() {
-        return fontSize;
-    }
-
-    public void setFontSize(Integer fontSize) {
-        this.fontSize = fontSize;
-    }
-
-    public String getFontName() {
-        return fontName;
-    }
-
-    public void setFontName(String fontName) {
-        this.fontName = fontName;
-    }
-
-    public String getFontColor() {
-        return fontColor;
-    }
-
-    public void setFontColor(String fontColor) {
-        this.fontColor = fontColor;
-    }
 
 
     public TextMark get(Map<String, String> mapMark) {

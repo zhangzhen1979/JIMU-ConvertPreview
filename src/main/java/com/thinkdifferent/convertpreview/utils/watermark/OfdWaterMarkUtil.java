@@ -92,6 +92,20 @@ public class OfdWaterMarkUtil {
                         i,
                         1f);
             }
+
+            // 如果添加二维码/条码，则进行如下处理
+            if (convertEntity.getBarCode() != null) {
+                if(convertEntity.getBarCode().getIsFirstPage() && i>1){
+                    // 如果设置只在首页添加，但是当前页面不是第一页，则跳过。
+                    continue;
+                }else{
+                    convertEntity.getBarCode().mark4Ofd(ofdDoc,
+                            pageSize,
+                            convertEntity.getBarCode(),
+                            i,
+                            1f);
+                }
+            }
         }
     }
 

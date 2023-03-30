@@ -2,6 +2,7 @@ package com.thinkdifferent.convertpreview.entity.mark;
 
 import cn.hutool.core.map.MapUtil;
 import com.thinkdifferent.convertpreview.utils.watermark.JpgWaterMarkUtil;
+import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -23,6 +24,7 @@ import java.util.Map;
  * 图片水印（PNG）
  */
 @Log4j2
+@Data
 public class PngMark {
     /**
      * 水印图片路径, “watermark”文件夹中已经存放的水印文件路径
@@ -45,45 +47,8 @@ public class PngMark {
      */
     private Integer imageHeight;
 
-    public String getWaterMarkFile() {
-        return waterMarkFile;
-    }
-
-    public void setWaterMarkFile(String waterMarkFile) {
-        this.waterMarkFile = waterMarkFile;
-    }
-
-    public float getLocateX() {
-        return locateX;
-    }
-
-    public void setLocateX(float locateX) {
-        this.locateX = locateX;
-    }
-
-    public float getLocateY() {
-        return locateY;
-    }
-
-    public void setLocateY(float locateY) {
-        this.locateY = locateY;
-    }
-
-    public Integer getImageWidth() {
-        return imageWidth;
-    }
-
-    public void setImageWidth(Integer imageWidth) {
-        this.imageWidth = imageWidth;
-    }
-
-    public Integer getImageHeight() {
-        return imageHeight;
-    }
-
-    public void setImageHeight(Integer imageHeight) {
-        this.imageHeight = imageHeight;
-    }
+    private static int dpi = 400;
+    private static float scale = 0.5f;
 
     public PngMark get(Map<String, String> mapMark) {
         PngMark pngMark = new PngMark();
@@ -109,7 +74,6 @@ public class PngMark {
      * @param page              PDF页面对象
      * @param pngMark           图片水印对象
      * @param modifyX
-     * @param blnFirstPageMark  是否是归档章
      * @param alpha             透明度
      * @throws IOException
      */
@@ -119,50 +83,43 @@ public class PngMark {
                          PDPage page,
                          PngMark pngMark,
                          float modifyX,
-                         boolean blnFirstPageMark,
                          float alpha) throws IOException {
-
         pdExtGfxState.setNonStrokingAlphaConstant(alpha);
         pdExtGfxState.setAlphaSourceFlag(true);
         contentStream.setGraphicsStateParameters(pdExtGfxState);
 
-        double dblIconLocateX = 0d;
-        double dblIconLocateY = 0d;
-        double dblImageWidth = 0d;
-        double dblImageHeight = 0d;
+        double dblIconLocateX;
+        double dblIconLocateY;
+        double doublePngWidthPt;
+        double doublePngHeightPt;
 
-        if(!blnFirstPageMark){
-
-            float floatIconLocateX = pngMark.getLocateX();
-            if (floatIconLocateX == 0f) {
-                floatIconLocateX = 40f;
-            }
-            dblIconLocateX = (floatIconLocateX * 72) / 25.4;
-
-            float floatIconLocateY = pngMark.getLocateY();
-            if (floatIconLocateY == 0) {
-                floatIconLocateY = 10;
-            }
-            dblIconLocateY = (floatIconLocateY * 72) / 25.4;
-
-            int intImageWidth = pngMark.getImageWidth();
-            if (intImageWidth == 0) {
-                intImageWidth = 50;
-            }
-            dblImageWidth = (intImageWidth * 72) / 25.4;
-
-            int intImageHeight = pngMark.getImageHeight();
-            if (intImageHeight == 0) {
-                intImageHeight = 50;
-            }
-            dblImageHeight = (intImageHeight * 72) / 25.4;
-
-        }else{
-            dblIconLocateX = pngMark.getLocateX();
-            dblIconLocateY = pngMark.getLocateY();
-            dblImageWidth = pngMark.getImageWidth();
-            dblImageHeight = pngMark.getImageHeight();
+        // 获取图片宽度pt（磅）
+        int intPngWidthPx = pngMark.getImageWidth();
+        if (intPngWidthPx == 0) {
+            intPngWidthPx = 50;
         }
+        doublePngWidthPt = intPngWidthPx * 72 / dpi;
+
+        // 获取图片高度pt（磅）
+        int intPngHeightPx = pngMark.getImageHeight();
+        if (intPngHeightPx == 0) {
+            intPngHeightPx = 50;
+        }
+        doublePngHeightPt = intPngHeightPx * 72 / dpi;
+
+        // 计算图片X轴位置pt（磅）
+        float floatIconLocateX = pngMark.getLocateX();
+        if (floatIconLocateX == 0f) {
+            floatIconLocateX = 40f;
+        }
+        dblIconLocateX = floatIconLocateX * 2.66;
+
+        // 计算图片Y轴位置pt（磅）
+        float floatIconLocateY = pngMark.getLocateY();
+        if (floatIconLocateY == 0) {
+            floatIconLocateY = 10;
+        }
+        dblIconLocateY = floatIconLocateY * 2.66;
 
         PDImageXObject pdImage = PDImageXObject.createFromFile(pngMark.getWaterMarkFile(), pdDocument);
         int rotation = page.getRotation();
@@ -170,32 +127,28 @@ public class PngMark {
             float floatLocalX = page.getMediaBox().getHeight() - (float)dblIconLocateY;
             float floatLocalY = page.getMediaBox().getWidth() - (float)dblIconLocateX - 60;
             // 通过Matrix.getRotateInstance(angle, x, y)进行转换会围绕坐标系的原点(0，0)旋转(通常是页面的左下角)，然后平移(x，y)。
-            if(!blnFirstPageMark){
-                contentStream.transform(
-                        Matrix.getRotateInstance(Math.toRadians(rotation),
-                                (float)dblIconLocateY,
-                                (float)dblIconLocateX
-                        ));
-            }
+            contentStream.transform(
+                    Matrix.getRotateInstance(Math.toRadians(rotation),
+                            (float)dblIconLocateY,
+                            (float)dblIconLocateX
+                    ));
             // tx、ty为图片绘制时的左上角坐标点。（需要累加前面的偏移量）
             contentStream.drawImage(pdImage,
                     floatLocalX - modifyX,
                     floatLocalY,
-                    (float)dblImageWidth, (float)dblImageHeight
+                    (float)doublePngWidthPt, (float)doublePngHeightPt
             );
         } else {
-            if(!blnFirstPageMark){
-                contentStream.transform(
-                        Matrix.getRotateInstance(Math.toRadians(0),
-                                (float)dblIconLocateX,
-                                (float)dblIconLocateY)
-                );
-            }
+            contentStream.transform(
+                    Matrix.getRotateInstance(Math.toRadians(0),
+                            (float)dblIconLocateX,
+                            (float)dblIconLocateY)
+            );
             // tx、ty为图片绘制时的左上角坐标点。（需要累加前面的偏移量）
             contentStream.drawImage(pdImage,
                     (float)dblIconLocateX - modifyX,
                     (float)dblIconLocateY,
-                    (float)dblImageWidth, (float)dblImageHeight
+                    (float)doublePngWidthPt, (float)doublePngHeightPt
             );
         }
 

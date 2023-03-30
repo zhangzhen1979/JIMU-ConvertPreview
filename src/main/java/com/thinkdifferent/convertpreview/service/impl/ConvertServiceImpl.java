@@ -553,6 +553,7 @@ public class ConvertServiceImpl implements ConvertService {
         if (convertEntity.getPngMark() != null
                 || convertEntity.getTextMark() != null
                 || convertEntity.getFirstPageMark() != null
+                || convertEntity.getBarCode() != null
                 || convertEntity.isPageNum()) {
             String strOutPath = null;
             File fileOutMark = null;

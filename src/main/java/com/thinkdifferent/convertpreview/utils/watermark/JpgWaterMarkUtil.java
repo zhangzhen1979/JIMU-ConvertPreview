@@ -60,6 +60,13 @@ public class JpgWaterMarkUtil {
                     convertEntity.getFirstPageMark());
         }
 
+        // 如果添加二维码/条码，则进行如下处理
+        if (convertEntity.getBarCode() != null) {
+            convertEntity.getBarCode().mark4Jpg(strSourceJpg,
+                    strTargetJpg,
+                    convertEntity.getBarCode());
+        }
+
     }
 
 

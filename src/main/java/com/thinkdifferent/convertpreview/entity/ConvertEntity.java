@@ -3,10 +3,12 @@ package com.thinkdifferent.convertpreview.entity;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.map.MapUtil;
 import com.thinkdifferent.convertpreview.entity.input.Input;
+import com.thinkdifferent.convertpreview.entity.mark.BarCode;
 import com.thinkdifferent.convertpreview.entity.mark.FirstPageMark;
 import com.thinkdifferent.convertpreview.entity.mark.PngMark;
 import com.thinkdifferent.convertpreview.entity.mark.TextMark;
 import com.thinkdifferent.convertpreview.entity.writeback.WriteBack;
+import lombok.Data;
 import lombok.ToString;
 import lombok.extern.log4j.Log4j2;
 import net.sf.json.JSONArray;
@@ -28,6 +30,7 @@ import java.util.stream.Collectors;
  */
 @Log4j2
 @ToString
+@Data
 public class ConvertEntity {
     /**
      * 输入类型（path/url）
@@ -69,6 +72,10 @@ public class ConvertEntity {
      * 首页水印（归档章）
      */
     private FirstPageMark firstPageMark;
+    /**
+     * 二维码/条码
+     */
+    private BarCode barCode;
     /**
      * 水印透明度
      */
@@ -177,6 +184,12 @@ public class ConvertEntity {
             entity.setFirstPageMark(FirstPageMark.get((Map<String,Object>)parameters.get("firstPageMark")));
         }
 
+        // 二维码/条码
+        if(parameters.get("barcode") != null){
+            entity.setBarCode(BarCode.get((Map<String,Object>)parameters.get("barcode")));
+        }
+
+
         // 转换出来的文件名（不包含扩展名）（"001-online"）
         entity.setOutPutFileName(MapUtil.getStr(parameters, "outPutFileName"));
         // 文件输出格式， 默认 jpg
@@ -246,143 +259,6 @@ public class ConvertEntity {
         }
         log.info("转换后对象:{}", entity);
         return entity;
-    }
-
-
-    public OutFileEncryptorEntity getOutFileEncryptorEntity() {
-        return outFileEncryptorEntity;
-    }
-
-    public void setOutFileEncryptorEntity(OutFileEncryptorEntity outFileEncryptorEntity) {
-        this.outFileEncryptorEntity = outFileEncryptorEntity;
-    }
-
-    public boolean isPageNum() {
-        return pageNum;
-    }
-
-    public void setPageNum(boolean pageNum) {
-        this.pageNum = pageNum;
-    }
-
-    public InputType getInputType() {
-        return inputType;
-    }
-
-    public void setInputType(InputType inputType) {
-        this.inputType = inputType;
-    }
-
-    public Map<String, String> getInputHeaders() {
-        return inputHeaders;
-    }
-
-    public void setInputHeaders(Map<String, String> inputHeaders) {
-        this.inputHeaders = inputHeaders;
-    }
-
-    public String getOutPutFileName() {
-        return outPutFileName;
-    }
-
-    public void setOutPutFileName(String outPutFileName) {
-        this.outPutFileName = outPutFileName;
-    }
-
-    public String getOutPutFileType() {
-        return outPutFileType;
-    }
-
-    public void setOutPutFileType(String outPutFileType) {
-        this.outPutFileType = outPutFileType;
-    }
-
-    public WriteBackType getWriteBackType() {
-        return writeBackType;
-    }
-
-    public void setWriteBackType(WriteBackType writeBackType) {
-        this.writeBackType = writeBackType;
-    }
-
-    public WriteBack getWriteBack() {
-        return writeBack;
-    }
-
-    public void setWriteBack(WriteBack writeBack) {
-        this.writeBack = writeBack;
-    }
-
-    public List<Context> getContexts() {
-        return contexts;
-    }
-
-    public void setContexts(List<Context> contexts) {
-        this.contexts = contexts;
-    }
-
-    public String getCallBackURL() {
-        return callBackURL;
-    }
-
-    public void setCallBackURL(String callBackURL) {
-        this.callBackURL = callBackURL;
-    }
-
-    public Map<String, String> getCallBackHeaders() {
-        return callBackHeaders;
-    }
-
-    public void setCallBackHeaders(Map<String, String> callBackHeaders) {
-        this.callBackHeaders = callBackHeaders;
-    }
-
-    public FirstPageMark getFirstPageMark() {
-        return firstPageMark;
-    }
-
-    public void setFirstPageMark(FirstPageMark firstPageMark) {
-        this.firstPageMark = firstPageMark;
-    }
-
-    public Thumbnail getThumbnail() {
-        return thumbnail;
-    }
-
-    public void setThumbnail(Thumbnail thumbnail) {
-        this.thumbnail = thumbnail;
-    }
-
-    public Input[] getInputFiles() {
-        return inputFiles;
-    }
-
-    public void setInputFiles(Input[] inputFiles) {
-        this.inputFiles = inputFiles;
-    }
-
-    public PngMark getPngMark() {
-        return pngMark;
-    }
-
-    public void setPngMark(PngMark pngMark) {
-        this.pngMark = pngMark;
-    }
-
-    public TextMark getTextMark() {
-        return textMark;
-    }
-
-    public void setTextMark(TextMark textMark) {
-        this.textMark = textMark;
-    }
-
-    public float getAlpha() {
-        return alpha;
-    }
-
-    public void setAlpha(float alpha) {
-        this.alpha = alpha;
     }
 
     /**

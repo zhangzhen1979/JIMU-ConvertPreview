@@ -20,12 +20,39 @@ public class PdfWaterMarkUtil {
 
     /**
      * 给PDF添加水印
-     *  @param strSourcePdf  源PDF
-     * @param strTargetPdf  目标PDF
-     * @param convertEntity 转换参数
-     * @param intPageNum    上一个文件的最后页码
+     * @param strSourcePdf      源PDF
+     * @param strTargetPdf      目标PDF
+     * @param convertEntity     转换参数
+     * @param intPageNum        上一个文件的最后页码
      */
     public static void mark4Pdf(String strSourcePdf,
+                                String strTargetPdf,
+                                ConvertEntity convertEntity,
+                                int intPageNum) throws Exception{
+
+        mark4PdfProcess(strSourcePdf, strTargetPdf, convertEntity, intPageNum);
+        strTargetPdf = SystemUtil.beautifulFilePath(strTargetPdf);
+
+        // 如果添加归档章水印，则进行如下处理
+        if (convertEntity.getFirstPageMark() != null) {
+            mark4PdfProcess(strSourcePdf, strTargetPdf, convertEntity, intPageNum);
+        }
+
+        // 如果添加二维码/条码，则进行如下处理
+        if (convertEntity.getBarCode() != null) {
+            mark4PdfProcess(strSourcePdf, strTargetPdf, convertEntity, intPageNum);
+        }
+
+    }
+
+    /**
+     * 给PDF添加水印
+     * @param strSourcePdf      源PDF
+     * @param strTargetPdf      目标PDF
+     * @param convertEntity     转换参数
+     * @param intPageNum        上一个文件的最后页码
+     */
+    public static void mark4PdfProcess(String strSourcePdf,
                                 String strTargetPdf,
                                 ConvertEntity convertEntity,
                                 int intPageNum) throws Exception{
@@ -46,6 +73,7 @@ public class PdfWaterMarkUtil {
                     PDPageContentStream.AppendMode.APPEND, true, true);
             // 水印位置修正
             float modifyX = 0f;
+
             // 如果添加图片水印，则进行如下处理
             if (convertEntity.getPngMark() != null) {
                 convertEntity.getPngMark().mark4Pdf(pdExtGfxState,
@@ -54,7 +82,6 @@ public class PdfWaterMarkUtil {
                         page,
                         convertEntity.getPngMark(),
                         0F,
-                        false,
                         convertEntity.getAlpha());
 
                 modifyX = convertEntity.getPngMark().getLocateX() == 0f ? 150F : convertEntity.getPngMark().getLocateX();
@@ -91,9 +118,26 @@ public class PdfWaterMarkUtil {
                         modifyX,
                         1f);
             }
+
+            // 如果添加二维码/条码，则进行如下处理
+            if (convertEntity.getBarCode() != null) {
+                if(convertEntity.getBarCode().getIsFirstPage() && i > 0){
+                    continue;
+                }else{
+                    convertEntity.getBarCode().mark4Pdf(pdExtGfxState,
+                            contentStream,
+                            pdDocument,
+                            page,
+                            convertEntity.getBarCode(),
+                            modifyX,
+                            1f);
+                }
+            }
+
         }
 
         pdDocument.save(strTargetPdf);
+
     }
 
     /**

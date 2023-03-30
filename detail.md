@@ -31,8 +31,6 @@
 
 转换后输出格式为：PDF、OFD、JPG。
 
-
-
 # 配置说明
 
 ## 转换引擎
@@ -192,8 +190,6 @@ jodconverter:
 - 本服务设置：根据本服务所在服务器的实际情况，修改本地文件输出路径。
 - 重试机制： 依赖RabbitMQ, 只有在RabbitMQ启动得到情况下才会生效
 - jodconverter设置：重点修改“office-home”的值，**一定要写LibreOffice在本服务器中安装的路径**。
-
-
 
 # 使用说明
 
@@ -464,6 +460,100 @@ url、ftp方式配置内容与【输入信息】章节中说明一致。
 
 
 
+### 首页水印
+
+可以设置输出的Jpg/Pdf/Ofd文件首页水印，如下：
+
+- base64：可选项。此参数传入base64后的html模板的字符串。采用前端业务系统生成水印HTML模板时，可使用此参数；如果使用转换服务内置的模板文件，则不需要传输此参数。参数传入示例如下：
+
+```json
+"firstPageMark": {
+    "base64": "assdffafadsfadfadfadaf=",
+    "pngWidth": 1.6,
+    "pngHeight": 4.5,
+    "isCm": true,
+    "locate": "TR"
+},
+```
+
+- template：生成首页水印用的HTML模板文件名（文件存放于“watermark”文件夹中）。
+- pngWidth：生成的png的宽度。此处设置的宽度需要略大于下面“data”中的“tableWidth”的值（给表格的边框留出空间）。
+- pngHeight：生成的png的高度。此处设置的高度需要略大于下面“data”中的“tdHeight”值的 2 倍（给表格的边框留出空间）。
+- isCm：是否为“厘米”单位。非必填，可无此key。默认值为false。当设置为true时，则设置的图片高度、宽度的单位均为“厘米”，否则为“像素”。
+- locate：图片位置。如果不设置此项，或者留空，则默认位置为【顶部居中】（TM）；如果设置位置值，则在指定位置添加页码。
+  - TR：顶部靠右。Top Right。
+  - TM：顶部居中。Top Middle。
+  - TL：顶部靠左。Top Left。
+  - CR：中心靠右。Center Right。
+  - C：中心。Center
+  - CL：中心靠左。Center Left。
+  - BR：底部靠右。Bottom Right。
+  - BM：底部居中。Bottom Middle。
+  - BL：底部靠左。Bottom Left。
+- data：首页水印模板中需要替换的字段和数据。（key：模板HTML中需要替换的字段名；value：模板HTML中需要替换的字段值）。
+  - tableWidth：表宽度。必须写单位px！此内容会替换模板中CSS的设置。
+  - tdWidth：单元格宽度。必须写单位px！需要根据模板中每行单元格的个数，计算单个单元格的宽度。即，表宽度=单元格宽度*单元格个数。此内容会替换模板中CSS的设置。
+  - tdHeight：单元格高度。必须写单位px！需要根据模板中行数，计算单个单元格的高度。即，单元格高度 = （pngHeight - 10 ）/ 行数。此内容会替换模板中CSS的设置。
+  - fontSize：字体大小。必须写单位px！此内容会替换模板中CSS的设置。
+  - 其他key：字段名。首页水印生成时，会将模板中对应key的位置替换为value的值。
+
+### 二维码/条码
+
+可以设置输出的Jpg/Pdf/Ofd文件加入“二维码/条码”水印，如下：
+
+```json
+"barcode": {
+    "code": "QR_CODE",
+    "context": "QZH-2022-ws-001-0123",
+    "isFirstPage": true,
+    "pngWidth": 2,
+    "pngHeight": 2,
+    "isCm": true,
+    "locate": "TL"
+},
+```
+
+- code：生成的条码或二维码的编码格式。支持如下编码：
+  - 条码
+    - CODABAR：支持 数字 和 - $ : / . + 一共16种符号，支持ABCD/EN*T 首尾。(类似A首E尾不支持,类似A首B尾支持)
+    - CODE_39：支持大写英文字母，- . $ / + % 和 空格，额外支持 *，一共43种符号。
+    - CODE_93：在Code_39的支持范围上增加了5种特殊符号，用以支持ASCII的128种符号。
+    - CODE_128：【常用编码】支持ASCII的128种符号。(通过3套不同的编码表，编码中随时切换并写下标志位)
+    - EAN：国际货物编码(International Article Number)，又称欧洲货物编码(European Article Number)仅支持数字，最后一位数字位校检。
+    - EAN_8：8位编码，源自EAN_13。
+    - EAN_13：13位编码。
+    - UPC：Universal Product Code，通用货物编码，纯数字。
+    - UPC_A：UPC-A技术上一般指代UPC，12位纯数字编码。首尾区外侧存在数字。
+    - UPC_E：6位编码，数字在首尾区内侧。
+    - RSS：全称 Reduced Space Symbology，现称 GS1 DataBar，因与RSS(Really Simple Syndication)易混淆，便改名。
+    - RSS_14：仅支持纯数字编码。
+    - RSS_EXPANDED：无相关资料。
+    - ITF：全称 Interleaved Two of five, 交错式2或5条码。每5条里有2条粗条。纯数字编码，仅支持偶数位数编码，即xx，xxxx等。为提高识别度，会在条码外圈用粗线框包裹。
+    - IMB：全称 Intelligent Mail Barcode，智能邮件条形码，纯数字编码，被美国邮件采用。
+    - PLESSEY：仅支持数字， 和ABCDEF6个大写字母，一共16个符号。
+    - PHARMA_CODE：仅支持存放3到131070范围的一个数(2^17-2)。一家制药企业用于其包装控制系统识别。
+  - 二维码
+    - AZTEC：支持ASCII的128种符号。因定位点在中心， 类似阿兹特克金字塔，故称为 阿兹特克码。
+    - DATA_MATRIX：支持ASCII，及更多模式。左及下边缘全为黑色点位。
+    - MAXICODE：支持ASCII，及更多模式。定位点在中心，为3同心圆重合。用于美国邮政业务(UPS)。
+    - PDF_417：支持ASCII，最短26位。外观形似一维，但属于行堆叠，3到90行范围，高信息密度，常用于登机证。
+    - QR_CODE：【常用编码】全称Quick Response Code， 快速响应码。除右下外共3个正方形定位点。
+- context：编码中的文字内容（注意：不同的编码支持的字符集不同！）。
+- pngWidth：生成的png的宽度。此处设置的宽度需要略大于下面“data”中的“tableWidth”的值（给表格的边框留出空间）。
+- pngHeight：生成的png的高度。此处设置的高度需要略大于下面“data”中的“tdHeight”值的 2 倍（给表格的边框留出空间）。
+- isFirstPage：是否只在首页输出。默认值为true；如果设置为flase，则每页都加入条码/二维码。
+- isCm：是否为“厘米”单位。非必填，可无此key。默认值为false。当设置为true时，则设置的图片高度、宽度的单位均为“厘米”，否则为“像素”。
+- locate：图片位置。如果不设置此项，或者留空，则默认位置为【顶部靠左】（TL）；如果设置位置值，则在指定位置添加页码。
+  - TR：顶部靠右。Top Right。
+  - TM：顶部居中。Top Middle。
+  - TL：顶部靠左。Top Left。
+  - CR：中心靠右。Center Right。
+  - C：中心。Center
+  - CL：中心靠左。Center Left。
+  - BR：底部靠右。Bottom Right。
+  - BM：底部居中。Bottom Middle。
+  - BL：底部靠左。Bottom Left。
+
 ### 输出信息
 
 可以设置输出的Jpg/Pdf文件的文件名（无扩展名）和输出的文件类型，如下：
@@ -629,8 +719,6 @@ writeBackType：必填，值为“local”。此时，系统自动获取配置�
   - password：ftp服务的密码。
   - filepath：文件所在的路径。
 
-
-
 ### 回调信息
 
 业务系统可以提供一个GET方式的回调接口，在视频文件转换、回写完毕后，本服务可以调用此接口，传回处理的状态。
@@ -788,8 +876,6 @@ convert2base64s接口返回信息示例如下：
 ### 返回信息
 
 convert2stream接口将转换后的文件输出到Http响应信息中，以文件流方式返回。
-
-
 
 ## 预览接口（页面）说明
 
