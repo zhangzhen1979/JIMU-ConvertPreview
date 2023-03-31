@@ -4,6 +4,7 @@ import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.FileUtil;
 import com.thinkdifferent.convertpreview.config.ConvertConfig;
 import com.thinkdifferent.convertpreview.entity.OutFileEncryptorEntity;
+import com.thinkdifferent.convertpreview.utils.SystemUtil;
 import lombok.Cleanup;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -14,7 +15,8 @@ import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import javax.imageio.ImageIO;
+import javax.imageio.stream.FileImageOutputStream;
+import javax.imageio.stream.ImageOutputStream;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -67,7 +69,7 @@ public class ConvertPdfUtil {
             // 设置用户是否可以打印。
             permissions.setCanPrint(outFileEncryptorEntity.getPrint());
             // 设置用户是否可以降级格式打印文档
-            permissions.setCanPrintDegraded(outFileEncryptorEntity.getPrintDegraded());
+            permissions.setCanPrintFaithful(outFileEncryptorEntity.getPrintDegraded());
 
             String strOwnerPwd = "";
             String strUserPwd = "";
@@ -116,15 +118,11 @@ public class ConvertPdfUtil {
         PDDocument pdfDocument = PDDocument.load(filePdf);
         PDFRenderer pdfRenderer = new PDFRenderer(pdfDocument);
 
-        // 以300 dpi 读取存入 BufferedImage 对象
-        BufferedImage buffImage = pdfRenderer.renderImageWithDPI(0, 300, ImageType.RGB);
-        // 将 BufferedImage 写入到 png
-        // ImageIOUtil.writeImage(buffImage, "c:/temp/xx.png", dpi);
 
+        // 以400 dpi 读取存入 BufferedImage 对象
+        BufferedImage buffImage = pdfRenderer.renderImageWithDPI(0, 400, ImageType.RGB);
         //文件储存对象
-        File fileThumbnail = new File(strOutputJpg);
-        // ImageIO.write(FrameToBufferedImage(frame), "jpg", outPut);
-        ImageIO.write(buffImage, "jpg", fileThumbnail);
+        File fileJpg = bufferedImage2Jpg(buffImage, strOutputJpg);
 
         // 关闭文档
         pdfDocument.close();
@@ -133,7 +131,7 @@ public class ConvertPdfUtil {
         //删除临时的file
         FileUtil.del(filePdf);
 
-        return fileThumbnail;
+        return fileJpg;
 
     }
 
@@ -156,20 +154,46 @@ public class ConvertPdfUtil {
             PDFRenderer pdfRenderer = new PDFRenderer(doc);
 
             String folder = ConvertConfig.outPutPath;
-            String imageFilePath;
+            String strOutputJpg;
             for (int pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-                imageFilePath =
+                strOutputJpg =
                         folder + File.separator + FileUtil.mainName(pdfFile) + File.separator + pageIndex + imageFileSuffix;
-                if (!FileUtil.exist(imageFilePath)) {
-                    BufferedImage image = pdfRenderer.renderImageWithDPI(pageIndex, 105, ImageType.RGB);
-                    ImgUtil.write(image, FileUtil.file(imageFilePath));
+                if (!FileUtil.exist(strOutputJpg)) {
+//                    BufferedImage buffImage = pdfRenderer.renderImageWithDPI(pageIndex, 400, ImageType.ARGB);
+                    BufferedImage buffImage = pdfRenderer.renderImage(pageIndex);
+                    //文件储存对象
+                    bufferedImage2Jpg(buffImage, strOutputJpg);
                 }
-                imageUrls.add(imageFilePath);
+                imageUrls.add(strOutputJpg);
             }
         } catch (IOException e) {
             log.error("Convert pdf to jpg exception, pdfFilePath：{}", pdfFile.getPath(), e);
         }
         return imageUrls;
     }
+
+    /**
+     * 获取PDF指定页JPG图片
+     *
+     * @param buffImage    输入的图片对象
+     * @param strOutputJpg 输出的JPG文件路径和文件名
+     * @return 转换成功的JPG文件File对象
+     */
+    public File bufferedImage2Jpg(BufferedImage buffImage, String strOutputJpg) throws IOException {
+        //文件储存对象
+        strOutputJpg = SystemUtil.beautifulFilePath(strOutputJpg);
+        File filePath = new File(strOutputJpg.substring(0, strOutputJpg.lastIndexOf("/")));
+        if(!filePath.exists()){
+            filePath.mkdirs();
+        }
+
+        File fileJpg = new File(strOutputJpg);
+
+        @Cleanup ImageOutputStream out = new FileImageOutputStream(fileJpg);
+        ImgUtil.convert(buffImage, "jpg", out, true);
+
+        return fileJpg;
+    }
+
 
 }
