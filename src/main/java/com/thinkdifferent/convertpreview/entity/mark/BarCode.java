@@ -7,8 +7,6 @@ import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.itextpdf.text.pdf.qrcode.EncodeHintType;
-import com.thinkdifferent.convertpreview.utils.watermark.JpgWaterMarkUtil;
-import lombok.Cleanup;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -21,7 +19,6 @@ import org.ofdrw.layout.OFDDoc;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Hashtable;
 import java.util.Map;
@@ -29,10 +26,6 @@ import java.util.UUID;
 
 /**
  * 条码/二维码
- *
- * @author ltian
- * @version 1.0
- * @date 2022/4/13 15:35
  */
 @Data
 public class BarCode {
@@ -51,13 +44,21 @@ public class BarCode {
     private Boolean isFirstPage;
 
     /**
-     * 水印图片宽度
+     * 水印图片像素宽度（px）
      */
-    private int pngWidth;
+    private int pngWidthPx;
     /**
-     * 水印图片高度
+     * 水印图片像素高度（px）
      */
-    private int pngHeight;
+    private int pngHeightPx;
+    /**
+     * 水印图片毫米宽度（mm）
+     */
+    private Double pngWidthMm;
+    /**
+     * 水印图片毫米高度（mm）
+     */
+    private Double pngHeightMm;
     /**
      * 图片尺寸单位，是否为“厘米”
      */
@@ -79,15 +80,24 @@ public class BarCode {
 
         double dblPngWidth = MapUtil.getDouble(mapMark, "pngWidth", 1d);
         double dblPngHeight = MapUtil.getDouble(mapMark, "pngHeight", 1d);
-        int intPngWidth = 0;
-        int intPngHeight = 0;
         if(mapMark.containsKey("isCm") && MapUtil.getBool(mapMark, "isCm")){
-            intPngWidth = (int)Math.round(dblPngWidth / 2.54 * dpi);
-            intPngHeight = (int)Math.round(dblPngHeight / 2.54 * dpi);
+            barCode.setPngWidthMm(dblPngWidth * 10);
+            barCode.setPngHeightMm(dblPngHeight * 10);
+
+            barCode.setPngWidthPx((int)Math.round(dblPngWidth / 2.54 * dpi));
+            barCode.setPngHeightPx((int)Math.round(dblPngHeight / 2.54 * dpi));
+            barCode.setIsCm(true);
+        }else{
+            barCode.setPngWidthPx((int)Math.round(dblPngWidth));
+            barCode.setPngHeightPx((int)Math.round(dblPngHeight));
+
+            double dblPngWidthMm = Math.round((int)Math.round(dblPngWidth) * 100 / dpi * 2.54 * 10)/100.0;
+            double dblPngHeightMm = Math.round((int)Math.round(dblPngHeight) * 100 / dpi * 2.54 * 10)/100.0;
+            barCode.setPngWidthMm(dblPngWidthMm);
+            barCode.setPngHeightMm(dblPngHeightMm);
+
+            barCode.setIsCm(false);
         }
-        barCode.setPngWidth(intPngWidth);
-        barCode.setPngHeight(intPngHeight);
-        barCode.setIsCm(true);
         barCode.setLocate(MapUtil.getStr(mapMark, "locate", "TL"));
 
         return barCode;
@@ -109,7 +119,7 @@ public class BarCode {
         if (!StringUtils.isEmpty(this.getCode()) &&
                 !StringUtils.isEmpty(this.getContext()) ) {
             BufferedImage bufferedImage = createBarCodeBufferdImage(this.getCode(), this.getContext(),
-                    this.getPngWidth(), this.getPngHeight());
+                    this.getPngWidthPx(), this.getPngWidthPx());
             File filePng = new File(pngPathFile);
             boolean blnFlag = ImageIO.write(bufferedImage, "png", filePng);
             if(blnFlag){
@@ -137,10 +147,12 @@ public class BarCode {
         hints.put(EncodeHintType.CHARACTER_SET, "utf-8");
         BitMatrix bitMatrix = new MultiFormatWriter().encode(
                 contents, BarcodeFormat.valueOf(code), width, height, hints);
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
+        int c = image.getRGB(3, 3);
+
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                image.setRGB(x, y, bitMatrix.get(x, y) ? 0xFF000000 : 0xFFFFFFFF);
+                image.setRGB(x, y, bitMatrix.get(x, y) ? 0xFF000000 : c & 0x00ffffff);
             }
         }
 
@@ -174,57 +186,21 @@ public class BarCode {
             // 获取PDF首页的尺寸大小，转换成mm
             double doublePageWidthMm = page.getMediaBox().getWidth() / 72 * 25.4;
             double doublePageHeightMm = page.getMediaBox().getHeight() / 72 * 25.4;
-            // 获取水印图片高度、宽度（px）
-            int intPngWidthPx = barCode.getPngWidth();
-            double dblPngWidthMm = Math.round(intPngWidthPx * 100 / dpi * 2.54 * 10)/100.0;
-            int intPngHeightPx = barCode.getPngHeight();
-            double dblPngHeightMm = Math.round(intPngHeightPx * 100 / dpi * 2.54 * 10)/100.0;
-
-            float floatIconLocateX = 0f;
-            float floatIconLocateY = 0f;
-
-            switch (barCode.getLocate().toUpperCase()){
-                case "TL":
-                    floatIconLocateX = 3;
-                    floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale + 3);
-                    break;
-                case "TM":
-                    floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm ) * scale * 0.5 );
-                    floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale + 3);
-                    break;
-                case "TR":
-                    floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm ) * scale + 3);
-                    floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale + 3);
-                    break;
-                case "CL":
-                    floatIconLocateX = 3;
-                    floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale * 0.5);
-                    break;
-                case "C":
-                    floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm ) * scale * 0.5 );
-                    floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale * 0.5);
-                    break;
-                case "CR":
-                    floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm) * scale + 3);
-                    floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale * 0.5);
-                    break;
-                case "BL":
-                    floatIconLocateX = 3;
-                    floatIconLocateY = 3;
-                    break;
-                case "BM":
-                    floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm ) * scale * 0.5 );
-                    floatIconLocateY = 3;
-                    break;
-                case "BR":
-                    floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm) * scale + 3);
-                    floatIconLocateY = 3;
-            }
+            // 获取水印图片高度、宽度（px、mm）
+            int intPngWidthPx = barCode.getPngWidthPx();
+            double dblPngWidthMm = barCode.getPngWidthMm();
+            int intPngHeightPx = barCode.getPngHeightPx();
+            double dblPngHeightMm = barCode.getPngHeightMm();
 
             PngMark pngMark = new PngMark();
+
+            PngMarkLocal pngMarkLocal = pngMark.getPngLocateInPdf(barCode.getLocate().toUpperCase(),
+            doublePageHeightMm, dblPngHeightMm,
+            doublePageWidthMm, dblPngWidthMm);
+
             pngMark.setWaterMarkFile(filePng.getAbsolutePath());
-            pngMark.setLocateX(floatIconLocateX);
-            pngMark.setLocateY(floatIconLocateY);
+            pngMark.setLocateX(pngMarkLocal.getLocateX());
+            pngMark.setLocateY(pngMarkLocal.getLocateY());
             pngMark.setImageWidth(intPngWidthPx);
             pngMark.setImageHeight(intPngHeightPx);
 
@@ -259,97 +235,29 @@ public class BarCode {
 
         if (filePng != null && filePng.exists()) {
             // 获取OFD页面大小
-            double dblPageWidth = pageSize.getWidth();
-            double dblPageHeight = pageSize.getHeight();
-            // 获取水印图片高度、宽度
-            int intPngWidth = barCode.getPngWidth();
-            int intPngHeight = barCode.getPngHeight();
+            double doublePageWidthMm = pageSize.getWidth();
+            double doublePageHeightMm = pageSize.getHeight();
+            // 获取水印图片高度、宽度（mm）
+            int intPngWidthMm = barCode.getPngWidthMm().intValue();
+            int intPngHeightMm = barCode.getPngHeightMm().intValue();
 
-            float floatIconLocateX = (float) (dblPageWidth - intPngWidth / 12) / 2;
-            float floatIconLocateY = (float) (dblPageHeight - intPngHeight / 12 - 5);
-
-            switch (barCode.getLocate().toUpperCase()){
-                case "TR":
-                    floatIconLocateX = (float) (dblPageWidth - intPngWidth / 12 - 5);
-                    break;
-                case "TL":
-                    floatIconLocateX = 5;
-                    break;
-                case "CR":
-                    floatIconLocateX = (float) (dblPageWidth - intPngWidth / 12 - 5);
-                    floatIconLocateY = (float) (dblPageHeight - intPngHeight / 12) / 2;
-                    break;
-                case "C":
-                    floatIconLocateX = (float) (dblPageWidth - intPngWidth / 12) / 2;
-                    floatIconLocateY = (float) (dblPageHeight - intPngHeight / 12) / 2;
-                    break;
-                case "CL":
-                    floatIconLocateX = 5;
-                    floatIconLocateY = (float) (dblPageHeight - intPngHeight / 12) / 2;
-                    break;
-                case "BR":
-                    floatIconLocateX = (float) (dblPageWidth - intPngWidth / 12 - 5);
-                    floatIconLocateY = 5;
-                    break;
-                case "BM":
-                    floatIconLocateX = (float) (dblPageWidth - intPngWidth / 12) / 2;
-                    floatIconLocateY = 5;
-                    break;
-                case "BL":
-                    floatIconLocateX = 5;
-                    floatIconLocateY = 5;
-            }
-
-            // 输入的是像素，需要转换为毫米。300dpi，1mm=12px
             PngMark pngMark = new PngMark();
+
+            PngMarkLocal pngMarkLocal = pngMark.getPngLocateInOfd(barCode.getLocate().toUpperCase(),
+                    doublePageHeightMm, barCode.getPngHeightMm(),
+                    doublePageWidthMm, barCode.getPngWidthMm());
+
             pngMark.setWaterMarkFile(filePng.getAbsolutePath());
-            pngMark.setLocateX(floatIconLocateX);
-            pngMark.setLocateY(floatIconLocateY);
-            pngMark.setImageWidth(intPngWidth / 12);
-            pngMark.setImageHeight(intPngHeight / 12);
+            pngMark.setLocateX(pngMarkLocal.getLocateX());
+            pngMark.setLocateY(pngMarkLocal.getLocateY());
+            pngMark.setImageWidth(intPngWidthMm);
+            pngMark.setImageHeight(intPngHeightMm);
 
             pngMark.mark4Ofd(ofdDoc,
                     pageSize,
                     pngMark,
                     intPageNum,
                     alpha);
-            FileUtil.del(filePng);
-        }
-
-    }
-
-    /**
-     * 为图片添加归档章水印
-     *
-     * @param strInputJpg   输入的JPG文件
-     * @param strOutputJpg  输出的JPG文件
-     * @param barCode       二维码/条码对象
-     */
-    public void mark4Jpg(String strInputJpg, String strOutputJpg,
-                         BarCode barCode) throws Exception {
-        File fileSourceImg = new File(strInputJpg);
-        @Cleanup FileInputStream input = new FileInputStream(fileSourceImg);
-        BufferedImage buffSourceImg = ImageIO.read(input);
-        BufferedImage buffImg = new BufferedImage(buffSourceImg.getWidth(), buffSourceImg.getHeight(), BufferedImage.TYPE_INT_RGB);
-        // 获取图片的大小
-        int intImageWidth = buffImg.getWidth();
-
-        // 获取水印图片高度、宽度
-        int intPngWidth = barCode.getPngWidth();
-        int intPngHeight = barCode.getPngHeight();
-
-        // 计算水印图片在右上角的坐标
-        int intIconLocateX = (intImageWidth - intPngWidth) / 2;
-        int intIconLocateY = 100;
-
-        File filePng = getMarkPng();
-
-        if (filePng.exists()) {
-            JpgWaterMarkUtil.markImageByImage(filePng.getAbsolutePath(),
-                    strInputJpg, strOutputJpg,
-                    0,
-                    intIconLocateX, intIconLocateY,
-                    intPngWidth, intPngHeight);
             FileUtil.del(filePng);
         }
 

@@ -2,6 +2,10 @@ package com.thinkdifferent.convertpreview.utils.watermark;
 
 import cn.hutool.core.io.FileUtil;
 import com.thinkdifferent.convertpreview.entity.ConvertEntity;
+import com.thinkdifferent.convertpreview.entity.mark.BarCode;
+import com.thinkdifferent.convertpreview.entity.mark.FirstPageMark;
+import com.thinkdifferent.convertpreview.entity.mark.PngMark;
+import com.thinkdifferent.convertpreview.entity.mark.PngMarkLocal;
 import lombok.Cleanup;
 import lombok.extern.log4j.Log4j2;
 
@@ -38,13 +42,6 @@ public class JpgWaterMarkUtil {
      * @param convertEntity 转换参数
      */
     public static void mark4Jpg(String strSourceJpg, String strTargetJpg, ConvertEntity convertEntity) throws Exception {
-        //  如果添加图片水印，则进行如下处理
-        if (convertEntity.getPngMark() != null) {
-            convertEntity.getPngMark().mark4Jpg(strSourceJpg,
-                    strTargetJpg,
-                    convertEntity.getPngMark());
-        }
-
         // 如果添加文字水印，则进行如下处理
         if (convertEntity.getTextMark() != null) {
             convertEntity.getTextMark().mark4Jpg(strSourceJpg,
@@ -53,19 +50,52 @@ public class JpgWaterMarkUtil {
                     convertEntity.getAlpha());
         }
 
+
+        File fileSourceImg = new File(strSourceJpg);
+        @Cleanup FileInputStream fileInputStream = new FileInputStream(fileSourceImg);
+        BufferedImage buffSourceImg = ImageIO.read(fileInputStream);
+        BufferedImage buffImg = new BufferedImage(buffSourceImg.getWidth(), buffSourceImg.getHeight(), BufferedImage.TYPE_INT_RGB);
+        // 获取图片的大小
+        int intImageWidth = buffImg.getWidth();
+        int intImageHeight = buffImg.getHeight();
+
+        PngMark pngMark = new PngMark();
+        //  如果添加图片水印，则进行如下处理
+        if (convertEntity.getPngMark() != null) {
+            pngMark = convertEntity.getPngMark();
+        }
+
         // 如果添加归档章水印，则进行如下处理
         if (convertEntity.getFirstPageMark() != null) {
-            convertEntity.getFirstPageMark().mark4Jpg(strSourceJpg,
-                    strTargetJpg,
-                    convertEntity.getFirstPageMark());
+            FirstPageMark firstPageMark = convertEntity.getFirstPageMark();
+            PngMarkLocal pngMarkLocal = pngMark.getPngLocateInJpg(firstPageMark.getLocate(),
+                    intImageHeight, firstPageMark.getPngHeightPx(),
+                    intImageWidth, firstPageMark.getPngWidthPx());
+
+            pngMark.setWaterMarkFile(firstPageMark.getMarkPng().getAbsolutePath());
+            pngMark.setImageWidth(firstPageMark.getPngWidthPx());
+            pngMark.setImageHeight(firstPageMark.getPngHeightPx());
+            pngMark.setLocateX(pngMarkLocal.getLocateX());
+            pngMark.setLocateY(pngMarkLocal.getLocateY());
         }
 
         // 如果添加二维码/条码，则进行如下处理
         if (convertEntity.getBarCode() != null) {
-            convertEntity.getBarCode().mark4Jpg(strSourceJpg,
-                    strTargetJpg,
-                    convertEntity.getBarCode());
+            BarCode barCode = convertEntity.getBarCode();
+            PngMarkLocal pngMarkLocal = pngMark.getPngLocateInJpg(barCode.getLocate(),
+                    intImageHeight, barCode.getPngHeightPx(),
+                    intImageWidth, barCode.getPngWidthPx());
+
+            pngMark.setWaterMarkFile(barCode.getMarkPng().getAbsolutePath());
+            pngMark.setImageWidth(barCode.getPngWidthPx());
+            pngMark.setImageHeight(barCode.getPngHeightPx());
+            pngMark.setLocateX(pngMarkLocal.getLocateX());
+            pngMark.setLocateY(pngMarkLocal.getLocateY());
         }
+
+        convertEntity.getPngMark().mark4Jpg(strSourceJpg,
+                strTargetJpg,
+                pngMark);
 
     }
 
@@ -89,7 +119,6 @@ public class JpgWaterMarkUtil {
         @Cleanup FileInputStream fileInputStream = new FileInputStream(fileSourceImg);
 
         BufferedImage buffSourceImg = ImageIO.read(fileInputStream);
-
         BufferedImage buffImg = new BufferedImage(buffSourceImg.getWidth(), buffSourceImg.getHeight(), BufferedImage.TYPE_INT_RGB);
         // 获取图片的大小
         int intImageWidth = buffImg.getWidth();

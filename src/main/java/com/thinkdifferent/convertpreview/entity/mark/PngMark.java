@@ -50,6 +50,11 @@ public class PngMark {
     private static int dpi = 400;
     private static float scale = 0.5f;
 
+    /**
+     * 根据传入的参数，转换为图片水印的对象
+     * @param mapMark 传入参数中“水印”部分的内容
+     * @return
+     */
     public PngMark get(Map<String, String> mapMark) {
         PngMark pngMark = new PngMark();
         // “watermark”文件夹中已经存放的水印文件
@@ -65,6 +70,69 @@ public class PngMark {
         return pngMark;
 
     }
+
+    /**
+     * 根据传入的参数，计算图片水印在PDF中的位置坐标
+     * @param strLocate            位置
+     * @param doublePageHeightMm   页面高度毫米mm
+     * @param dblPngHeightMm       水印图片高度毫米mm
+     * @param doublePageWidthMm    页面宽度毫米mm
+     * @param dblPngWidthMm        水印图片宽度毫米mm
+     * @return  计算后的图片坐标值PngMarkLocal对象
+     */
+    public PngMarkLocal getPngLocateInPdf(String strLocate,
+                                          double doublePageHeightMm, double dblPngHeightMm,
+                                          double doublePageWidthMm, double dblPngWidthMm){
+        PngMarkLocal pngMarkLocal = new PngMarkLocal();
+        // PDF原点为：左下角；页面尺寸：px（磅）
+
+        float floatIconLocateX = 0f;
+        float floatIconLocateY = 0f;
+
+        switch (strLocate){
+            case "TL":
+                floatIconLocateX = 3;
+                floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale + 3);
+                break;
+            case "TM":
+                floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm ) * scale * 0.5 );
+                floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale + 3);
+                break;
+            case "TR":
+                floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm ) * scale + 0);
+                floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale + 3);
+                break;
+            case "CL":
+                floatIconLocateX = 3;
+                floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale * 0.5);
+                break;
+            case "C":
+                floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm ) * scale * 0.5 );
+                floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale * 0.5);
+                break;
+            case "CR":
+                floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm) * scale + 3);
+                floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm ) * scale * 0.5);
+                break;
+            case "BL":
+                floatIconLocateX = 3;
+                floatIconLocateY = 3;
+                break;
+            case "BM":
+                floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm ) * scale * 0.5 );
+                floatIconLocateY = 3;
+                break;
+            case "BR":
+                floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm) * scale + 3);
+                floatIconLocateY = 3;
+        }
+
+        pngMarkLocal.setLocateX(floatIconLocateX);
+        pngMarkLocal.setLocateY(floatIconLocateY);
+
+        return pngMarkLocal;
+    }
+
 
     /**
      * PDF页面中添加图片水印
@@ -166,6 +234,69 @@ public class PngMark {
 
 
     /**
+     * 根据传入的参数，计算图片水印在OFD中的位置坐标
+     * @param strLocate            位置
+     * @param doublePageHeightMm   页面高度毫米mm
+     * @param dblPngHeightMm       水印图片高度毫米mm
+     * @param doublePageWidthMm    页面宽度毫米mm
+     * @param dblPngWidthMm        水印图片宽度毫米mm
+     * @return  计算后的图片坐标值PngMarkLocal对象
+     */
+    public PngMarkLocal getPngLocateInOfd(String strLocate,
+                                          double doublePageHeightMm, double dblPngHeightMm,
+                                          double doublePageWidthMm, double dblPngWidthMm){
+        PngMarkLocal pngMarkLocal = new PngMarkLocal();
+        // OFD原点为：左上角；页面尺寸：mm（毫米）
+
+        float floatIconLocateX = 0f;
+        float floatIconLocateY = 0f;
+
+        switch (strLocate){
+            case "TL":
+                floatIconLocateX = 5;
+                floatIconLocateY = 5;
+                break;
+            case "TM":
+                floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm) * 0.5);
+                floatIconLocateY = 5;
+                break;
+            case "TR":
+                floatIconLocateX = (float)(doublePageWidthMm - dblPngWidthMm - 5 - 10);
+                floatIconLocateY = 5;
+                break;
+            case "CL":
+                floatIconLocateX = 5;
+                floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm) * 0.5);
+                break;
+            case "C":
+                floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm) * 0.5);
+                floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm) * 0.5);
+                break;
+            case "CR":
+                floatIconLocateX = (float)(doublePageWidthMm - dblPngWidthMm - 5);
+                floatIconLocateY = (float)((doublePageHeightMm - dblPngHeightMm) * 0.5);
+                break;
+            case "BL":
+                floatIconLocateX = 5;
+                floatIconLocateY = (float)(doublePageHeightMm - dblPngHeightMm - 5);
+                break;
+            case "BM":
+                floatIconLocateX = (float)((doublePageWidthMm - dblPngWidthMm) * 0.5);
+                floatIconLocateY = (float)(doublePageHeightMm - dblPngHeightMm - 5);
+                break;
+            case "BR":
+                floatIconLocateX = (float)(doublePageWidthMm - dblPngWidthMm - 5 - 10);
+                floatIconLocateY = (float)(doublePageHeightMm - dblPngHeightMm - 5);
+        }
+
+        pngMarkLocal.setLocateX(floatIconLocateX);
+        pngMarkLocal.setLocateY(floatIconLocateY);
+
+        return pngMarkLocal;
+    }
+
+
+    /**
      * 为OFD添加图片水印
      * @param ofdDoc        OFD页面对象
      * @param pageSize      页面尺寸对象
@@ -194,7 +325,7 @@ public class PngMark {
             ctx.save();
             //ctx.rotate(-1 * pngMark.getDegree());
             ctx.drawImage(pathIcon,
-                    pngMark.getLocateX(), (dblPageHeight - pngMark.getLocateY() - pngMark.getImageHeight()),
+                    pngMark.getLocateX(), pngMark.getLocateY(),
                     pngMark.getImageWidth(), pngMark.getImageHeight());
             ctx.restore();
         });
@@ -204,6 +335,68 @@ public class PngMark {
 
     }
 
+
+    /**
+     * 根据传入的参数，计算图片水印在JPG中的位置坐标
+     * @param strLocate            位置
+     * @param doublePageHeightPx   页面高度像素px
+     * @param dblPngHeightPx       水印图片高度像素px
+     * @param doublePageWidthPx    页面宽度像素px
+     * @param dblPngWidthPx        水印图片宽度像素px
+     * @return  计算后的图片坐标值PngMarkLocal对象
+     */
+    public PngMarkLocal getPngLocateInJpg(String strLocate,
+                                          double doublePageHeightPx, double dblPngHeightPx,
+                                          double doublePageWidthPx, double dblPngWidthPx){
+        PngMarkLocal pngMarkLocal = new PngMarkLocal();
+        // JPG（图片）原点为：左上角：页面尺寸：px（像素）
+
+        float floatIconLocateX = 10f;
+        float floatIconLocateY = 10f;
+
+        switch (strLocate){
+            case "TL":
+                floatIconLocateX = 10;
+                floatIconLocateY = 10;
+                break;
+            case "TM":
+                floatIconLocateX = (float)((doublePageWidthPx - dblPngWidthPx)  * 0.5 );
+                floatIconLocateY = 10;
+                break;
+            case "TR":
+                floatIconLocateX = (float)(doublePageWidthPx - dblPngWidthPx - 20 );
+                floatIconLocateY = 10;
+                break;
+            case "CL":
+                floatIconLocateX = 10;
+                floatIconLocateY = (float)((doublePageHeightPx - dblPngHeightPx ) * 0.5);
+                break;
+            case "C":
+                floatIconLocateX = (float)((doublePageWidthPx - dblPngWidthPx ) * 0.5 );
+                floatIconLocateY = (float)((doublePageHeightPx - dblPngHeightPx ) * 0.5);
+                break;
+            case "CR":
+                floatIconLocateX = (float)(doublePageWidthPx - dblPngWidthPx - 10);
+                floatIconLocateY = (float)((doublePageHeightPx - dblPngHeightPx ) * 0.5);
+                break;
+            case "BL":
+                floatIconLocateX = 10;
+                floatIconLocateY = (float)(doublePageHeightPx - dblPngHeightPx - 10);
+                break;
+            case "BM":
+                floatIconLocateX = (float)((doublePageWidthPx - dblPngWidthPx ) * 0.5 );
+                floatIconLocateY = (float)(doublePageHeightPx - dblPngHeightPx - 10);
+                break;
+            case "BR":
+                floatIconLocateX = (float)(doublePageWidthPx - dblPngWidthPx - 10);
+                floatIconLocateY = (float)(doublePageHeightPx - dblPngHeightPx - 10);
+        }
+
+        pngMarkLocal.setLocateX(floatIconLocateX);
+        pngMarkLocal.setLocateY(floatIconLocateY);
+
+        return pngMarkLocal;
+    }
 
     /**
      * 给JPG图片文件添加png图片水印
