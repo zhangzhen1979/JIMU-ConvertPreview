@@ -20,9 +20,17 @@ public class WriteBackResult extends SimpleResult {
      */
     private String file;
     /**
+     * 临时文件路径
+     */
+    private String tempFile;
+    /**
      * 文件总页数
      */
     private Long pageNum;
+    /**
+     * zip动态密码
+     */
+    private String zippwd;
 
     public WriteBackResult() {
         super.setFlag(false);

@@ -1,7 +1,10 @@
 package com.thinkdifferent.convertpreview.entity.input;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
+import com.thinkdifferent.convertpreview.config.ConvertDocConfigBase;
+import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -23,11 +26,13 @@ import java.util.UUID;
  * @date 2022/4/22 11:03
  */
 @Log4j2
+@Data
 public class InputUrl extends Input {
     /**
      * 需转换的输入文件在Web服务中的URL地址
      */
     private String url;
+    private String fileName;
     private String fileType;
 
     public boolean matchInput(String inputStr) {
@@ -35,9 +40,10 @@ public class InputUrl extends Input {
     }
 
     @Override
-    public Input of(String inputPath, String strExt) {
+    public Input of(String inputPath, String strFileName, String strExt) {
         InputUrl path = new InputUrl();
         path.setUrl(inputPath);
+        path.setFileName(strFileName);
         path.setFileType(strExt);
         return path;
     }
@@ -49,8 +55,22 @@ public class InputUrl extends Input {
      */
     @Override
     public boolean exists() {
-        File file = getInputFile();
-        return Objects.nonNull(file) && file.exists();
+        try {
+            HttpResponse resp = HttpUtil.createGet(url)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+                    .setMaxRedirectCount(10)
+                    .execute();
+            if (resp.isOk() && (resp.contentLength() > 0 || (Objects.nonNull(getInputFile()) && getInputFile().length() > 0))) {
+                return true;
+            }
+
+            log.error("File not download. status:" + resp.getStatus() + "; fileLength: " + resp.contentLength() + ", URL: " + url);
+            return false;
+        } catch (Exception | Error e) {
+            log.error("inputUrl 判断文件是否存在异常", e);
+            return false;
+        }
+
     }
 
 
@@ -60,32 +80,53 @@ public class InputUrl extends Input {
         if (super.inputFile == null) {
             // 判断缓存中是否存在
             super.inputFile = super.getCacheFile(this.url);
-            if (super.inputFile == null) {
-                String strInputFileName = getFileNameFromHeader();
-                if (!StringUtils.isEmpty(strInputFileName)) {
-                    // 判断文件是否存在
-                    String downloadFilePath = getBaseUrl() + strInputFileName;
-                    File fileDownload = new File(downloadFilePath);
-                    if(fileDownload != null &&
-                            fileDownload.exists()){
-                        if(fileDownload.length()==0){
-                            // 如果文件大小为0，则删除，重新下载
-                            FileUtil.del(downloadFilePath);
-                        }else {
-                            super.setInputFile(fileDownload);
-                            super.addCache(this.url, downloadFilePath);
-                            return super.inputFile;
-                        }
-                    }
-                    // 从指定的URL中将文件读取下载到目标路径
-                    log.debug("url:" + url + " ;downloadFilePath:" + downloadFilePath);
-                    HttpUtil.downloadFile(url, downloadFilePath);
-                    Assert.isTrue(FileUtil.exist(downloadFilePath), this.url + "下载文件失败");
-                    // log.info("下载【{}】文件【{}】成功", this.url, downloadFilePath);
-                    super.setInputFile(fileDownload);
-                    super.addCache(this.url, downloadFilePath);
+            if (Objects.nonNull(super.inputFile)) {
+                return super.inputFile;
+            }
 
+            if (fileName == null
+                    || fileName.equalsIgnoreCase("null")
+                    || fileName.isEmpty()) {
+                String strInputFileName = getFileNameFromHeader();
+                fileName = StringUtils.isNotBlank(strInputFileName) ? strInputFileName : (UUID.randomUUID() + "." + this.getFileType());
+            }
+
+            if (!StringUtils.isEmpty(fileName)) {
+                // 判断文件是否存在
+                String downloadFilePath = getInputTempPath() + fileName;
+                File fileDownload = new File(downloadFilePath);
+                if (fileDownload.exists()) {
+                    if (fileDownload.length() == 0) {
+                        // 如果文件大小为0，则删除，重新下载
+                        FileUtil.del(fileDownload);
+                    } else {
+                        super.setInputFile(fileDownload);
+                        super.addCache(this.url, downloadFilePath);
+                        return super.inputFile;
+                    }
                 }
+                // 从指定的URL中将文件读取下载到目标路径
+                log.debug("url:" + url + " ;downloadFilePath:" + downloadFilePath);
+                // 如果下载异常，则自动重试，每次间隔1秒
+                for (int i = 0; i < ConvertDocConfigBase.maxRetryNum; i++) {
+                    try {
+                        HttpResponse execute = HttpUtil.createGet(url)
+                                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+                                .setMaxRedirectCount(10)
+                                .execute();
+
+                        long longSize = execute.writeBody(downloadFilePath);
+                        if (longSize > 0) {
+                            break;
+                        }
+                        Thread.sleep(1000L);
+                    } catch (Exception | Error e) {
+                    }
+                }
+                Assert.isTrue(FileUtil.size(fileDownload) > 0, this.url + "下载文件失败");
+
+                super.setInputFile(fileDownload);
+                super.addCache(this.url, downloadFilePath);
             }
         }
         return super.inputFile;
@@ -97,6 +138,7 @@ public class InputUrl extends Input {
             String fileName;
             URL urlConnection = new URL(this.url);
             URLConnection uc = urlConnection.openConnection();
+            uc.setConnectTimeout(30 * 1000);
 
             String uuid = "";
             String md5 = "";
@@ -119,29 +161,13 @@ public class InputUrl extends Input {
                 fileName = new String(headerField.getBytes(StandardCharsets.ISO_8859_1), "GBK");
                 realFileName = URLDecoder.decode(fileName.substring(fileName.indexOf("filename=") + 9), "UTF-8");
             } else {
-                realFileName = UUID.randomUUID().toString() + "." + this.fileType;
+                realFileName = UUID.randomUUID() + "." + this.fileType;
             }
             return StringUtils.isNotBlank(md5) ? (md5 + realFileName.substring(realFileName.lastIndexOf("."))) :
                     (StringUtils.isNotBlank(uuid) ? (uuid + realFileName.substring(realFileName.lastIndexOf("."))) : realFileName);
 
         }
         return null;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public String getFileType() {
-        return fileType;
-    }
-
-    public void setFileType(String fileType) {
-        this.fileType = fileType;
     }
 
 

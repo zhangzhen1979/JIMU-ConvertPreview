@@ -19,7 +19,7 @@ public class LocalEnabled implements Condition {
         try {
             Objects.requireNonNull(context.getBeanFactory()).getBean(CacheService.class);
             return false;
-        }catch (Exception e){
+        } catch (Exception | Error e) {
             log.info("使用默认缓存");
             return true;
         }

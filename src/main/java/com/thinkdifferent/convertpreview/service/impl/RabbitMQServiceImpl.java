@@ -53,14 +53,14 @@ public class RabbitMQServiceImpl implements RabbitMQService, RabbitTemplate.Conf
         try {
             // 将传入的数据JSON，放入到MQ服务器的receive队列中。
             CorrelationData correlationId = new CorrelationData(UUID.randomUUID().toString());
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EXECHANGE_RECEIVE, RabbitMQConfig.ROUTING_RECEIVE,
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_RECEIVE, RabbitMQConfig.ROUTING_RECEIVE,
                     jsonInput.toString(), correlationId);
 
             long longEndTime = System.currentTimeMillis();    //获取结束时间
 
             log.info("数据JSON发送成功！ID:" + correlationId.getId() + "， 耗时：" + (longEndTime - longStartTime) + " ms");
 
-        } catch (Exception e) {
+        } catch (Exception | Error e) {
             e.printStackTrace();
             log.error(e.getMessage());
         }
@@ -134,7 +134,7 @@ public class RabbitMQServiceImpl implements RabbitMQService, RabbitTemplate.Conf
         try {
             // 获取当前重试次数
             int currentRetryNum = jsonInput.containsKey(SystemConstants.RETRY_KEY) ? jsonInput.getInt(SystemConstants.RETRY_KEY) : 0;
-            int nextRetryNum = ++currentRetryNum ;
+            int nextRetryNum = ++currentRetryNum;
             if (nextRetryNum > maxRetryNum) {
                 log.error("已超过最大重试次数，请检查。data={}", jsonInput);
                 // 记录错误数据
@@ -156,7 +156,7 @@ public class RabbitMQServiceImpl implements RabbitMQService, RabbitTemplate.Conf
                     }
             );
             log.info("第{}次重试数据JSON发送成功！", currentRetryNum);
-        } catch (Exception e) {
+        } catch (Exception | Error e) {
             e.printStackTrace();
             log.error("发送失败重试出现异常, data=" + jsonInput, e);
         }

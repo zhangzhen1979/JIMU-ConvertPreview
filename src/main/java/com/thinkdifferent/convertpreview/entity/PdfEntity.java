@@ -16,7 +16,6 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 
 @Data
 @Accessors(chain = true)
@@ -43,12 +42,12 @@ public class PdfEntity {
      * @return 标准entity
      */
     @SneakyThrows
-    public static PdfEntity of(PdfInputVO vo) throws ExecutionException {
+    public static PdfEntity of(PdfInputVO vo) {
         log.debug("接收参数:{}", vo);
         PdfEntity result = SystemUtil.getPdfEntityFromCache(vo.getUuid());
         if (Objects.isNull(result)) {
             result = new PdfEntity().setUuid(vo.getUuid())
-                    .setInput(InputType.convert(vo.getFilePath(), vo.getFileType()))
+                    .setInput(InputType.convert(vo.getFilePath(), vo.getFileName(), vo.getFileType()))
                     // 只支持url的
                     .setWriteBack(WriteBackType.of(vo.getWriteBack()))
                     .setCallBackUrl(vo.getCallBack());

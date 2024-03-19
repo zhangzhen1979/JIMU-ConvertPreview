@@ -1,7 +1,7 @@
 package com.thinkdifferent.convertpreview.utils.watermark;
 
 import cn.hutool.core.io.FileUtil;
-import com.thinkdifferent.convertpreview.entity.ConvertEntity;
+import com.thinkdifferent.convertpreview.entity.ConvertDocEntity;
 import com.thinkdifferent.convertpreview.entity.mark.BarCode;
 import com.thinkdifferent.convertpreview.entity.mark.FirstPageMark;
 import com.thinkdifferent.convertpreview.entity.mark.PngMark;
@@ -22,14 +22,15 @@ public class JpgWaterMarkUtil {
 
     /**
      * jpg 批量添加水印
-     * @param sourceJpgList 图片list
-     * @param convertEntity 输入参数
+     *
+     * @param sourceJpgList    图片list
+     * @param convertDocEntity 输入参数
      * @throws Exception err
      */
-    public static void mark4JpgList(List<String> sourceJpgList, ConvertEntity convertEntity) throws Exception {
-        if(sourceJpgList != null){
+    public static void mark4JpgList(List<String> sourceJpgList, ConvertDocEntity convertDocEntity) throws Exception {
+        if (sourceJpgList != null) {
             for (String strJpg : sourceJpgList) {
-                mark4Jpg(strJpg, strJpg, convertEntity);
+                mark4Jpg(strJpg, strJpg, convertDocEntity);
             }
         }
     }
@@ -37,17 +38,18 @@ public class JpgWaterMarkUtil {
 
     /**
      * 给JPG添加水印, 单页
-     *  @param strSourceJpg  源Jpg
-     * @param strTargetJpg  目标Jpg
-     * @param convertEntity 转换参数
+     *
+     * @param strSourceJpg     源Jpg
+     * @param strTargetJpg     目标Jpg
+     * @param convertDocEntity 转换参数
      */
-    public static void mark4Jpg(String strSourceJpg, String strTargetJpg, ConvertEntity convertEntity) throws Exception {
+    public static void mark4Jpg(String strSourceJpg, String strTargetJpg, ConvertDocEntity convertDocEntity) throws Exception {
         // 如果添加文字水印，则进行如下处理
-        if (convertEntity.getTextMark() != null) {
-            convertEntity.getTextMark().mark4Jpg(strSourceJpg,
+        if (convertDocEntity.getTextMark() != null) {
+            convertDocEntity.getTextMark().mark4Jpg(strSourceJpg,
                     strTargetJpg,
-                    convertEntity.getTextMark(),
-                    convertEntity.getAlpha());
+                    convertDocEntity.getTextMark(),
+                    convertDocEntity.getAlpha());
         }
 
 
@@ -58,16 +60,22 @@ public class JpgWaterMarkUtil {
         // 获取图片的大小
         int intImageWidth = buffImg.getWidth();
         int intImageHeight = buffImg.getHeight();
+        if (buffSourceImg != null) {
+            buffSourceImg.getGraphics().dispose();
+        }
+        if (buffImg != null) {
+            buffImg.getGraphics().dispose();
+        }
 
         PngMark pngMark = new PngMark();
         //  如果添加图片水印，则进行如下处理
-        if (convertEntity.getPngMark() != null) {
-            pngMark = convertEntity.getPngMark();
+        if (convertDocEntity.getPngMark() != null) {
+            pngMark = convertDocEntity.getPngMark();
         }
 
         // 如果添加归档章水印，则进行如下处理
-        if (convertEntity.getFirstPageMark() != null) {
-            FirstPageMark firstPageMark = convertEntity.getFirstPageMark();
+        if (convertDocEntity.getFirstPageMark() != null) {
+            FirstPageMark firstPageMark = convertDocEntity.getFirstPageMark();
             PngMarkLocal pngMarkLocal = pngMark.getPngLocateInJpg(firstPageMark.getLocate(),
                     intImageHeight, firstPageMark.getPngHeightPx(),
                     intImageWidth, firstPageMark.getPngWidthPx());
@@ -80,20 +88,20 @@ public class JpgWaterMarkUtil {
         }
 
         // 如果添加二维码/条码，则进行如下处理
-        if (convertEntity.getBarCode() != null) {
-            BarCode barCode = convertEntity.getBarCode();
+        if (convertDocEntity.getBarCode() != null) {
+            BarCode barCode = convertDocEntity.getBarCode();
             PngMarkLocal pngMarkLocal = pngMark.getPngLocateInJpg(barCode.getLocate(),
                     intImageHeight, barCode.getPngHeightPx(),
                     intImageWidth, barCode.getPngWidthPx());
 
-            pngMark.setWaterMarkFile(barCode.getMarkPng().getAbsolutePath());
+            pngMark.setWaterMarkFile(barCode.getBarcodePng().getAbsolutePath());
             pngMark.setImageWidth(barCode.getPngWidthPx());
             pngMark.setImageHeight(barCode.getPngHeightPx());
             pngMark.setLocateX(pngMarkLocal.getLocateX());
             pngMark.setLocateY(pngMarkLocal.getLocateY());
         }
 
-        convertEntity.getPngMark().mark4Jpg(strSourceJpg,
+        convertDocEntity.getPngMark().mark4Jpg(strSourceJpg,
                 strTargetJpg,
                 pngMark);
 
@@ -102,7 +110,8 @@ public class JpgWaterMarkUtil {
 
     /**
      * 给图片添加水印、可设置水印图片旋转角度
-     *  @param strIconPath      水印图片路径
+     *
+     * @param strIconPath      水印图片路径
      * @param strSourceImgPath 源图片路径
      * @param strTargetImgPath 目标图片路径
      * @param intDegree        水印图片旋转角度
@@ -163,9 +172,16 @@ public class JpgWaterMarkUtil {
         g.drawImage(img, intIconLocateX, intIconLocateY, intIconWidth, intIconHeight, null);
         // 关闭图像
         g.dispose();
-        try (OutputStream os = new FileOutputStream(strTargetImgPath)){
+        try (OutputStream os = new FileOutputStream(strTargetImgPath)) {
             // 生成图片
             ImageIO.write(buffImg, "JPG", os);
+        }
+
+        if (buffSourceImg != null) {
+            buffSourceImg.getGraphics().dispose();
+        }
+        if (buffImg != null) {
+            buffImg.getGraphics().dispose();
         }
 
         // 清理归档章文件
@@ -233,7 +249,7 @@ public class JpgWaterMarkUtil {
         try {
             Field field = Color.class.getField(strFontColor);
             color = (Color) field.get(null);
-        } catch (Exception e) {
+        } catch (Exception | Error e) {
             e.printStackTrace();
         }
 
@@ -295,6 +311,13 @@ public class JpgWaterMarkUtil {
         // 生成图片
         @Cleanup OutputStream os = new FileOutputStream(strTargetImgPath);
         ImageIO.write(buffImg, "JPG", os);
+
+        if (buffSourceImg != null) {
+            buffSourceImg.getGraphics().dispose();
+        }
+        if (buffImg != null) {
+            buffImg.getGraphics().dispose();
+        }
 
     }
 

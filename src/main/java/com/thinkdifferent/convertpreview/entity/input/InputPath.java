@@ -2,15 +2,20 @@ package com.thinkdifferent.convertpreview.entity.input;
 
 
 import cn.hutool.core.io.FileUtil;
+import com.thinkdifferent.convertpreview.config.ConvertDocConfigBase;
+import com.thinkdifferent.convertpreview.utils.SystemUtil;
+import lombok.Data;
 
 import java.io.File;
 
 /**
  * 本地文件路径输入
+ *
  * @author ltian
  * @version 1.0
  * @date 2022/4/22 11:03
  */
+@Data
 public class InputPath extends Input {
     /**
      * 本地文件路径
@@ -23,9 +28,9 @@ public class InputPath extends Input {
     }
 
     @Override
-    public Input of(String inputPath, String strExt) {
+    public Input of(String inputPath, String strFileName, String strExt) {
         InputPath path = new InputPath();
-        path.setFilePath(inputPath);
+        path.setFilePath(SystemUtil.beautifulFilePath(inputPath));
         return path;
     }
 
@@ -36,13 +41,22 @@ public class InputPath extends Input {
      */
     @Override
     public boolean exists() {
-        return new File(filePath).exists();
+        return FileUtil.exist(filePath);
     }
 
     @Override
     public File getInputFile() {
         if (super.inputFile == null) {
-            super.setInputFile(new File(filePath));
+            // 将文件复制到intemp文件夹
+            String strFileName = FileUtil.getName(filePath);
+            File fileTarget = new File(ConvertDocConfigBase.inPutTempPath + strFileName);
+            if (!FileUtil.equals(new File(filePath), fileTarget)) {
+                if (fileTarget.exists()) {
+                    FileUtil.del(fileTarget);
+                }
+                FileUtil.copy(new File(filePath), fileTarget, true);
+            }
+            super.setInputFile(fileTarget);
         }
         return super.inputFile;
     }
@@ -54,15 +68,8 @@ public class InputPath extends Input {
     @Override
     public void clean() {
         // 文件临时存储路径
-        File imageFile = new File(getBaseUrl());
-        FileUtil.del(imageFile);
+        File fileTemp = new File(getInputTempPath());
+        FileUtil.del(fileTemp);
     }
 
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
-    }
 }

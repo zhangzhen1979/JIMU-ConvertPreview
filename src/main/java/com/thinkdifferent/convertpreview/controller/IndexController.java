@@ -1,9 +1,8 @@
 package com.thinkdifferent.convertpreview.controller;
 
 import com.thinkdifferent.convertpreview.config.SystemConstants;
-import com.thinkdifferent.convertpreview.utils.convert4pdf.LocalConvertUtil;
+import com.thinkdifferent.convertpreview.engine.impl.localOffice.LocalConvertDocUtil;
 import com.thinkdifferent.convertpreview.vo.MessageBean;
-import io.swagger.annotations.ApiOperation;
 import net.sf.json.JSONObject;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,12 +19,6 @@ import java.util.Collection;
 @RestController
 public class IndexController {
 
-    @GetMapping
-    public String index() {
-        return "启动成功";
-    }
-
-    @ApiOperation("显示最近错误的数据，最大200条")
     @GetMapping("listError")
     public Collection<JSONObject> listError() {
         return SystemConstants.ERROR_CONVERT_DATA.values();
@@ -33,7 +26,7 @@ public class IndexController {
 
     @GetMapping("testJacob")
     public MessageBean<Boolean> testJacob(@RequestParam("input") String input, @RequestParam("output") String output)
-            throws IOException, InterruptedException {
-        return MessageBean.success(LocalConvertUtil.process(input, output));
+            throws IOException {
+        return MessageBean.success(LocalConvertDocUtil.process(input, output));
     }
 }

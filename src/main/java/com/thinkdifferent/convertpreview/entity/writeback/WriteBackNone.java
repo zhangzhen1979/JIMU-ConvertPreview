@@ -1,6 +1,8 @@
 package com.thinkdifferent.convertpreview.entity.writeback;
 
+import cn.hutool.core.io.FileUtil;
 import com.thinkdifferent.convertpreview.entity.WriteBackResult;
+import com.thinkdifferent.convertpreview.entity.ZipParam;
 
 import java.io.File;
 import java.util.List;
@@ -45,9 +47,10 @@ public class WriteBackNone extends WriteBack {
      * @param outPutFileType 目标文件类型
      * @param fileOut        转换后的文件
      * @param listJpg        转换后的jpg文件
+     * @param zipParam       zip参数
      */
     @Override
-    public WriteBackResult writeBack(String outPutFileType, File fileOut, List<String> listJpg) {
-        return new WriteBackResult(true);
+    public WriteBackResult writeBack(String outPutFileType, File fileOut, List<String> listJpg, ZipParam zipParam) {
+        return new WriteBackResult(true).setFile(FileUtil.getCanonicalPath(fileOut));
     }
 }

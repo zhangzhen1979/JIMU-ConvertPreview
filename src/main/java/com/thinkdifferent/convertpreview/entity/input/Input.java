@@ -3,7 +3,7 @@ package com.thinkdifferent.convertpreview.entity.input;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.thinkdifferent.convertpreview.cache.CacheManager;
-import com.thinkdifferent.convertpreview.config.ConvertConfig;
+import com.thinkdifferent.convertpreview.config.ConvertDocConfigBase;
 import com.thinkdifferent.convertpreview.utils.SystemUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.Assert;
@@ -27,6 +27,22 @@ public abstract class Input {
     private CacheManager cacheManager;
 
     /**
+     * 单页文件是否补空白页
+     */
+    private boolean duplexPrint = false;
+    public boolean getDuplexPrint(){
+        return duplexPrint;
+    }
+
+    /**
+     * 补充的空白页是否添加页码
+     */
+    private boolean blankPageHaveNum = false;
+    public boolean getBlankPageHaveNum(){
+        return blankPageHaveNum;
+    }
+
+    /**
      * 检测输入字符串是否满足该输入类型, 只匹配，不做文件存在校验
      *
      * @param inputStr 输入的字符串
@@ -37,11 +53,30 @@ public abstract class Input {
     /**
      * 输入字符串转换成对应类
      *
-     * @param inputPath 文件路径
-     * @param strExt    文件扩展名
+     * @param inputPath   文件路径
+     * @param strFileName 文件名
+     * @param strExt      文件扩展名
      * @return input对象
      */
-    public abstract Input of(String inputPath, String strExt);
+    public abstract Input of(String inputPath, String strFileName, String strExt);
+
+    /**
+     * 输入字符串转换成对应类
+     *
+     * @param inputPath          文件路径
+     * @param strFileName        文件名
+     * @param strExt             文件扩展名
+     * @param duplexPrint        单页文件是否补空白页
+     * @param blankPageHaveNum   补充的空白页是否添加页码
+     * @return input对象
+     */
+    public Input of(String inputPath, String strFileName, String strExt,
+                    boolean duplexPrint, boolean blankPageHaveNum){
+        Input input = this.of(inputPath, strFileName,strExt);
+        input.duplexPrint = duplexPrint;
+        input.blankPageHaveNum = blankPageHaveNum;
+        return input;
+    }
 
     /**
      * 判断传入资源是否存在
@@ -69,10 +104,10 @@ public abstract class Input {
 
 
     /**
-     * @return 父级目录
+     * @return 获取【输入文件临时文件夹】
      */
-    protected String getBaseUrl() {
-        return SystemUtil.beautifulPath(ConvertConfig.inPutTempPath);
+    protected String getInputTempPath() {
+        return SystemUtil.beautifulPath(ConvertDocConfigBase.inPutTempPath);
     }
 
     /**
@@ -85,7 +120,7 @@ public abstract class Input {
         if (Objects.isNull(cacheManager)) {
             try {
                 cacheManager = SpringUtil.getBean(CacheManager.class);
-            } catch (Exception ignored) {
+            } catch (Exception | Error ignored) {
             }
         }
 
@@ -108,7 +143,7 @@ public abstract class Input {
         if (Objects.isNull(cacheManager)) {
             try {
                 cacheManager = SpringUtil.getBean(CacheManager.class);
-            } catch (Exception ignored) {
+            } catch (Exception | Error ignored) {
             }
         }
         if (Objects.nonNull(cacheManager)) {

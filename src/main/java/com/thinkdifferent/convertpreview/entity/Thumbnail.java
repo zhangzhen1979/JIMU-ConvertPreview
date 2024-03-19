@@ -1,11 +1,13 @@
 package com.thinkdifferent.convertpreview.entity;
 
 import cn.hutool.core.map.MapUtil;
+import lombok.Data;
 import org.springframework.util.Assert;
 
 import java.util.Map;
 import java.util.Objects;
 
+@Data
 public class Thumbnail {
 
     private int width;
@@ -29,39 +31,6 @@ public class Thumbnail {
         thumbnail.setQuality(MapUtil.getDouble(mapThumbnail, "quality", 0d));
 
         return thumbnail;
-    }
-
-
-    public int getWidth() {
-        return width;
-    }
-
-    public void setWidth(int width) {
-        this.width = width;
-    }
-
-    public int getHeight() {
-        return height;
-    }
-
-    public void setHeight(int height) {
-        this.height = height;
-    }
-
-    public double getScale() {
-        return scale;
-    }
-
-    public void setScale(double scale) {
-        this.scale = scale;
-    }
-
-    public double getQuality() {
-        return quality;
-    }
-
-    public void setQuality(double quality) {
-        this.quality = quality;
     }
 
 }

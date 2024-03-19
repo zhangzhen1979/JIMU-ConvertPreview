@@ -1,19 +1,18 @@
 package com.thinkdifferent.convertpreview.utils;
 
 import com.thinkdifferent.convertpreview.entity.WriteBackResult;
+import com.thinkdifferent.convertpreview.entity.ZipParam;
 import com.thinkdifferent.convertpreview.entity.writeback.WriteBack;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.ofdrw.reader.OFDReader;
+import net.lingala.zip4j.exception.ZipException;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -22,39 +21,75 @@ import java.util.Objects;
 @Log4j2
 public class WriteBackUtil {
 
+
+    /**
+     * 回写
+     *
+     * @param writeBack 回写对象
+     * @param outPutFileType
+     * @param fileOut   输出文件
+     * @param zipParam
+     * @return jo
+     */
+    public static WriteBackResult writeBack(WriteBack writeBack, String outPutFileType, File fileOut, ZipParam zipParam) throws ZipException {
+        if (Objects.isNull(writeBack)) {
+            return new WriteBackResult(true);
+        }
+        return writeBack.writeBack(fileOut);
+    }
+
     /**
      * 回写
      *
      * @param writeBack      回写对象
      * @param outPutFileType 输出文件类型
-     * @param fileOut        输出文件
+     * @param fileOut        输出文件, @see ArcZipUtil.zipFile, 做了兼容
      * @param listJpg        jpg list
+     * @param zipParam       zip参数
      * @return jo
      */
     @SneakyThrows
-    public static WriteBackResult writeBack(WriteBack writeBack, String outPutFileType, File fileOut, List<String> listJpg) {
-        if (Objects.isNull(writeBack)) {
+    public static WriteBackResult writeBack(WriteBack writeBack, String outPutFileType,
+                                            File fileOut, List<String> listJpg, ZipParam zipParam) {
+        if (Objects.isNull(writeBack) || !fileOut.getClass().getName().equals("java.io.File")) {
             return new WriteBackResult(true);
         }
-        WriteBackResult writeBackResult = writeBack.writeBack(outPutFileType, fileOut, listJpg);
+        WriteBackResult writeBackResult = writeBack.writeBack(outPutFileType, fileOut, listJpg, zipParam);
+        long longPageCount = 0;
 
-        if(!listJpg.isEmpty()){
-            writeBackResult.setPageNum((long)listJpg.size());
+        if(listJpg != null && !listJpg.isEmpty()){
+            longPageCount = listJpg.size();
+            writeBackResult.setPageNum(longPageCount);
         }else{
-            if("jpg".equalsIgnoreCase(outPutFileType)){
-                writeBackResult.setPageNum(1l);
-            }else if("pdf".equalsIgnoreCase(outPutFileType)){
-                try (PDDocument doc = PDDocument.load(fileOut)) {
-                    writeBackResult.setPageNum((long)doc.getPages().getCount());
-                }
-
-            }else if("ofd".equalsIgnoreCase(outPutFileType)){
-                try (OFDReader ofdReader = new OFDReader(Paths.get(fileOut.getCanonicalPath()))) {
-                    writeBackResult.setPageNum((long)ofdReader.getPageList().size());
-                }
+            // 如果输出zip文件，则经fileOut对象改为pdf文件（结束前删除）。
+            if(zipParam != null){
+                String strPDF = writeBackResult.getTempFile();
+                fileOut = new File(strPDF);
+            }else{
+                fileOut = new File(writeBackResult.getFile());
+//                if("jpg".equalsIgnoreCase(outPutFileType)){
+//                    longPageCount = 1;
+//                    writeBackResult.setPageNum(longPageCount);
+//                }else if("pdf".equalsIgnoreCase(outPutFileType) && fileOut.getName().endsWith(".pdf")){
+//                    try (PDDocument doc = PDDocument.load(fileOut, MemoryUsageSetting.setupTempFileOnly())) {
+//                        longPageCount = doc.getPages().getCount();
+//                        writeBackResult.setPageNum(longPageCount);
+//                    }
+//
+//                }else if("ofd".equalsIgnoreCase(outPutFileType)){
+//                    try (OFDReader ofdReader = new OFDReader(Paths.get(fileOut.getCanonicalPath()))) {
+//                        longPageCount = ofdReader.getPageList().size();
+//                        writeBackResult.setPageNum(longPageCount);
+//                    }
+//                }
             }
         }
 
+        // 如果输出zip文件，则结束前删除pdf文件。
+        if(zipParam != null){
+            cn.hutool.core.io.FileUtil.del(fileOut);
+        }
+        log.info("该文件共有【" + longPageCount + "】页");
         log.info("回写结果：{}", writeBackResult);
         return writeBackResult;
     }
@@ -99,7 +134,7 @@ public class WriteBackUtil {
                 stringBuilder.append(strBoundaryPrefix)
                         .append(strBOUNDARY)
                         .append(strNewLine)
-                        .append("Content-Disposition: form-data; name=\"")
+                        .append("Content-Disposition: form-data; pdfSignName=\"")
                         .append(entry.getKey())
                         .append("\"").append(strNewLine).append(strNewLine)
                         .append(entry.getValue())
@@ -112,7 +147,7 @@ public class WriteBackUtil {
         String sb = strBoundaryPrefix +
                 strBOUNDARY +
                 strNewLine +
-                "Content-Disposition: form-data;name=\"file\";filename=\"" + strFilePathName +
+                "Content-Disposition: form-data;pdfSignName=\"file\";filename=\"" + strFilePathName +
                 "\"" + strNewLine +
                 "Content-Type:application/octet-stream" +
                 strNewLine +

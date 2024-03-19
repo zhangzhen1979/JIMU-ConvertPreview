@@ -2,6 +2,7 @@ package com.thinkdifferent.convertpreview.entity.input;
 
 import cn.hutool.core.io.FileUtil;
 import com.thinkdifferent.convertpreview.utils.FtpUtil;
+import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.Assert;
 
@@ -12,6 +13,7 @@ import java.io.File;
  * @version 1.0
  * @date 2022/4/22 11:10
  */
+@Data
 public class InputFtp extends Input {
     /**
      * ftp服务的访问地址
@@ -48,7 +50,7 @@ public class InputFtp extends Input {
     }
 
     @Override
-    public Input of(String inputPath, String strExt) {
+    public Input of(String inputPath, String strFileName, String strExt) {
         Assert.hasText(inputPath, "路径不能为空");
         Assert.isTrue(inputPath.startsWith("ftp://"), "FTP文件格式错误");
         InputFtp inputFtp = new InputFtp();
@@ -101,54 +103,15 @@ public class InputFtp extends Input {
                 }
 
                 // 如果文件大小为0，则删除，重新下载
-                FileUtil.del(getBaseUrl() + downloadFilePath);
+                FileUtil.del(getInputTempPath() + downloadFilePath);
                 // ftp 下载文件
-                FtpUtil.downloadFile(this, new File(getBaseUrl() + downloadFilePath));
-                super.setInputFile(new File(getBaseUrl() + downloadFilePath));
-                super.addCache(this.filePath, getBaseUrl() + downloadFilePath);
+                FtpUtil.downloadFile(this, new File(getInputTempPath() + downloadFilePath));
+                super.setInputFile(new File(getInputTempPath() + downloadFilePath));
+                super.addCache(this.filePath, getInputTempPath() + downloadFilePath);
             }
 
         }
         return super.inputFile;
     }
 
-    public String getHost() {
-        return host;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
-    }
-
-    public Integer getPort() {
-        return port;
-    }
-
-    public void setPort(Integer port) {
-        this.port = port;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
-    }
 }

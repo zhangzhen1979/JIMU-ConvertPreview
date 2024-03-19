@@ -1,0 +1,231 @@
+# Tomcat
+server:
+  # 端口号
+  port: 8080
+  tomcat:
+    uri-encoding: UTF-8
+    threads:
+      max: 1000
+      min-spare: 30
+    # 超时时间
+    connection-timeout: 500000
+
+# 本服务设置
+convert:
+  # 当前服务【内网】访问地址（使用【WPS预览服务】、【福昕转换服务】、【数科转换服务】时必须配置此项）
+  baseUrl: http://127.0.0.1:8080
+#  # URL编码的key（必须16位），用于解码。如果不设置，则默认为空
+#  urlEncodeKey: archivesAes14023
+
+  preview:
+    poi:
+      word: false
+      excel: false
+      ppt: false
+    # 预览是否使用水印。如果设置为false，则在预览时传入的水印参数不生效
+    watermarkEnable: true
+    # 文字水印内容
+    watermarkTxt:
+    # 默认文件预览方式：pdf | img， 默认 pdf
+    type: pdf
+    # 图片预览时进行异步转换加载的图片数量，默认：0(不进行异步加载)， 1：加载1页，其他页异步加载
+    asyncImgNum: 2
+    # 图片水印地址, 优先级比文字水印高
+#    watermarkImage: watermark/watermark.png
+    # 是否启用 ticket 验证
+    useTicket: false
+    timeControl: false
+
+  # 转换/下载重试。转换重试功能需启用MQ才有效。
+  retry:
+    # 最大重试次数（0-8）, 0标识不重试, 若异常情况只记录日志， 大于1（最大8）：标识失败进行重试的次数, 将会在以下时间重试（5min, 10min, 30min, 1h, 2h, 4h, 8h, 16h）
+    max: 3
+  pdf:
+    # 水印用字体文件路径。默认不配置，则自动取系统内的【宋体】。
+    font:
+    fontName:
+    fontFamilyName:
+
+    # 图片化pdf，生成的图片的分辨率（dpi）。默认200dpi
+    picDpi: 200
+    # 图片文件合成pdf时，可以设置合成pdf后图片的压缩率。默认值为0.5。1为不压缩，0.5为压缩50%
+    picQuality: 0.5
+
+  path:
+    # 默认本地接收文件夹。可以为空，则系统自动在当前文件夹中创建“intemp”文件夹。
+    # 如果设置，则必须以“intemp/”结尾。不要配置到存储的根目录！定时任务会定时清空临时文件夹中的内容！！！
+    inPutTempPath: intemp/
+    # 默认本地输出文件夹。可以为空，则系统自动在当前文件夹中创建“outtemp”文件夹。
+    # 如果设置，则必须以“outtemp/”结尾。不要配置到存储的根目录！定时任务会定时清空临时文件夹中的内容！！！
+    outPutPath: outtemp/
+    # 清理临时目录的间隔时间，单位：天（正整数）, 默认：1
+    cleanUnit: 1
+
+  # 转换引擎配置
+  engine:
+    # 可转换的图片格式
+    picType: tif,tiff,png,jpg,jpeg,bmp,psd,sgi,pcx,webp,batik,icns,pnm,pict,tga,iff,hdr,gif
+    # 可转换的其他文件格式
+    otherFileType: htm,html,dwg,dxf
+    otherUtilPath:
+      cad: utils/QCADCAM/windows/
+
+    # 自动加入【页码】
+    autoAddPageNum:
+      # 是否开启自动添加【页码】
+      enabled: false
+      # 文件的处理类型：single：单个文件；multi：多个文件合并（默认值）；all：以上两种类型
+      type: all
+      # 字号
+      fontSize: 15
+      # 文字颜色
+      fontColor: black
+      # 文字位置。TL：顶部靠左；TM：顶部居中；TR：顶部靠右；CL：中间靠左；C：中间；CR：中间靠右；BL：底部靠左；BM：底部居中；BR：底部靠右
+      locate: TR
+      # 边距。即页码位置的页边距。PDF边距为OFD边距的3倍。例如，PDF边距为30时，OFD边距设置为10较适宜
+      margins: 30
+      # 奇偶页交换页码位置。
+      swapPosition: false
+      # 自动补零位数。如果设置的位数不为0，则自动以0补足位数；如果设置的位数为0，则不对页码补0。
+      digits: 3
+
+    # 自动加入【版权声明】
+    autoAddCopyRight:
+      # 是否开启自动添加【版权声明】
+      enabled: false
+      # 文件的处理类型：single：单个文件；multi：多个文件合并（默认值）；all：以上两种类型
+      type: multi
+      # 文字信息
+      text: 公司内部资料\n严禁外传
+      # 字号
+      fontSize: 15
+      # 文字颜色
+      fontColor: black
+      # 文字位置。TL：顶部靠左；TM：顶部居中；TR：顶部靠右；CL：中间靠左；C：中间；CR：中间靠右；BL：底部靠左；BM：底部居中；BR：底部靠右
+      locate: TR
+      # 边距。即页码位置的页边距。PDF边距为OFD边距的3倍。例如，PDF边距为30时，OFD边距设置为10较适宜
+      margins: 30
+      # 奇偶页交换页码位置。
+      swapPosition: false
+
+  video:
+    # ffmpeg相关设置
+    ffmpeg:
+      # 支持的音视频文件后缀列表
+      ext: avi,mp4,mkv,mov,flv,webm,mp3,m4a,ogg,3gp,wav
+      # ffmpeg所在文件夹和文件名
+      file: utils/ffmpeg/ffmpeg.exe
+      # 可以使用的CPU进程数量。设置为0，则使用全部CPU资源
+      threads: 0
+      # 视频编码格式。设置为空，则默认使用libx264编码
+      videoCode:
+      # 帧率。设置为0，则使用原视频的帧率
+      fps: 0
+      # 分辨率。如：640*480。设置为空，则使用原视频的分辨率
+      resolution:
+      # 音频编码格式。设置为空，则默认使用aac编码
+      audioCode:
+      # 视频转换m3u8相关参数
+      m3u8:
+        # 转换等待时间。如果服务器性能低，请放大此时间。默认值：10秒
+        convertWait: 10
+        # 预览页面下载等待时间。如果服务器性能低，请放大此时间。默认值：10秒
+        downloadWait: 10
+
+jodconverter:
+  local:
+    # 是否启用LibrOffice引擎。使用其他引擎时，此项必须设置为false
+    enabled: false
+    # libreOffice根目录
+    office-home: D:/libreOffice
+    # 端口（线程）
+    portNumbers: 8001,8002,8003
+    # LibreOffice进程重启前的最大进程数
+    maxTasksPerProcess: 100
+    # 任务执行的超时时间
+    taskExecutionTimeout: 86400000
+    # 任务队列的超时时间
+    taskQueueTimeout: 86400000
+    # 一个进程的超时时间
+    processTimeout: 86400000
+
+spring:
+  application:
+    # 应用名称。如果启用nacos，此值必填
+    name: com.thinkdifferent.convertpreview
+  # 配置本服务的本地路径作为Web路径。用于给外部系统提供日志在线浏览功能。（测试专用，安全检测、正式系统上线时，注释resources、mvc以下所有配置项）
+  resources:
+    # 日志文件路径（服务实际部署路径下的logs文件夹）
+    static-locations: file:logs/
+  mvc:
+    static-path-pattern: /logs/
+    view:
+      prefix: /
+      # 可以解析的日志文件扩展名：.log
+      suffix: .log
+
+  # RabbitMQ设置
+  rabbitmq:
+    # 访问地址。指定RabbitMQ服务地址，多个以逗号分隔(优先取addresses，然后再取host)
+    # 集群配置 addresses之间用逗号隔开：addresses: ip:port,ip:port
+    addresses: 127.0.0.1:5672,127.0.0.1:6606,127.0.0.1:6705
+    # 单机IP
+    # host: 127.0.0.1
+    # 单机端口
+    # port: 5672
+    # 用户名
+    username: guest
+    # 密码
+    password: guest
+    # 监听设置
+    listener:
+      # 生产者
+      direct:
+        # 自动启动开关
+        auto-startup: false
+      # 消费者
+      simple:
+        # 自动启动开关
+        auto-startup: false
+
+#  redis:
+#    database: 0
+#    cluster:
+#      # 集群配置
+#      # nodes: 127.0.0.1:7001,127.0.0.1:7002,127.0.0.1:7003,127.0.0.1:7004,127.0.0.1:7005,127.0.0.1:7006
+#      nodes: 127.0.0.1:7001
+#    # pdfPassword: xxxx     #tx
+#    jedis:
+#      pool:
+#        max-active: 10  #连接池最大连接数
+#        max-idle: 8     #连接池中最大空闲连接数
+#        max-wait: -1    #连接池最大等待阻塞时间
+#        min-idle: 0     #连接池中最小空闲数
+#    timeout: 5000      #访问超时时间
+
+
+  cloud:
+    # Nacos的配置。
+    # 如果启用Nacos服务作为配置中心，
+    # 则此部分之后的内容均可以在Nacos配置中心中管理，
+    # 不必在此配置文件中维护。
+    nacos:
+      config:
+        # 配置服务地址
+        server-addr: 127.0.0.1:8848
+        # 启用状态
+        enabled: false
+      discovery:
+        # 服务发现服务地址
+        server-addr: 127.0.0.1:8848
+        # 启用状态
+        enabled: false
+
+# log4j2设置
+logging:
+  level:
+    root: info
+    com.thinkdifferent: debug
+  file:
+    name: logs/application.log
+

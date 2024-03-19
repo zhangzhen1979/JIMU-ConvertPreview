@@ -2,7 +2,8 @@ package com.thinkdifferent.convertpreview.entity.mark;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.map.MapUtil;
-import com.thinkdifferent.convertpreview.utils.XHTMLToImage;
+import com.thinkdifferent.convertpreview.utils.htmlUtil.TableSizeCalculate;
+import com.thinkdifferent.convertpreview.utils.htmlUtil.XHTMLToImage;
 import lombok.Data;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang3.StringUtils;
@@ -69,10 +70,7 @@ public class FirstPageMark {
      */
     private Map<String, String> data;
 
-
     private static int dpi = 400;
-    private static float scale = 0.5f;
-
 
     public static FirstPageMark get(Map<String, Object> mapMark) {
         FirstPageMark firstPageMark = new FirstPageMark();
@@ -92,6 +90,7 @@ public class FirstPageMark {
 
             firstPageMark.setPngWidthPx((int)Math.round(dblPngWidth / 2.54 * dpi));
             firstPageMark.setPngHeightPx((int)Math.round(dblPngHeight / 2.54 * dpi));
+
             firstPageMark.setIsCm(true);
         }else{
             firstPageMark.setPngWidthPx((int)Math.round(dblPngWidth));
@@ -104,7 +103,7 @@ public class FirstPageMark {
 
             firstPageMark.setIsCm(false);
         }
-        firstPageMark.setLocate(MapUtil.getStr(mapMark, "locate", "TC"));
+        firstPageMark.setLocate(MapUtil.getStr(mapMark, "locate", "TL"));
 
         if (mapMark.containsKey("data")) {
             // 兼容非 str value
@@ -143,9 +142,39 @@ public class FirstPageMark {
             strHtmlPath = this.getTemplate();
         }
 
+
+        Map<String, String> mapMarkData = this.getData();
+        if(mapMarkData == null){
+            mapMarkData = new HashMap<>();
+        }
+
+        Map<String,String> mapParam = new HashMap<>();
+        mapParam.put("tableHeight", String.valueOf(this.getPngHeightPx()));
+        mapParam.put("tableWidth", String.valueOf(this.getPngWidthPx()));
+
+        TableSizeCalculate tc = new TableSizeCalculate();
+        tc.set(mapParam);
+        tc.get(strHtmlPath, strHtml);
+
+        // 如果设置了图片尺寸，则将计算后的表格px值传入参数
+        if(this.getPngHeightPx() >0 && this.getPngWidthPx() >0){
+            mapMarkData.put("tableHeight", pngHeightPx + "px");
+            mapMarkData.put("tableWidth", pngWidthPx + "px");
+        }else{
+            mapMarkData.put("tableHeight", tc.getHeightPx() + "px");
+            mapMarkData.put("tableWidth", tc.getWidthPx() + "px");
+        }
+        mapMarkData.put("tdWidth", tc.getTdWidthPx() + "px");
+        mapMarkData.put("tdHeight", tc.getTdHeightPx() + "px");
+
         // 将html转换为png
-        return XHTMLToImage.convertToImage(strHtmlPath, strHtml, pngPathFile,
-                this.getPngWidthPx(), this.getPngHeightPx(), this.getData());
+        if((strHtmlPath != null && !"".equals(strHtmlPath))
+                || (strHtml != null && !"".equals(strHtml))){
+            return XHTMLToImage.convertToImage(strHtmlPath, strHtml, pngPathFile,
+                    this.getPngWidthPx(), this.getPngHeightPx(), mapMarkData);
+        }else{
+            return null;
+        }
     }
 
 
@@ -171,35 +200,20 @@ public class FirstPageMark {
         File filePng = getMarkPng();
 
         if (filePng != null && filePng.exists()) {
-            // 获取PDF首页的尺寸大小，转换成mm
-            double doublePageWidthMm = page.getMediaBox().getWidth() / 72 * 25.4;
-            double doublePageHeightMm = page.getMediaBox().getHeight() / 72 * 25.4;
-            // 获取水印图片高度、宽度（px、mm）
-            int intPngWidthPx = firstPageMark.getPngWidthPx();
-            double dblPngWidthMm = firstPageMark.getPngWidthMm();
-            int intPngHeightPx = firstPageMark.getPngHeightPx();
-            double dblPngHeightMm = firstPageMark.getPngHeightMm();
             PngMark pngMark = new PngMark();
-
-            PngMarkLocal pngMarkLocal = pngMark.getPngLocateInPdf(firstPageMark.getLocate().toUpperCase(),
-                    doublePageHeightMm, dblPngHeightMm,
-                    doublePageWidthMm, dblPngWidthMm);
-
             pngMark.setWaterMarkFile(filePng.getAbsolutePath());
-            pngMark.setLocateX(pngMarkLocal.getLocateX());
-            pngMark.setLocateY(pngMarkLocal.getLocateY());
-            pngMark.setImageWidth(intPngWidthPx);
-            pngMark.setImageHeight(intPngHeightPx);
+            pngMark.setImageWidth(firstPageMark.getPngWidthPx());
+            pngMark.setImageHeight(firstPageMark.getPngHeightPx());
 
             pngMark.mark4Pdf(pdExtGfxState,
                     contentStream,
                     pdDocument,
                     page,
                     pngMark,
-                    modifyX,
+                    firstPageMark.getLocate(),
                     alpha);
-            FileUtil.del(filePng);
         }
+        FileUtil.del(filePng);
 
     }
 
@@ -221,32 +235,19 @@ public class FirstPageMark {
         File filePng = getMarkPng();
 
         if (filePng != null && filePng.exists()) {
-            // 获取OFD页面大小
-            double doublePageWidthMm = pageSize.getWidth();
-            double doublePageHeightMm = pageSize.getHeight();
-            // 获取水印图片高度、宽度（mm）
-            int intPngWidthMm = firstPageMark.getPngWidthMm().intValue();
-            int intPngHeightMm = firstPageMark.getPngHeightMm().intValue();
-
             PngMark pngMark = new PngMark();
-
-            PngMarkLocal pngMarkLocal = pngMark.getPngLocateInOfd(firstPageMark.getLocate().toUpperCase(),
-                    doublePageHeightMm, firstPageMark.getPngHeightMm(),
-                    doublePageWidthMm, firstPageMark.getPngWidthMm());
-
             pngMark.setWaterMarkFile(filePng.getAbsolutePath());
-            pngMark.setLocateX(pngMarkLocal.getLocateX());
-            pngMark.setLocateY(pngMarkLocal.getLocateY());
-            pngMark.setImageWidth(intPngWidthMm);
-            pngMark.setImageHeight(intPngHeightMm);
+            pngMark.setImageWidth(firstPageMark.getPngWidthMm().intValue());
+            pngMark.setImageHeight(firstPageMark.getPngHeightMm().intValue());
 
             pngMark.mark4Ofd(ofdDoc,
                     pageSize,
                     pngMark,
+                    firstPageMark.getLocate(),
                     intPageNum,
                     alpha);
-            FileUtil.del(filePng);
         }
+        FileUtil.del(filePng);
 
     }
 

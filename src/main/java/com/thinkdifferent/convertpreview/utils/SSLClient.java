@@ -56,7 +56,7 @@ public class SSLClient {
                     return null;
                 }
             }).setSSLSocketFactory(ssf).build();
-        } catch (Exception e) {
+        } catch (Exception | Error e) {
             return HttpClients.createDefault();
         }
     }

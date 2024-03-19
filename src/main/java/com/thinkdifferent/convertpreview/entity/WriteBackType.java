@@ -1,6 +1,6 @@
 package com.thinkdifferent.convertpreview.entity;
 
-import com.thinkdifferent.convertpreview.config.ConvertConfig;
+import com.thinkdifferent.convertpreview.config.ConvertDocConfigBase;
 import com.thinkdifferent.convertpreview.entity.writeback.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.Assert;
@@ -24,6 +24,8 @@ public enum WriteBackType {
     URL(WriteBackUrl.class),
     // FTP 回写
     FTP(WriteBackFtp.class),
+    // FTP 回写
+    SFTP(WriteBackSftp.class),
     ;
 
     private final Class<? extends WriteBack> clazzWriteBack;
@@ -49,7 +51,7 @@ public enum WriteBackType {
 
         if (LOCAL.equals(this)) {
             // 服务端路径回写，添加服务端输出文件夹
-            ((WriteBackPath) writeBack).setPath(ConvertConfig.outPutPath);
+            ((WriteBackPath) writeBack).setPath(ConvertDocConfigBase.outPutPath);
         }
 
         if (URL.equals(this)) {

@@ -6,6 +6,7 @@
 <script src="/js/base64.min.js" type="text/javascript"></script>
 
 <script type="text/javascript">
+
     //屏蔽右键菜单
     document.oncontextmenu = function (event) {
         if (window.event) {
@@ -86,23 +87,24 @@
         }
     }
 
-    function hehe() {
-        if ((window.console && (console.firebug || console.table && /firebug/i.test(console.table()))) || (
-            typeof opera ==
-            'object' && typeof opera.postError == 'function' && console.profile.length > 0)) {
-            nof12();
-        }
-        if (typeof console.profiles == "object" && console.profiles.length > 0) {
-            nof12();
-        }
-    }
-
-    hehe();
-    window.onresize = function () {
-        if ((window.outerHeight - window.innerHeight) > 200)
-            //判断当前窗口内页高度和窗口高度，如果差值大于200，那么呵呵
-            nof12();
-    }
+    // 禁用F12
+    // function hehe() {
+    //     if ((window.console && (console.firebug || console.table && /firebug/i.test(console.table()))) || (
+    //         typeof opera ==
+    //         'object' && typeof opera.postError == 'function' && console.profile.length > 0)) {
+    //         nof12();
+    //     }
+    //     if (typeof console.profiles == "object" && console.profiles.length > 0) {
+    //         nof12();
+    //     }
+    // }
+    //
+    // hehe();
+    // window.onresize = function () {
+    //     if ((window.outerHeight - window.innerHeight) > 200)
+    //         //判断当前窗口内页高度和窗口高度，如果差值大于200，那么呵呵
+    //         nof12();
+    // }
 
     document.onkeydown = function (event) {
         if ((event.keyCode == 112) || //屏蔽 F1
@@ -144,6 +146,7 @@
         } else if (watermarkTxt !== '') {
             watermark({
                 watermark_txt: '${watermarkTxt}',
+                watermark_color: '${watermarkColor}',
                 watermark_alpha: ${watermarkAlpha}, //水印透明度
                 watermark_fontsize: '${watermarkFontsize}', //水印字体大小
                 watermark_angle: ${watermarkAngle}, //水印倾斜度数

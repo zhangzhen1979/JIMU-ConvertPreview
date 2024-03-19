@@ -3,20 +3,18 @@ package com.thinkdifferent.convertpreview.cache;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.springframework.context.annotation.Conditional;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Objects;
 
 /**
- * guava 缓存，只支持一种过期时间, 默认8H过期
+ * guava 缓存，只支持一种过期时间, 8H过期
  *
  * @author ltian
  * @version 1.0
  * @date 2022/5/26 14:42
  */
-@Order
 @Service
 @Conditional(LocalEnabled.class)
 public class GuavaCacheServiceImpl implements CacheService {

@@ -18,7 +18,7 @@ public class PrintStream extends Thread {
                     System.out.print((char) _ch);
                 else break;
             }
-        } catch (Exception e) {
+        } catch (Exception | Error e) {
             log.error("PrintStream", e);
         }
     }

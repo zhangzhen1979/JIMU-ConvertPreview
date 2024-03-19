@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <default>-i ${inputFile} -c:v libx264 -mbd 0 -c:a aac -strict -2 -pix_fmt yuv420p -movflags faststart -y ${outputFile}</default>
+    <!--    <m3u8>-i ${inputFile} -c:v libx264 -mbd 0 -c:a aac -strict -2 -pix_fmt yuv420p -movflags faststart -y ${outputFile}</m3u8>-->
+    <m3u8>-i ${inputFile} -codec:v libx264 -codec:a mp3 -map 0 -f ssegment -segment_format mpegts -segment_list ${outputFile}/index.m3u8 -segment_time 30 ${outputFile}/out%03d.ts</m3u8>
+</root>

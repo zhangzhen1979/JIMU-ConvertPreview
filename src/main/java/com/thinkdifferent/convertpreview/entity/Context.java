@@ -59,6 +59,12 @@ public class Context {
         this.text = text;
     }
 
+    public Context(Integer pageIndex, String text, List<Word> words) {
+        this.pageIndex = pageIndex;
+        this.text = text;
+        this.words = words;
+    }
+
     public Integer getPageIndex() {
         return pageIndex;
     }

@@ -6,7 +6,10 @@ import cn.hutool.extra.ftp.Ftp;
 import cn.hutool.extra.ftp.FtpConfig;
 import cn.hutool.extra.ftp.FtpMode;
 import com.thinkdifferent.convertpreview.entity.WriteBackResult;
+import com.thinkdifferent.convertpreview.entity.ZipParam;
+import com.thinkdifferent.convertpreview.utils.SystemUtil;
 import lombok.Cleanup;
+import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -21,6 +24,7 @@ import java.util.Map;
  * @date 2022/4/22 10:18
  */
 @Log4j2
+@Data
 public class WriteBackFtp extends WriteBack {
     /**
      * 是否是被动模式
@@ -61,9 +65,9 @@ public class WriteBackFtp extends WriteBack {
             // 用户、密码
             if (subFtpFilePath.contains("@")) {
                 this.setUsername(subFtpFilePath.substring(0, subFtpFilePath.indexOf(":")));
-                this.setPassword(subFtpFilePath.substring(subFtpFilePath.indexOf(":") + 1, subFtpFilePath.indexOf("@")));
+                this.setPassword(subFtpFilePath.substring(subFtpFilePath.indexOf(":") + 1, subFtpFilePath.lastIndexOf("@")));
                 // 获取完用户密码后, 重新截取
-                subFtpFilePath = subFtpFilePath.substring(subFtpFilePath.indexOf("@") + 1);
+                subFtpFilePath = subFtpFilePath.substring(subFtpFilePath.lastIndexOf("@") + 1);
             } else {
                 // 匿名登录
                 this.setUsername("anonymous");
@@ -103,10 +107,14 @@ public class WriteBackFtp extends WriteBack {
      * @param outPutFileType 目标文件类型
      * @param fileOut        转换后的文件
      * @param listJpg        转换后的jpg文件
+     * @param zipParam       zip压缩参数
      */
     @SneakyThrows
     @Override
-    public WriteBackResult writeBack(String outPutFileType, File fileOut, List<String> listJpg){
+    public WriteBackResult writeBack(String outPutFileType, File fileOut, List<String> listJpg, ZipParam zipParam){
+        WriteBackResult writeBackResult = new WriteBackResult();
+        String strZipPWDs = "";
+
         // 回写是否成功
         boolean blnFlag = true;
         @Cleanup Ftp ftp = passive ?
@@ -120,65 +128,41 @@ public class WriteBackFtp extends WriteBack {
 
         if ("jpg".equalsIgnoreCase(outPutFileType)) {
             for (String strJpg : listJpg) {
-                if (!ftp.upload(filePath, new File(strJpg))) {
+                fileOut = new File(strJpg);
+                Map<String,Object> mapZip = getZip(fileOut, zipParam);
+                // 判断是否需要进行zip压缩
+                if(mapZip != null && mapZip.get("flag").equals(true)){
+                    fileOut = new File((String)mapZip.get("fileDest"));
+                    strZipPWDs = strZipPWDs + mapZip.get("pwd") + ",";
+                }
+
+                if (!ftp.upload(filePath, fileOut)) {
                     blnFlag = false;
                 }
             }
         } else {
+            Map<String,Object> mapZip = getZip(fileOut, zipParam);
+            // 判断是否需要进行zip压缩
+            if(mapZip != null && mapZip.get("flag").equals(true)){
+                fileOut = new File((String)mapZip.get("fileDest"));
+                strZipPWDs = (String)mapZip.get("pwd");
+            }
+
             // pdf 和 ofd 的都走这里
             if (!ftp.upload(filePath, fileOut)) {
                 blnFlag = false;
             }
         }
+
+        writeBackResult.setFlag(blnFlag);
+
+        String strFileName = SystemUtil.beautifulFilePath(fileOut.getAbsolutePath());
+        strFileName = strFileName.substring(strFileName.lastIndexOf("/")+1);
+        writeBackResult.setFile(filePath + strFileName);
+        writeBackResult.setZippwd(strZipPWDs);
+
         // 返回回写状态
-        return new WriteBackResult(blnFlag);
+        return writeBackResult;
     }
 
-    public boolean isPassive() {
-        return passive;
-    }
-
-    public void setPassive(boolean passive) {
-        this.passive = passive;
-    }
-
-    public String getHost() {
-        return host;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
-    }
-
-    public Integer getPort() {
-        return port;
-    }
-
-    public void setPort(Integer port) {
-        this.port = port;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
-    }
 }

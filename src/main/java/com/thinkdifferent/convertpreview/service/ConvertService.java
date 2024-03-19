@@ -1,36 +1,45 @@
 package com.thinkdifferent.convertpreview.service;
 
 import com.thinkdifferent.convertpreview.entity.CallBackResult;
-import com.thinkdifferent.convertpreview.entity.input.Input;
+import com.thinkdifferent.convertpreview.entity.TargetFile;
+import com.thinkdifferent.convertpreview.entity.WriteBackResult;
 import net.sf.json.JSONObject;
-import org.springframework.scheduling.annotation.Async;
 
-import javax.servlet.http.HttpServletResponse;
-import java.io.File;
 import java.util.Map;
 
+/**
+ * 转换接口，内部区分文档、音视频，统一输入输出
+ *
+ * @author ltian
+ * @version 1.0
+ * @date 2023/12/27 15:06
+ */
 public interface ConvertService {
-    void checkParams(JSONObject jsonInput);
-
-    @Async
-    void asyncConvert(Map<String, Object> parameters);
+    /**
+     * 异步转换
+     *
+     * @param jsonInput 输入参数
+     */
+    void asyncConvert(JSONObject jsonInput);
 
     /**
-     * 将传入的JSON对象中记录的文件，转换为MP4，输出到指定的目录中；回调应用系统接口，将数据写回。
+     * 同步转换，返回转换后的文件、多文件返回父级目录
      *
-     * @param parameters 输入的参数，JSON格式数据对象
-     * @param type       调用类型：convert，转换；base64，需要返回base64；stream，将文件信息返回Http响应头。
-     * @param response   Http响应对象。
+     * @param jsonInput 输入参数
+     * @return 转换后文件
      */
-    CallBackResult convert(Map<String, Object> parameters, String type, HttpServletResponse response);
+    TargetFile convert(JSONObject jsonInput);
 
     /**
-     * 文件预览
+     * 回调业务系统提供的接口
      *
-     * @param input   输入文件
-     * @param params
-     * @param outType 预览的类型 pdf 或 officePicture
-     * @return 转换后的pdf文件
+     * @param strCallBackURL      回调接口URL
+     * @param mapWriteBackHeaders 请求头参数
+     * @param writeBackResult     参数
+     * @param outPutFileName      文件名
+     * @return JSON格式的返回结果
      */
-    File filePreview(Input input, Map<String, String> params, String outType) throws Exception;
+    CallBackResult callBack(String strCallBackURL, Map<String, String> mapWriteBackHeaders,
+                            WriteBackResult writeBackResult, String outPutFileName);
+
 }

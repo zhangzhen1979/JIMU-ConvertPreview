@@ -2,7 +2,9 @@ package com.thinkdifferent.convertpreview.entity.writeback;
 
 import cn.hutool.core.map.MapUtil;
 import com.thinkdifferent.convertpreview.entity.WriteBackResult;
+import com.thinkdifferent.convertpreview.entity.ZipParam;
 import com.thinkdifferent.convertpreview.utils.WriteBackUtil;
+import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -17,6 +19,7 @@ import java.util.Map;
  * @date 2022/4/22 10:15
  */
 @Log4j2
+@Data
 public class WriteBackUrl extends WriteBack {
     /**
      * 文件上传接口的API地址
@@ -56,10 +59,11 @@ public class WriteBackUrl extends WriteBack {
      * @param outPutFileType 目标文件类型
      * @param fileOut        转换后的文件
      * @param listJpg        转换后的jpg文件
+     * @param zipParam       zip压缩参数
      */
     @SneakyThrows
     @Override
-    public WriteBackResult writeBack(String outPutFileType, File fileOut, List<String> listJpg) {
+    public WriteBackResult writeBack(String outPutFileType, File fileOut, List<String> listJpg, ZipParam zipParam) {
         if ("jpg".equalsIgnoreCase(outPutFileType)) {
             if(listJpg != null && listJpg.size() > 0){
                 return WriteBackUtil.writeBack2Api(listJpg.get(0), url, writeBackHeaders);
@@ -72,19 +76,4 @@ public class WriteBackUrl extends WriteBack {
         }
     }
 
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public Map<String, String> getWriteBackHeaders() {
-        return writeBackHeaders;
-    }
-
-    public void setWriteBackHeaders(Map<String, String> writeBackHeaders) {
-        this.writeBackHeaders = writeBackHeaders;
-    }
 }

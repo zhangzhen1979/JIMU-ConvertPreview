@@ -21,6 +21,7 @@ public class PdfInputVO {
      */
     @NotBlank(message = "文件路径不能为空")
     private String filePath;
+    private String fileName;
     private String fileType;
     /**
      * 回调：http://.... get , 带uuid

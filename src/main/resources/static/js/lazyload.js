@@ -11,7 +11,7 @@ var index = 0;
 function checkImgs() {
     var imgs = document.querySelectorAll('.my-photo');
     for (var i = index; i < imgs.length; i++) {
-        if (isInSight(imgs[i])) {
+        if (isInSight(imgs[i]) || i < 2) {
             loadImg(imgs[i]);
             index = i;
         }

@@ -3,10 +3,10 @@ package com.thinkdifferent.convertpreview.entity.mark;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.map.MapUtil;
 import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
-import com.itextpdf.text.pdf.qrcode.EncodeHintType;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -69,7 +69,6 @@ public class BarCode {
     private String locate;
 
     private static int dpi = 400;
-    private static float scale = 0.5f;
 
     public static BarCode get(Map<String, Object> mapMark) {
         BarCode barCode = new BarCode();
@@ -109,7 +108,7 @@ public class BarCode {
      * @return 水印图片
      * @throws IOException err
      */
-    public File getMarkPng() throws IOException, WriterException {
+    public File getBarcodePng() throws IOException, WriterException {
         // 生成二维码/条码png图片
         // 搞个临时文件名
         String uuid = UUID.randomUUID().toString();
@@ -121,9 +120,10 @@ public class BarCode {
             BufferedImage bufferedImage = createBarCodeBufferdImage(this.getCode(), this.getContext(),
                     this.getPngWidthPx(), this.getPngWidthPx());
             File filePng = new File(pngPathFile);
-            boolean blnFlag = ImageIO.write(bufferedImage, "png", filePng);
-            if(blnFlag){
-                bufferedImage = null;
+            ImageIO.write(bufferedImage, "png", filePng);
+
+            if (bufferedImage != null) {
+                bufferedImage.getGraphics().dispose();
             }
 
             return filePng;
@@ -162,7 +162,7 @@ public class BarCode {
 
 
     /**
-     * PDF文件中加入水印
+     * PDF文件中加入二维码
      *
      * @param pdExtGfxState
      * @param contentStream
@@ -179,45 +179,29 @@ public class BarCode {
                          BarCode barCode,
                          float modifyX,
                          float alpha) throws IOException, WriterException {
-        // 获取归档章png图片
-        File filePng = getMarkPng();
+        // 获取二维码png图片
+        File filePng = getBarcodePng();
 
         if (filePng != null && filePng.exists()) {
-            // 获取PDF首页的尺寸大小，转换成mm
-            double doublePageWidthMm = page.getMediaBox().getWidth() / 72 * 25.4;
-            double doublePageHeightMm = page.getMediaBox().getHeight() / 72 * 25.4;
-            // 获取水印图片高度、宽度（px、mm）
-            int intPngWidthPx = barCode.getPngWidthPx();
-            double dblPngWidthMm = barCode.getPngWidthMm();
-            int intPngHeightPx = barCode.getPngHeightPx();
-            double dblPngHeightMm = barCode.getPngHeightMm();
-
             PngMark pngMark = new PngMark();
-
-            PngMarkLocal pngMarkLocal = pngMark.getPngLocateInPdf(barCode.getLocate().toUpperCase(),
-            doublePageHeightMm, dblPngHeightMm,
-            doublePageWidthMm, dblPngWidthMm);
-
             pngMark.setWaterMarkFile(filePng.getAbsolutePath());
-            pngMark.setLocateX(pngMarkLocal.getLocateX());
-            pngMark.setLocateY(pngMarkLocal.getLocateY());
-            pngMark.setImageWidth(intPngWidthPx);
-            pngMark.setImageHeight(intPngHeightPx);
+            pngMark.setImageWidth(barCode.getPngWidthPx());
+            pngMark.setImageHeight(barCode.getPngWidthPx());
 
             pngMark.mark4Pdf(pdExtGfxState,
                     contentStream,
                     pdDocument,
                     page,
                     pngMark,
-                    modifyX,
+                    barCode.getLocate(),
                     alpha);
-            FileUtil.del(filePng);
         }
+        FileUtil.del(filePng);
 
     }
 
     /**
-     * OFD文件中加入首页水印
+     * OFD文件中加入二维码
      *
      * @param ofdDoc        OFD页面对象
      * @param pageSize      页面尺寸对象
@@ -231,35 +215,22 @@ public class BarCode {
                          int intPageNum,
                          float alpha) throws IOException, WriterException {
         // 生成png图片
-        File filePng = getMarkPng();
+        File filePng = getBarcodePng();
 
         if (filePng != null && filePng.exists()) {
-            // 获取OFD页面大小
-            double doublePageWidthMm = pageSize.getWidth();
-            double doublePageHeightMm = pageSize.getHeight();
-            // 获取水印图片高度、宽度（mm）
-            int intPngWidthMm = barCode.getPngWidthMm().intValue();
-            int intPngHeightMm = barCode.getPngHeightMm().intValue();
-
             PngMark pngMark = new PngMark();
-
-            PngMarkLocal pngMarkLocal = pngMark.getPngLocateInOfd(barCode.getLocate().toUpperCase(),
-                    doublePageHeightMm, barCode.getPngHeightMm(),
-                    doublePageWidthMm, barCode.getPngWidthMm());
-
             pngMark.setWaterMarkFile(filePng.getAbsolutePath());
-            pngMark.setLocateX(pngMarkLocal.getLocateX());
-            pngMark.setLocateY(pngMarkLocal.getLocateY());
-            pngMark.setImageWidth(intPngWidthMm);
-            pngMark.setImageHeight(intPngHeightMm);
+            pngMark.setImageWidth(barCode.getPngWidthMm().intValue());
+            pngMark.setImageHeight(barCode.getPngHeightMm().intValue());
 
             pngMark.mark4Ofd(ofdDoc,
                     pageSize,
                     pngMark,
+                    barCode.getLocate(),
                     intPageNum,
                     alpha);
-            FileUtil.del(filePng);
         }
+        FileUtil.del(filePng);
 
     }
 

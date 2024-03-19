@@ -1,0 +1,323 @@
+# Tomcat
+server:
+  # 端口号
+  port: 8080
+  tomcat:
+    uri-encoding: UTF-8
+    threads:
+      max: 1000
+      min-spare: 30
+    # 超时时间
+    connection-timeout: 500000
+
+# 本服务设置
+convert:
+  # 当前服务器【内网】访问地址
+  baseUrl: http://192.168.100.123:8080
+  # URL编码的key（必须16位），用于解码。如果不设置，则默认为空
+  urlEncodeKey: archivesAes14023
+
+  preview:
+    # 默认文件预览方式：pdf | img， 默认 pdf
+    type: pdf
+    # 图片预览时进行异步转换加载的图片数量，默认：0(不进行异步加载)， 1：加载1页，其他页异步加载
+    asyncImgNum: 2
+    # 预览是否使用水印。如果设置为false，则在预览时传入的水印参数不生效
+    watermarkEnable: true
+    # 图片水印地址, 优先级比文字水印高
+    #    watermarkImage: watermark/watermark.png
+    # 文字水印内容
+    watermarkTxt: 文字水印
+    # 是否启用 ticket 验证
+    useTicket: false
+    timeControl: false
+
+  # 转换重试功能需启用MQ才有效
+  retry:
+    # 最大重试次数（0-8）, 0标识不重试, 若异常情况只记录日志， 大于1（最大8）：标识失败进行重试的次数, 将会在以下时间重试（5min, 10min, 30min, 1h, 2h, 4h, 8h, 16h）
+    max: 3
+  pdf:
+    # pdf 用字体文件路径。可不配置，则默认取内置【思源宋体】。
+    font: conf/fonts/SourceHanSerifCN-Light.ttf
+    # 图片化pdf，生成的图片的分辨率（dpi）。默认100dpi
+    picDpi: 100
+  path:
+    # 默认本地接收文件夹。可以为空，则系统自动在当前文件夹中创建“intemp”文件夹。
+    # 如果设置，则必须以“intemp/”结尾。不要配置到存储的根目录！定时任务会定时清空临时文件夹中的内容！！！
+    inPutTempPath: intemp/
+    # 默认本地输出文件夹。可以为空，则系统自动在当前文件夹中创建“outtemp”文件夹。
+    # 如果设置，则必须以“outtemp/”结尾。不要配置到存储的根目录！定时任务会定时清空临时文件夹中的内容！！！
+    outPutPath: outtemp/
+    # 清理临时目录的间隔时间，单位：天（正整数）, 默认：1
+    cleanUnit: 1
+
+  # 转换引擎配置
+  engine:
+    # 可转换的图片格式
+    picType: tif,tiff,png,jpg,jpeg,bmp,psd,sgi,pcx,webp,batik,icns,pnm,pict,tga,iff,hdr,gif
+    # 可转换的其他文件格式
+    otherFileType: htm,html,dwg,dxf
+    otherUtilPath:
+      cad: utils/QCADCAM/windows/
+
+    # 自动加入【页码】
+    autoAddPageNum:
+      # 是否开启自动页码
+      enabled: false
+      # 文件的处理类型：single：单个文件；multi：多个文件合并（默认值）；all：以上两种类型
+      type: multi
+      # 页码字号
+      fontSize: 15
+      # 页码文字颜色
+      fontColor: black
+      # 页码位置。TL：顶部靠左；TM：顶部居中；TR：顶部靠右；CL：中间靠左；C：中间；CR：中间靠右；BL：底部靠左；BM：底部居中；BR：底部靠右
+      locate: TR
+      # 边距。即页码位置的页边距。PDF边距为OFD边距的3倍。例如，PDF边距为30时，OFD边距设置为10较适宜
+      margins: 30
+      # 奇偶页交换页码位置。
+      swapPosition: false
+    # 自动加入【版权声明】
+    autoAddCopyRight:
+      # 是否开启自动页码
+      enabled: false
+      # 文件的处理类型：single：单个文件；multi：多个文件合并（默认值）；all：以上两种类型
+      type: multi
+      # 页码字号
+      fontSize: 15
+      # 页码文字颜色
+      fontColor: black
+      # 页码位置。TL：顶部靠左；TM：顶部居中；TR：顶部靠右；CL：中间靠左；C：中间；CR：中间靠右；BL：底部靠左；BM：底部居中；BR：底部靠右
+      locate: TR
+      # 边距。即页码位置的页边距。PDF边距为OFD边距的3倍。例如，PDF边距为30时，OFD边距设置为10较适宜
+      margins: 30
+      # 奇偶页交换页码位置。
+      swapPosition: false
+
+    localUtil:
+      # 接受修订：doc、docx、
+      acceptRevisions: true
+      # 删除批注：doc、docx、xls、xlsx、ppt、pptx
+      deleteComments: true
+
+      # 使用本地WPS应用转换
+      wps:
+        # 是否启用
+        enabled: false
+
+      # 使用本地Office应用转换的文件格式。
+      office:
+        # 是否启用
+        enabled: false
+
+    # WPS预览服务 相关配置，支持v6、v7
+    wpsPreview:
+      enabled: false
+      # 访问地址
+      domain: http://10.10.27.103/
+      # appId
+      app_id: 123
+      # appKey
+      app_key: 123
+      # 接受修订
+      accept_all_revisions: true
+      # 删除批注
+      delete_all_comments: true
+      # 删除墨迹
+      delete_all_ink: true
+
+    # 永中FCS 相关配置
+    fcs:
+      enabled: false
+      # 访问地址
+      domain: http://192.168.41.155:8088/fcscloud/composite/upload
+      # 接受修订
+      acceptTracks: true
+
+    # 数科转换服务 相关配置
+    suwell:
+      enabled: false
+      # 访问地址
+      domain: http://10.10.27.208:8090/sync/common/x2y
+
+    # 福昕转换服务 相关配置
+    foxit:
+      enabled: false
+      # 访问地址
+      domain: https://convert.foxitjj.net/gsdk-service/api/convert/urlSubmit
+      # 接受修订
+      acceptRev: true
+      # 删除批注
+      showComments: true
+
+    # OnlyOffice DocumentServer配置
+    onlyOffice:
+      # 是否启用
+      enabled: false
+      # OnlyOffice 服务地址
+      domain: http://192.168.1.147:8099
+      # 超时时间，单位：毫秒
+      timeout: 60000
+      # 代表 ONLYOFFICE 文档服务器生成的密钥。您可以在 local.json 文件中找到这个密钥，或者通过在终端执行如下命令
+      # sudo docker exec <dockerID> /var/www/onlyoffice/documentserver/npm/json -f /etc/onlyoffice/documentserver/local.json 'services.CoAuthoring.secret.session.string'
+      secret: RLVQPVeAi6tuxXGWqBWHKc4QdR9gxnUI
+      # 是否异步处理。默认值：false
+      async: false
+
+    # 契约锁配置,
+    qiyuesuo:
+      # 契约锁服务地址。如不使用契约锁电子签章，则只需要注释此行
+      #    serviceUrl: https://privopen3.qiyuesuo.cn
+      accessToken: 123
+      accessSecret: 123
+      # 用印流程ID
+      categoryId: 123
+      # 公司名
+      companyName: XX科技
+
+
+  video:
+    # ffmpeg相关设置
+    ffmpeg:
+      # 支持的音视频文件后缀列表
+      ext: avi,mp4,mkv,mov,flv,webm,mp3,m4a,ogg,3gp
+      # ffmpeg所在文件夹和文件名
+      file: utils/ffmpeg/ffmpeg.exe
+      # 可以使用的CPU进程数量。设置为0，则使用全部CPU资源
+      threads: 0
+      # 视频编码格式。设置为空，则默认使用libx264编码
+      videoCode:
+      # 帧率。设置为0，则使用原视频的帧率
+      fps: 0
+      # 分辨率。如：640*480。设置为空，则使用原视频的分辨率
+      resolution:
+      # 音频编码格式。设置为空，则默认使用aac编码
+      audioCode:
+
+jodconverter:
+  local:
+    # 是否启用LibrOffice引擎。使用其他引擎时，此项必须设置为false
+    enabled: false
+    # libreOffice根目录
+    office-home: D:/LibreOffice
+    # 端口（线程）
+    portNumbers: 8001,8002,8003
+    # LibreOffice进程重启前的最大进程数
+    maxTasksPerProcess: 100
+    # 任务执行的超时时间
+    taskExecutionTimeout: 86400000
+    # 任务队列的超时时间
+    taskQueueTimeout: 86400000
+    # 一个进程的超时时间
+    processTimeout: 86400000
+
+spring:
+  application:
+    # 应用名称。如果启用nacos，此值必填
+    name: com.thinkdifferent.convertpreview
+  # 配置本服务的本地路径作为Web路径。用于给外部系统提供报表PDF文件下载
+  resources:
+    # 日志文件路径（服务实际部署路径下的logs文件夹）（测试专用，安全检测、正式系统上线时，删除此项）
+    static-locations: file:C:/Java/IdeaProjects/convert-preview/logs/
+  mvc:
+    static-path-pattern: /logs/
+    view:
+      prefix: /
+      # 可以解析的日志文件扩展名（测试专用，安全检测、正式系统上线时，删除此项）：.log
+      suffix: .log
+  # RabbitMQ设置
+  rabbitmq:
+    # 访问地址。指定RabbitMQ服务地址，多个以逗号分隔(优先取addresses，然后再取host)
+    # 集群配置 addresses之间用逗号隔开：addresses: ip:port,ip:port
+    addresses: 127.0.0.1:5672,127.0.0.1:6606,127.0.0.1:6705
+    # 单机IP
+    # host: 127.0.0.1
+    # 单机端口
+    # port: 5672
+    # 用户名
+    username: guest
+    # 密码
+    password: guest
+    # 监听设置
+    listener:
+      # 生产者
+      direct:
+        # 自动启动开关
+        auto-startup: false
+      # 消费者
+      simple:
+        # 自动启动开关
+        auto-startup: false
+  #  redis:
+  #    database: 0
+  #    cluster:
+  #      # 集群配置
+  #      # nodes: 127.0.0.1:7001,127.0.0.1:7002,127.0.0.1:7003,127.0.0.1:7004,127.0.0.1:7005,127.0.0.1:7006
+  #      nodes: 127.0.0.1:7001
+  #    # pdfPassword: xxxx     #tx
+  #    jedis:
+  #      pool:
+  #        max-active: 10  #连接池最大连接数
+  #        max-idle: 8     #连接池中最大空闲连接数
+  #        max-wait: -1    #连接池最大等待阻塞时间
+  #        min-idle: 0     #连接池中最小空闲数
+  #    timeout: 5000      #访问超时时间
+
+
+  cloud:
+    # Nacos的配置。
+    # 如果启用Nacos服务作为配置中心，
+    # 则此部分之后的内容均可以在Nacos配置中心中管理，
+    # 不必在此配置文件中维护。
+    nacos:
+      config:
+        # 配置服务地址
+        server-addr: 127.0.0.1:8848
+        # 启用状态
+        enabled: false
+      discovery:
+        # 服务发现服务地址
+        server-addr: 127.0.0.1:8848
+        # 启用状态
+        enabled: false
+
+# log4j2设置
+logging:
+  level:
+    root: info
+    com.thinkdifferent: debug
+    de.codecentric.boot.admin.client: error
+  file:
+    name: logs/application.log
+
+meta:
+  archive:
+    # 48XML中是否包含文件流Base64
+    fileIn48XML: false
+
+  sign:
+    pdf:
+      enabled: false
+      keyAlgorithm: RSA
+      signAlgorithm: SHA384withRSA
+      # 证书库文件。如果不配置【私钥】，则必须配置此项。
+      keyStore: C:/Java/IdeaProjects/convert-preview/conf/pdf/Weaver
+      # 证书库的访问密码。如果不配置【私钥】，则必须配置此项。
+      password: weaver
+      # 证书别名
+      alias: ams
+      # 证书文件。生成”电子文件元数据.xml“时需要使用。
+      cerFile: C:/Java/IdeaProjects/convert-preview/conf/pdf/ams.cer
+      # 证书引证URL
+      certificateCitation: http://127.0.0.1/sign
+
+      name: Weaver
+      location: Shanghai, China
+      reason: Sign the document.
+      tsaUrl:
+
+    ofd:
+      enabled: false
+      userP12File: C:/Java/IdeaProjects/convert-preview/conf/ofd/USER.p12
+      sealFile: C:/Java/IdeaProjects/convert-preview/conf/ofd/UserV4.esl
+      privateKey: 777777
+      userCert: 777777

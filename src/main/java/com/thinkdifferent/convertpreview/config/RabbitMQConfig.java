@@ -1,5 +1,6 @@
 package com.thinkdifferent.convertpreview.config;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -19,12 +20,11 @@ import java.util.Map;
  */
 @Configuration
 public class RabbitMQConfig {
-//    public static Log log = LogFactory.getLog(RabbitMQConfig.class.getName());
 
     // 生产者，是否开启
     public static boolean producer;
 
-    @Value(value = "${spring.rabbitmq.listener.direct.auto-startup}")
+    @Value(value = "${spring.rabbitmq.listener.direct.auto-startup:false}")
     public void setProducer(boolean producer) {
         RabbitMQConfig.producer = producer;
     }
@@ -32,22 +32,25 @@ public class RabbitMQConfig {
     // 消费者，是否开启
     public static boolean consumer;
 
-    @Value(value = "${spring.rabbitmq.listener.simple.auto-startup}")
+    @Value(value = "${spring.rabbitmq.listener.simple.auto-startup:false}")
     public void setConsumer(boolean consumer) {
         RabbitMQConfig.consumer = consumer;
     }
 
-
-    @Value("${spring.rabbitmq.host}")
+    // 集群地址。每个服务ip和端口
+    @Value("${spring.rabbitmq.addresses:127.0.0.1:5672}")
+    private String addresses;
+    // 单机ip地址
+    @Value("${spring.rabbitmq.host:}")
     private String host;
-
-    @Value("${spring.rabbitmq.port}")
+    // 单机端口
+    @Value("${spring.rabbitmq.port:5672}")
     private int port;
 
-    @Value("${spring.rabbitmq.username}")
+    @Value("${spring.rabbitmq.username:guest}")
     private String username;
 
-    @Value("${spring.rabbitmq.password}")
+    @Value("${spring.rabbitmq.password:guest}")
     private String password;
 
     /**
@@ -64,24 +67,30 @@ public class RabbitMQConfig {
 
     // 配置“交换机”
     // 接收队列交换机
-    public static final String EXECHANGE_RECEIVE = "exchange_receive_pic";//交换机
+    public static final String EXCHANGE_RECEIVE = "exchange_convertpreview";//交换机
 
     // 配置“队列名称”
     // 接收队列名称
-    public static final String QUEUE_RECEIVE = "queue_receive_pic";//请求队列名称
+    public static final String QUEUE_RECEIVE = "queue_convertpreview";//请求队列名称
 
     // 配置“路由关键字”
     // 接收队列路由关键字
-    public static final String ROUTING_RECEIVE = "routing_receive_pic";//路由关键字
+    public static final String ROUTING_RECEIVE = "routing_convertpreview";//路由关键字
 
 
     @Bean
     public ConnectionFactory connectionFactory() {
-        CachingConnectionFactory connectionFactory = new CachingConnectionFactory(host, port);
+        CachingConnectionFactory connectionFactory;
+        if (StringUtils.isBlank(addresses)) {
+            connectionFactory = new CachingConnectionFactory(host, port);
+        } else {
+            connectionFactory = new CachingConnectionFactory();
+            connectionFactory.setAddresses(addresses);
+        }
+
         connectionFactory.setUsername(username);
         connectionFactory.setPassword(password);
         connectionFactory.setVirtualHost("/");
-        connectionFactory.setPublisherConfirms(true);
         return connectionFactory;
     }
 
@@ -112,7 +121,7 @@ public class RabbitMQConfig {
     @Bean
     public DirectExchange defaultExchange_receive() {
         //默认是交换机持久化
-        return new DirectExchange(EXECHANGE_RECEIVE);
+        return new DirectExchange(EXCHANGE_RECEIVE);
     }
 
 
@@ -137,16 +146,15 @@ public class RabbitMQConfig {
 
     /************ 重试部分 ***************/
     // 接收队列交换机
-    public static final String DELAY_EXCHANGE_RETRY = "delay_exchange_retry_pic";//交换机
+    public static final String DELAY_EXCHANGE_RETRY = "delay_exchange_retry_convertpreview";//交换机
 
     // 配置“队列名称”
     // 接收队列名称
-    public static final String DELAY_QUEUE_RETRY = "delay_queue_retry_pic";//请求队列名称
+    public static final String DELAY_QUEUE_RETRY = "delay_queue_retry_convertpreview";//请求队列名称
 
     // 配置“路由关键字”
     // 接收队列路由关键字
-    public static final String DELAY_ROUTING_RECEIVE_RETRY = "delay_key_retry_pic";//路由关键字
-
+    public static final String DELAY_ROUTING_RECEIVE_RETRY = "delay_key_retry_convertpreview";//路由关键字
 
 
     /**

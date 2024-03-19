@@ -1,9 +1,10 @@
 package com.thinkdifferent.convertpreview.utils.watermark;
 
-import com.thinkdifferent.convertpreview.entity.ConvertEntity;
+import com.thinkdifferent.convertpreview.entity.ConvertDocEntity;
 import com.thinkdifferent.convertpreview.utils.SystemUtil;
 import lombok.Cleanup;
 import lombok.extern.log4j.Log4j2;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -20,47 +21,23 @@ public class PdfWaterMarkUtil {
 
     /**
      * 给PDF添加水印
-     * @param strSourcePdf      源PDF
-     * @param strTargetPdf      目标PDF
-     * @param convertEntity     转换参数
-     * @param intPageNum        上一个文件的最后页码
+     *
+     * @param strSourcePdf     源PDF
+     * @param strTargetPdf     目标PDF
+     * @param convertDocEntity 转换参数
+     * @param intPageNum       上一个文件的最后页码
+     * @param intPageCount     截止到上一个文件的最后总页数
      */
     public static void mark4Pdf(String strSourcePdf,
                                 String strTargetPdf,
-                                ConvertEntity convertEntity,
-                                int intPageNum) throws Exception{
-
-        mark4PdfProcess(strSourcePdf, strTargetPdf, convertEntity, intPageNum);
-        strTargetPdf = SystemUtil.beautifulFilePath(strTargetPdf);
-
-        // 如果添加归档章水印，则进行如下处理
-        if (convertEntity.getFirstPageMark() != null) {
-            mark4PdfProcess(strSourcePdf, strTargetPdf, convertEntity, intPageNum);
-        }
-
-        // 如果添加二维码/条码，则进行如下处理
-        if (convertEntity.getBarCode() != null) {
-            mark4PdfProcess(strSourcePdf, strTargetPdf, convertEntity, intPageNum);
-        }
-
-    }
-
-    /**
-     * 给PDF添加水印
-     * @param strSourcePdf      源PDF
-     * @param strTargetPdf      目标PDF
-     * @param convertEntity     转换参数
-     * @param intPageNum        上一个文件的最后页码
-     */
-    public static void mark4PdfProcess(String strSourcePdf,
-                                String strTargetPdf,
-                                ConvertEntity convertEntity,
-                                int intPageNum) throws Exception{
+                                ConvertDocEntity convertDocEntity,
+                                int intPageNum,
+                                int intPageCount) throws Exception {
         File fileInputPdf = new File(strSourcePdf);
         strTargetPdf = SystemUtil.beautifulFilePath(strTargetPdf);
 
         //打开pdf文件
-        @Cleanup PDDocument pdDocument = PDDocument.load(fileInputPdf);
+        @Cleanup PDDocument pdDocument = Loader.loadPDF(fileInputPdf);
         pdDocument.setAllSecurityToBeRemoved(true);
 
         PDExtendedGraphicsState pdExtGfxState = new PDExtendedGraphicsState();
@@ -75,60 +52,105 @@ public class PdfWaterMarkUtil {
             float modifyX = 0f;
 
             // 如果添加图片水印，则进行如下处理
-            if (convertEntity.getPngMark() != null) {
-                convertEntity.getPngMark().mark4Pdf(pdExtGfxState,
+            if (convertDocEntity.getPngMark() != null) {
+                convertDocEntity.getPngMark().mark4Pdf(pdExtGfxState,
                         contentStream,
                         pdDocument,
                         page,
-                        convertEntity.getPngMark(),
-                        0F,
-                        convertEntity.getAlpha());
+                        convertDocEntity.getPngMark(),
+                        null,
+                        convertDocEntity.getAlpha());
 
-                modifyX = convertEntity.getPngMark().getLocateX() == 0f ? 150F : convertEntity.getPngMark().getLocateX();
+                modifyX = convertDocEntity.getPngMark().getLocateX() == 0f ? 150F : convertDocEntity.getPngMark().getLocateX();
             }
 
             // 如果添加页码，则进行如下处理
-            if(convertEntity.isPageNum()){
-                intPageNum++;
-                convertEntity.getTextMark().addPageNum4Pdf(pdExtGfxState,
-                        contentStream,
-                        pdDocument,
-                        page,
-                        intPageNum);
+            if (convertDocEntity.getPageNum() != null &&
+                    convertDocEntity.getPageNum().isEnable()) {
+                // 如果设置为单个文件single，且输入文件也是单个，则加页码
+                if (("single".equalsIgnoreCase(convertDocEntity.getPageNum().getType()) &&
+                        convertDocEntity.getInputFiles().size() == 1) ||
+                        // 如果设置为多个文件mutli，且输入文件也是多个，则加页码
+                        ("multi".equalsIgnoreCase(convertDocEntity.getPageNum().getType()) &&
+                                convertDocEntity.getInputFiles().size() > 1) ||
+                        // 如果设置为所有all，则加页码
+                        ("all".equalsIgnoreCase(convertDocEntity.getPageNum().getType())) ||
+                        // 如果不设置，则为所有，加页码
+                        (convertDocEntity.getPageNum().getType() == null ||
+                                "".equalsIgnoreCase(convertDocEntity.getPageNum().getType()))) {
+                    intPageNum++;
+                    intPageCount++;
+                    convertDocEntity.getPageNum().addPageNum4Pdf(pdExtGfxState,
+                            contentStream,
+                            pdDocument,
+                            page,
+                            convertDocEntity.getPageNum(),
+                            intPageNum,
+                            intPageCount
+                    );
+                }
+                // 否则，不加页码
+            }
+
+            // 如果添加【版权声明】，则进行如下处理
+            if (convertDocEntity.getCopyRight() != null &&
+                    convertDocEntity.getCopyRight().isEnable()) {
+                // 如果设置为单个文件single，且输入文件也是单个，则加页码
+                if (("single".equalsIgnoreCase(convertDocEntity.getCopyRight().getType()) &&
+                        convertDocEntity.getInputFiles().size() == 1) ||
+                        // 如果设置为多个文件mutli，且输入文件也是多个，则加页码
+                        ("multi".equalsIgnoreCase(convertDocEntity.getCopyRight().getType()) &&
+                                convertDocEntity.getInputFiles().size() > 1) ||
+                        // 如果设置为所有all，则加页码
+                        ("all".equalsIgnoreCase(convertDocEntity.getCopyRight().getType())) ||
+                        // 如果不设置，则为所有，加页码
+                        (convertDocEntity.getCopyRight().getType() == null ||
+                                "".equalsIgnoreCase(convertDocEntity.getCopyRight().getType()))) {
+                    intPageNum++;
+                    intPageCount++;
+                    convertDocEntity.getCopyRight().addCopyRight4Pdf(pdExtGfxState,
+                            contentStream,
+                            pdDocument,
+                            page,
+                            convertDocEntity.getCopyRight(),
+                            intPageCount
+                    );
+                }
+                // 否则，不加页码
             }
 
             // 如果添加文字水印，则进行如下处理
-            if (convertEntity.getTextMark() != null) {
-                convertEntity.getTextMark().mark4Pdf(pdExtGfxState,
+            if (convertDocEntity.getTextMark() != null) {
+                convertDocEntity.getTextMark().mark4Pdf(pdExtGfxState,
                         contentStream,
                         pdDocument,
                         page,
-                        convertEntity.getTextMark(),
+                        convertDocEntity.getTextMark(),
                         modifyX,
-                        convertEntity.getAlpha());
+                        convertDocEntity.getAlpha());
             }
 
             // 如果添加归档章水印，则进行如下处理
-            if (i == 0 && convertEntity.getFirstPageMark() != null) {
-                convertEntity.getFirstPageMark().mark4Pdf(pdExtGfxState,
+            if (i == 0 && convertDocEntity.getFirstPageMark() != null) {
+                convertDocEntity.getFirstPageMark().mark4Pdf(pdExtGfxState,
                         contentStream,
                         pdDocument,
                         page,
-                        convertEntity.getFirstPageMark(),
+                        convertDocEntity.getFirstPageMark(),
                         modifyX,
                         1f);
             }
 
             // 如果添加二维码/条码，则进行如下处理
-            if (convertEntity.getBarCode() != null) {
-                if(convertEntity.getBarCode().getIsFirstPage() && i > 0){
+            if (convertDocEntity.getBarCode() != null) {
+                if (convertDocEntity.getBarCode().getIsFirstPage() && i > 0) {
                     continue;
-                }else{
-                    convertEntity.getBarCode().mark4Pdf(pdExtGfxState,
+                } else {
+                    convertDocEntity.getBarCode().mark4Pdf(pdExtGfxState,
                             contentStream,
                             pdDocument,
                             page,
-                            convertEntity.getBarCode(),
+                            convertDocEntity.getBarCode(),
                             modifyX,
                             1f);
                 }
@@ -137,7 +159,6 @@ public class PdfWaterMarkUtil {
         }
 
         pdDocument.save(strTargetPdf);
-
     }
 
     /**
@@ -169,6 +190,48 @@ public class PdfWaterMarkUtil {
         mapReturn.put("bdGu", bdGu);
 
         return mapReturn;
+    }
+
+    /**
+     * 根据单个文字的字号（斜边长度），计算文字宽度（临边长度）
+     * 斜边（长边）、锐角，计算临边的长度
+     *
+     * @param hypotenuse     斜边（长边）的长度（例如：5.0）
+     * @param angleInDegrees 锐角度数（例如：30.0）
+     * @return 临边长度
+     */
+    public static double getFontWidth(double hypotenuse, double angleInDegrees) {
+        // 将角度转换为弧度
+        double angleInRadians = Math.toRadians(angleInDegrees);
+        // 使用三角函数计算临边长度
+        double value = hypotenuse * Math.cos(angleInRadians);
+
+        return value;
+    }
+
+    /**
+     * 根据单个文字的字号（斜边长度），计算文字高度（对边长度）
+     * 斜边（长边）、锐角，计算对边的长度
+     *
+     * @param hypotenuse     斜边（长边）的长度（例如：5.0）
+     * @param angleInDegrees 锐角度数（例如：30.0）
+     * @return 对边长度
+     */
+    public static Double getFontHeight(double hypotenuse, double angleInDegrees) {
+        // 将角度转换为弧度
+        double angleInRadians = Math.toRadians(angleInDegrees);
+        // 使用三角函数计算临边长度
+        Double value = hypotenuse * Math.sin(angleInRadians);
+
+        return value;
+    }
+
+    /**
+     * 计算文本宽度
+     */
+    public static float getTextWidth(String text, float fontSize) {
+        double doubleFontWidth = getFontWidth(fontSize, 30);
+        return (float) doubleFontWidth * text.length();
     }
 
 }

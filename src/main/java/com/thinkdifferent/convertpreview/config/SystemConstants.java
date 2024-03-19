@@ -9,7 +9,6 @@ import com.google.common.cache.RemovalListener;
 import com.thinkdifferent.convertpreview.entity.PdfEntity;
 import net.sf.json.JSONObject;
 
-import java.io.File;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
@@ -32,7 +31,7 @@ public interface SystemConstants {
     /**
      * 文件临时存储目录, 按日期记录
      */
-    String INPUT_FILE_PATH = System.getProperty("user.dir") + File.separator + "upload" + File.separator + LocalDate.now() + File.separator;
+    String INPUT_FILE_PATH = System.getProperty("user.dir") + "/upload/" + LocalDate.now() + "/";
     /**
      * 系统对象缓存， 记录 12H， 最大 1W 条数据，清理时自动删除文件
      */
