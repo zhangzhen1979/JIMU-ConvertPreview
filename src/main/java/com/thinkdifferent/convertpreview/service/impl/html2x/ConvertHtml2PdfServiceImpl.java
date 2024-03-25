@@ -42,10 +42,10 @@ public class ConvertHtml2PdfServiceImpl implements ConvertTypeService {
         long etime = System.currentTimeMillis();
         // 计算执行时间
         if (blnFlag) {
-            log.info("Html Convert PDF success, Use time is: " + (int) ((etime - stime) / 1000) + " s...");
+            log.info("Html Convert PDF success, Use time is: " + (etime - stime) + " ms...");
             return new File(strOutputFilePath + ".pdf");
         } else {
-            log.info("Html Convert PDF fail, Use time is: " + (int) ((etime - stime) / 1000) + " s...");
+            log.info("Html Convert PDF fail, Use time is: " + (etime - stime) + " ms...");
             return null;
         }
     }

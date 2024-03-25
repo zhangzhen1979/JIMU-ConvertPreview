@@ -23,7 +23,9 @@ public class ConvertOfd2OfdServiceImpl implements ConvertTypeService {
     @Override
     public File convert0(File inputFile, String targetDir) {
         File targetFile = new File(targetDir + ".ofd");
-        FileUtil.copyFile(inputFile, targetFile);
+        if(!inputFile.equals(targetFile)){
+            FileUtil.copyFile(inputFile, targetFile);
+        }
         return targetFile;
     }
 }

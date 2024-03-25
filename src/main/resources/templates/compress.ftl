@@ -120,7 +120,7 @@
                         fulls += ",resizable"; // 对于不支持screen属性的浏览器，可以手工进行最大化。 manually
                     }
                     console.log(treeNode);
-                    const watermark = '';
+                    var watermark = '';
                     if (jsonQueryResult.watermark) {
                         watermark = jsonQueryResult.watermark;
                     }
@@ -129,6 +129,12 @@
                         + "&fileInZip=" + fileInZip + "&blnDirInZip=" + treeNode.isParent
                         + "&watermark=" + watermark, "_blank", fulls);
                 } else {
+                    const existId = data.filter(function (item) {
+                        return item.id === treeNode.id + "1_";
+                    });
+                    if (existId && existId.length > 0){
+                        return;
+                    }
 
                     // 加载目录，
                     $.ajax({
@@ -140,7 +146,6 @@
                         },
                         success: function (resp) {
                             data = data.concat(resp)
-                            console.log(data)
                             for (var i = 0; i < data.length; i++) {
                                 if (data[i].pid){
                                     data[i].pId = data[i].pid

@@ -14,7 +14,7 @@ public enum InputType {
     PATH(InputPath.class),
     URL(InputUrl.class),
     FTP(InputFtp.class),
-    BASE64(InputBase64.class);
+    BASE64(InputBase64 .class);
 
     private final Class<? extends Input> inputClass;
 

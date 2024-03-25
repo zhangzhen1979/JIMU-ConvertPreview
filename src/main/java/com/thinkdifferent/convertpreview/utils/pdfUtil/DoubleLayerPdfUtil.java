@@ -59,46 +59,47 @@ public class DoubleLayerPdfUtil {
 
         File tempFile = new File(path + UUID.randomUUID() + basePdfFile.getName().substring(basePdfFile.getName().lastIndexOf(".")));
         // FileUtils.moveFile();
-        @Cleanup PDDocument document = Loader.loadPDF(basePdfFile);
-        document.setAllSecurityToBeRemoved(true);
+        try (PDDocument document = Loader.loadPDF(basePdfFile)){
+            document.setAllSecurityToBeRemoved(true);
 
-        for (Context context : contexts) {
-            // PDF 写入文字
-            PDPage page = document.getPage(context.getPageIndex());
+            for (Context context : contexts) {
+                // PDF 写入文字
+                PDPage page = document.getPage(context.getPageIndex());
 
-            PDRectangle mediaBox = page.getMediaBox();
+                PDRectangle mediaBox = page.getMediaBox();
 
-            // 使用配置文件字体
-            PDFont pdfFont = PDType0Font.load(document, getTtfFile());
+                // 使用配置文件字体
+                PDFont pdfFont = PDType0Font.load(document, getTtfFile());
 
-            @Cleanup PDPageContentStream contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true, true);
+                @Cleanup PDPageContentStream contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true, true);
 
-            // 设置透明度
-            PDExtendedGraphicsState pdExtGfxState = new PDExtendedGraphicsState();
-            pdExtGfxState.setNonStrokingAlphaConstant(0F);
-            pdExtGfxState.setAlphaSourceFlag(true);
-            //pdExtGfxState.getCOSObject().setItem(COSName.BM, COSName.MULTIPLY);
-            contentStream.setGraphicsStateParameters(pdExtGfxState);
+                // 设置透明度
+                PDExtendedGraphicsState pdExtGfxState = new PDExtendedGraphicsState();
+                pdExtGfxState.setNonStrokingAlphaConstant(0F);
+                pdExtGfxState.setAlphaSourceFlag(true);
+                //pdExtGfxState.getCOSObject().setItem(COSName.BM, COSName.MULTIPLY);
+                contentStream.setGraphicsStateParameters(pdExtGfxState);
 
-            // 水印颜色
-            // contentStream.setNonStrokingColor(0.2f, 0.2f, 0.2F);
-            contentStream.setNonStrokingColor(Color.RED);
+                // 水印颜色
+                // contentStream.setNonStrokingColor(0.2f, 0.2f, 0.2F);
+                contentStream.setNonStrokingColor(Color.RED);
 
-            contentStream.beginText();
+                contentStream.beginText();
 
-            for (Context.Word word : context.getWords()) {
-                // 设置字体大小
-                contentStream.setFont(pdfFont, fontSize(word.getText(), word.getRect().getWidth()));
-                // OCR结果是从左上算起点， PDFBOX 从左下算起点
-                contentStream.setTextMatrix(Matrix.getTranslateInstance((float) word.getRect().getX()
-                        // 页面高度 - 纵坐标 - 文字高度的一半
-                        , (float) (mediaBox.getHeight() - word.getRect().getY() - word.getRect().getHeight())));
-                contentStream.showText(word.getText());
+                for (Context.Word word : context.getWords()) {
+                    // 设置字体大小
+                    contentStream.setFont(pdfFont, fontSize(word.getText(), word.getRect().getWidth()));
+                    // OCR结果是从左上算起点， PDFBOX 从左下算起点
+                    contentStream.setTextMatrix(Matrix.getTranslateInstance((float) word.getRect().getX()
+                            // 页面高度 - 纵坐标 - 文字高度的一半
+                            , (float) (mediaBox.getHeight() - word.getRect().getY() - word.getRect().getHeight())));
+                    contentStream.showText(word.getText());
+                }
+                contentStream.endText();
+                contentStream.restoreGraphicsState();
             }
-            contentStream.endText();
-            contentStream.restoreGraphicsState();
+            document.save(tempFile);
         }
-        document.save(tempFile);
         FileUtil.rename(tempFile, basePdfFile.getName(), true);
 
     }

@@ -275,22 +275,6 @@
                         document.getElementById("editorInk").style.display = "block";
                         // document.getElementById("editorStamp").style.display = "block";
                     }
-                    const disablepresentationmode = this.getQuery("disablepresentationmode");
-                    if (disablepresentationmode === "false") {
-                        document.getElementById("presentationMode").style.display = "block";
-                    }
-                    const disableprint = this.getQuery("disableprint");
-                    if (disableprint === "false") {
-                        document.getElementById("print").style.display = "block";
-                    }
-                    const disabledownload = this.getQuery("disabledownload");
-                    if (disabledownload === "false") {
-                        document.getElementById("download").style.display = "block";
-                    }
-                    const disablebookmark = this.getQuery("disablebookmark");
-                    if (disablebookmark === "false") {
-                        document.getElementById("viewBookmark").style.display = "block";
-                    }
                     // init keyword
                     const keyword = this.getQuery("keyword");
                     if (keyword){
@@ -1993,7 +1977,9 @@
             }
 
             function webViewerPresentationMode() {
-                PDFViewerApplication.requestPresentationMode();
+                if (window.arcEnableActive) {
+                    PDFViewerApplication.requestPresentationMode();
+                }
             }
 
             function webViewerSwitchAnnotationEditorMode(evt) {
@@ -2005,11 +1991,15 @@
             }
 
             function webViewerPrint() {
-                PDFViewerApplication.triggerPrinting();
+                if (window.arcTriggerPrinting) {
+                    PDFViewerApplication.triggerPrinting();
+                }
             }
 
             function webViewerDownload() {
-                PDFViewerApplication.downloadOrSave();
+                if (window.arcBlobToDataURI){
+                    PDFViewerApplication.downloadOrSave();
+                }
             }
 
             function webViewerOpenInExternalApp() {

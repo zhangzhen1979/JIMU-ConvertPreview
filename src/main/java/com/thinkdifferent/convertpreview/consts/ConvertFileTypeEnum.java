@@ -64,7 +64,7 @@ public enum ConvertFileTypeEnum {
                 List<String> poiService = SpringUtil.getBeansOfType(PoiConvertTypeService.class)
                         .keySet()
                         .stream()
-                        .map(bean -> StringUtils.substring(bean.getClass().getName(), 7, -11).toLowerCase())
+                        .map(beanName -> StringUtils.substring(beanName, 7, -11).toLowerCase())
                         .collect(Collectors.toList());
 
                 boolean isPoi = false;

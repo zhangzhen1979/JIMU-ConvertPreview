@@ -145,6 +145,34 @@
 
 </body>
 <script>
+  let cookie = document.cookie;
+  let token = '';
+  for (let i in document.cookie.split("; ")) {
+    const iValue = String(document.cookie.split("; ")[i]);
+    if( iValue.indexOf('token=') === 0){
+      token = iValue.substr(6);
+    }
+  }
+
+  $.ajax({
+    url: '/api/getCtrlParams' + window.location.search,
+    type: 'GET',
+    headers: {
+      'token': token
+    },
+    success: function(response) {
+      // 处理成功响应
+      console.log(response)
+      var script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.text = response;
+      document.body.appendChild(script);
+    },
+    error: function(xhr, status, error) {
+      // 处理错误响应
+    }
+  });
+
   function getQuery(key) {
     const params = window.location.href.split("?")[1];
     if (!params) {
@@ -171,21 +199,5 @@
    window.location.href = url;
     }
 
-
-  const disableprint = getQuery("disableprint");
-  if (disableprint === "false") {
-    document.getElementById("print").style.display = "flex";
-  }
-  const disabledownload = getQuery("disabledownload");
-  if (disabledownload === "false") {
-    document.getElementById("download").style.display = "flex";
-  }
-
-  $("#download").click(function(){
-    const link = document.createElement('a');
-    link.href = dUrl;
-    link.download = 'download.ofd';
-    link.click();
-  })
 </script>
 </html>

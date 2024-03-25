@@ -25,7 +25,7 @@ public class DocByJacob {
      * @return
      */
 
-    public synchronized static int doc2PDF(String appName, String inputFile, String pdfFile) {
+    public synchronized static long doc2PDF(String appName, String inputFile, String pdfFile) {
         ActiveXComponent app = null;
         Dispatch docs = null;
         Dispatch word = null;
@@ -78,7 +78,7 @@ public class DocByJacob {
             log.info(word);
             // 关闭文档
             long date2 = new Date().getTime();
-            return (int) ((date2 - date) / 1000);
+            return date2 - date;
         } catch (Exception | Error e) {
             log.error("使用本地应用将Word转PDF异常", e);
             return -1;
@@ -114,7 +114,7 @@ public class DocByJacob {
      * @param pdfFile     输出pdf文件
      * @return
      */
-    public synchronized static int xls2PDF(String appName, String inputFile, String pdfFile) {
+    public synchronized static long xls2PDF(String appName, String inputFile, String pdfFile) {
         ActiveXComponent app = null;
         Dispatch excel = null;
         Dispatch xlss = null;
@@ -139,16 +139,22 @@ public class DocByJacob {
                             new Object[]{inputFile, new Variant(false), new Variant(false)}, new int[9])
                     .toDispatch();
 
-            // 关闭批注
-            if (ConvertDocConfigEngineLocal.localDeleteComments) {
-                // 获取所有Sheet的数量
-                Dispatch sheets = Dispatch.get(excel, "Sheets").toDispatch();
-                int count = Dispatch.get(sheets, "Count").getInt();
+            // 获取所有Sheet的数量
+            Dispatch sheets = Dispatch.get(excel, "Sheets").toDispatch();
+            int count = Dispatch.get(sheets, "Count").getInt();
 
-                // 遍历每个Sheet
-                for (int i = 1; i <= count; i++) {
-                    Dispatch sheet = Dispatch.invoke(sheets, "Item", Dispatch.Get, new Object[]{i}, new int[1]).toDispatch();
+            // 遍历每个Sheet
+            for (int i = 1; i <= count; i++) {
+                Dispatch sheet = Dispatch.invoke(sheets, "Item", Dispatch.Get, new Object[]{i}, new int[1]).toDispatch();
 
+                // 获取每页sheet的PageSetup对象
+                Dispatch pageSetup = Dispatch.get(sheet, "PageSetup").toDispatch();
+                // 设置每页sheet自适应页面宽度和高度。
+                Dispatch.put(pageSetup, "FitToPagesWide", new Variant(1));
+                Dispatch.put(pageSetup, "FitToPagesTall", new Variant(1));
+
+                // 关闭批注
+                if (ConvertDocConfigEngineLocal.localDeleteComments) {
                     // 获取批注集合
                     Dispatch comments = Dispatch.get(sheet, "Comments").toDispatch();
                     int commentsCount = Dispatch.get(comments, "Count").getInt();
@@ -170,16 +176,8 @@ public class DocByJacob {
                     new Variant(true)// IgnorePrintAreas。如果设置为 True，则忽略在发布时设置的任何打印区域。 如果设置为 False，则使用发布时设置的打印区域。
             }, new int[1]);
 
-            // 这里放弃使用SaveAs
-            /*
-             * Dispatch.invoke(excel,"SaveAs",Dispatch.Method,new Object[]{
-             * outFile, new Variant(57), new Variant(false), new Variant(57),
-             * new Variant(57), new Variant(false), new Variant(true), new
-             * Variant(57), new Variant(true), new Variant(true), new
-             * Variant(true) },new int[1]);
-             */
             long date2 = new Date().getTime();
-            return (int) ((date2 - date) / 1000);
+            return (date2 - date);
         } catch (Exception | Error e) {
             log.error("使用本地应用将Excel转PDF异常", e);
             return -1;
@@ -215,7 +213,7 @@ public class DocByJacob {
      * @param pdfFile     输出pdf文件
      * @return
      */
-    public synchronized static int ppt2PDF(String appName, String inputFile, String pdfFile) {
+    public synchronized static long ppt2PDF(String appName, String inputFile, String pdfFile) {
         ActiveXComponent app = null;
         Dispatch powerPoint = null;
         Dispatch ppts = null;
@@ -267,7 +265,7 @@ public class DocByJacob {
                     new int[1]);
 
             long date2 = new Date().getTime();
-            return (int) ((date2 - date) / 1000);
+            return (date2 - date);
         } catch (Exception | Error e) {
             log.error("使用本地应用将PowerPoint转PDF异常", e);
             return -1;
@@ -302,7 +300,7 @@ public class DocByJacob {
      * @param pdfFile     输出pdf文件
      * @return
      */
-    public synchronized static int vsd2PDF(String inputFile, String pdfFile) {
+    public synchronized static long vsd2PDF(String inputFile, String pdfFile) {
         ActiveXComponent app = null;
         ActiveXComponent documents = null;
         Dispatch vsd = null;
@@ -330,7 +328,7 @@ public class DocByJacob {
                     new int[1]);
 
             long date2 = new Date().getTime();
-            return (int) ((date2 - date) / 1000);
+            return (date2 - date);
         } catch (Exception | Error e) {
             log.error("使用本地应用将Visio转PDF异常", e);
             return -1;

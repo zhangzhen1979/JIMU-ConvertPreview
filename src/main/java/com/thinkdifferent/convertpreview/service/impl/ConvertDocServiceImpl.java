@@ -109,10 +109,11 @@ public class ConvertDocServiceImpl implements ConvertDocService {
                 // 1. 单个文件格式转换
                 File fileOutSingle = convertSingleFile(fileInput, convertDocEntity);
                 // 为文件改名，为后续【文件合并】服务
-                if (fileOutSingle.getClass().getName().equals("java.io.File")) {
+                if (fileOutSingle.getClass().getName().equals("java.io.File")
+                        && StringUtils.equalsIgnoreCase(FileUtil.extName(fileOutSingle), convertDocEntity.getOutPutFileType())) {
                     fileOutSingle = FileUtil.rename(
                             fileOutSingle,
-                            fileOutSingle.getAbsolutePath() + "_" + i + "." + convertDocEntity.getOutPutFileType(),
+                            fileOutSingle.getName() + "_" + i + "." + FileUtil.extName(fileOutSingle),
                             true);
                 }
 
@@ -156,15 +157,12 @@ public class ConvertDocServiceImpl implements ConvertDocService {
                                     PDPage page = new PDPage(doc.getPage(0).getMediaBox());
                                     doc.addPage(page);
                                     doc.save(fileOutSingle.getAbsoluteFile() + "_AddBlank.pdf");
-                                    doc.close();
-
-                                    FileUtil.rename(
-                                            new File(fileOutSingle.getAbsoluteFile() + "_AddBlank.pdf"),
-                                            fileOutSingle.getAbsolutePath(),
-                                            true);
-
                                     intPageCount ++;
                                 }
+                                FileUtil.rename(
+                                        new File(fileOutSingle.getAbsoluteFile() + "_AddBlank.pdf"),
+                                        FileUtil.getName(fileOutSingle),
+                                        true);
 
                                 if(input.getBlankPageHaveNum()) {
                                     intPageNum++;
@@ -186,20 +184,15 @@ public class ConvertDocServiceImpl implements ConvertDocService {
                                     ofdMerger.add(fileBlank.toPath());
                                 }
 
-                                FileUtil.rename(fileTemp, fileOutSingle.getAbsolutePath(), true);
-
+                                FileUtil.rename(fileTemp, FileUtil.getName(fileOutSingle), true);
                                 // 删掉这个空页面
                                 FileUtil.del(fileBlank);
-
                                 intPageCount ++;
                             }
                         }
-
                     }
-
                     targetFiles.add(fileOutSingle);
                 }
-
             }
 
             // 5 多PDF/OFD文件合并：如果转换后的目标文件有多个，则需要执行“文件合并”
@@ -213,7 +206,7 @@ public class ConvertDocServiceImpl implements ConvertDocService {
             List<String> docFileExt = Arrays.asList("pdf", "ofd");
             if (docFileExt.contains(convertDocEntity.getOutPutFileType().toLowerCase())) {
                 // 6. 截取指定页，形成新的PDF/OFD
-                TargetFile targetFileCut = DocConvertUtil.cutFile(convertDocEntity, fileTarget);
+                TargetFile targetFileCut = DocConvertUtil.cutFile(convertDocEntity, fileTarget, longReturnPageCount);
                 longReturnPageCount = targetFileCut.getLongPageCount();
 
                 // 如果转换目标格式是OFD，则文件先转成PDF，处理完毕后，再整体转OFD
@@ -337,8 +330,6 @@ public class ConvertDocServiceImpl implements ConvertDocService {
         }
         // 文件的输出路径和文件名
         String strOutPath;
-        // 加水印后的临时文件
-        File fileTemp = fileInput;
         // 如果传入的参数中，包含图片水印、文字水印、首页水印、条码、页码等，则执行添加水印操作
         if (ArrayUtil.matchIndex(Objects::nonNull,
                 convertDocEntity.getPageNum(), convertDocEntity.getCopyRight()) > -1
@@ -347,7 +338,7 @@ public class ConvertDocServiceImpl implements ConvertDocService {
                         convertDocEntity.getCopyRight().isEnable()) ||
                 ArrayUtil.matchIndex(Objects::nonNull,
                         convertDocEntity.getPngMark(), convertDocEntity.getTextMark(),
-                        convertDocEntity.getFirstPageMark(), convertDocEntity.getBarCode()) > -1) {
+                        convertDocEntity.getBarCode()) > -1) {
             // 【页码水印】计数器
             int intPageNum = 0;
             // 如果设置启用【页码水印】，并且【起始页码】不为空，则将计数器-1（后续循环使用）
@@ -369,22 +360,23 @@ public class ConvertDocServiceImpl implements ConvertDocService {
                     // 否则，获取输入文件的路径作为输出文件路径。
                     strOutPath = fileInput.getAbsolutePath();
                 }
+
                 // 声明输出文件File对象
-                fileTemp = new File(strOutPath);
+                if (!StringUtils.equals(strOutPath, fileInput.getAbsolutePath())) {
+                    File fileMarked = new File(strOutPath);
+                    FileUtil.rename(fileMarked, FileUtil.getName(fileInput), true);
+                }
+                // 清除二级临时文件夹
+                String strTempPath = SystemUtil.beautifulFilePath(strOutPath);
+                strTempPath = strTempPath.substring(0, strTempPath.lastIndexOf("/"));
+                File fileTempPath  = new File(strTempPath);
+                if(fileTempPath.isDirectory() && fileTempPath.listFiles().length == 0){
+                    FileUtil.del(fileTempPath);
+                }
+
             }
         }
-        // 如果输出文件不等于输入文件，则将加水印后的文件复制到输出文件夹
-        if (fileTemp.exists() && !fileTemp.equals(fileInput)) {
-            FileUtil.rename(fileTemp, fileInput.getAbsolutePath(), true);
-        }
 
-        // 清除二级临时文件夹
-        String strTempPath = SystemUtil.beautifulFilePath(fileTemp.getAbsolutePath());
-        strTempPath = strTempPath.substring(0, strTempPath.lastIndexOf("/"));
-        File fileTempPath  = new File(strTempPath);
-        if(fileTempPath.isDirectory() && fileTempPath.listFiles().length == 0){
-            FileUtil.del(fileTempPath);
-        }
         return fileInput;
     }
 

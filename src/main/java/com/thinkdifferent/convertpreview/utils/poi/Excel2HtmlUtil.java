@@ -1,13 +1,18 @@
 package com.thinkdifferent.convertpreview.utils.poi;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.extra.spring.SpringUtil;
+import com.monitorjbl.xlsx.StreamingReader;
 import com.thinkdifferent.convertpreview.config.ConvertDocConfigBase;
+import com.thinkdifferent.convertpreview.service.impl.engine.ConvertEngine2PdfServiceImpl;
 import com.thinkdifferent.convertpreview.utils.AesUtil;
 import lombok.Cleanup;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import net.coobird.thumbnailator.Thumbnails;
 import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.ooxml.POIXMLDocumentPart;
+import org.apache.poi.openxml4j.exceptions.OLE2NotOfficeXmlFileException;
 import org.apache.poi.ss.format.CellFormat;
 import org.apache.poi.ss.format.CellFormatResult;
 import org.apache.poi.ss.usermodel.*;
@@ -32,6 +37,7 @@ import static org.apache.poi.hssf.record.cf.BorderFormatting.*;
  * @author ACGkaka
  * @date 2020/4/11 2:41
  */
+@Log4j2
 public class Excel2HtmlUtil {
 
     /**
@@ -40,11 +46,47 @@ public class Excel2HtmlUtil {
      * @param excelFile    excel文件
      * @param htmlFilePath 转换后的html文件路径, /usr/home/xxx/xxx.html
      */
-    public static void excel2html(File excelFile, String htmlFilePath) throws IOException {
+    public static File excel2html(File excelFile, String htmlFilePath) throws Exception {
         String imgPath = htmlFilePath + "_html_imgs";
-        try (FileInputStream in = new FileInputStream(excelFile)) {
-            ToHtml.excelToHtml(in, htmlFilePath, imgPath);
+
+        // 判断xlsx 行列是否满足解析条件
+        if (excelFile.getName().endsWith(".xls") || checkXlsxStream(excelFile)) {
+            try (FileInputStream in = new FileInputStream(excelFile)) {
+                return ToHtml.excelToHtml(in, htmlFilePath, imgPath);
+            }
         }
+
+        // 不满足条件的，尝试使用引擎进行转换
+       return SpringUtil.getBean(ConvertEngine2PdfServiceImpl.class).convert(excelFile, htmlFilePath+".pdf");
+    }
+
+    private static boolean checkXlsxStream(File excelFile) {
+        try {
+            Workbook workbook = StreamingReader.builder()
+                    .rowCacheSize(1024)//读取到内存中的行数，默认10
+                    .bufferSize(40960)//读取资源，缓存到内存的字节大小。默认1024
+                    .open(excelFile);//打开资源。只能是xlsx文件
+            if (workbook != null) {
+                // 遍历sheets
+                for (int sheetIndex = 0; sheetIndex < workbook.getNumberOfSheets(); sheetIndex++) {
+                    Sheet sheet = workbook.getSheetAt(sheetIndex);
+                    if (sheet.getLastRowNum() > 5000) {
+                        log.warn("最大行：{}", sheet.getLastRowNum());
+                        return false;
+                    }
+                    for (Row row : sheet) {
+                        if (row.getLastCellNum() > 100) {
+                            log.warn("最大列：{}", row.getLastCellNum());
+                            return false;
+                        }
+                    }
+                }
+            }
+        } catch (OLE2NotOfficeXmlFileException e) {
+            // 兼容老版本xlsx
+            return true;
+        }
+        return true;
     }
 
     static class ToHtml {
@@ -686,12 +728,7 @@ public class Excel2HtmlUtil {
 
                             List<XSSFShape> shapes = drawing.getShapes();
                             for (XSSFShape shape : shapes) {
-                                if (shape instanceof XSSFObjectData) {
-                                    XSSFObjectData shape1 = (XSSFObjectData) shape;
-                                    String fileName = shape1.getFileName();
-                                    FileUtil.writeBytes(shape1.getObjectData(), "E:\\ltian_project\\java\\convert-preview\\outtemp\\" + fileName);
-                                    continue;
-                                } else {
+                                if (shape instanceof XSSFPicture) {
                                     XSSFPicture pic = (XSSFPicture) shape;
                                     XSSFClientAnchor anchor = pic.getPreferredSize();
                                     CTMarker ctMarker = anchor.getFrom();
@@ -714,6 +751,10 @@ public class Excel2HtmlUtil {
                                         System.err.println("图片处理异常");
                                         e.printStackTrace();
                                     }
+                                } else {
+                                    XSSFObjectData shape1 = (XSSFObjectData) shape;
+                                    String fileName = shape1.getFileName();
+                                    FileUtil.writeBytes(shape1.getObjectData(), "E:\\ltian_project\\java\\convert-preview\\outtemp\\" + fileName);
                                 }
                             }
                         }

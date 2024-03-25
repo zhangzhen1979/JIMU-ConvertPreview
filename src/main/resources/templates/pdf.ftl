@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1.0">
-    <title>PDF预览文档</title>
+    <title>文件预览</title>
     <#include "commonHeader.ftl">
 </head>
 
@@ -40,7 +40,7 @@
                 document.getElementsByTagName('iframe')[0].src = "/ofd/index.html?file=" + encodeURIComponent(htmlUrl)+"&scale=width";
             }else{
                 document.getElementsByTagName('iframe')[0].src = "/ofd/index.html?file=" + encodeURIComponent(htmlUrl)
-                    + "&disableprint=${pdfPrintDisable}&disabledownload=${pdfDownloadDisable}";
+                    + "&controlParams=${controlParams}";
             }
         } else{
             document.getElementsByTagName('iframe')[0].src = htmlUrl;
@@ -55,8 +55,7 @@
         }
         document.getElementsByTagName('iframe')[0].src = "/pdfjs/web/viewer.html?file=" + encodeURIComponent(url)
             + pdfCover + uid
-            + "&disablepresentationmode=${pdfPresentationModeDisable}"
-            + "&disableprint=${pdfPrintDisable}&disabledownload=${pdfDownloadDisable}&keyword=${keyword}";
+            + "&controlParams=${controlParams}&keyword=${keyword}";
     }
     document.getElementsByTagName('iframe')[0].height = document.documentElement.clientHeight - 10;
 

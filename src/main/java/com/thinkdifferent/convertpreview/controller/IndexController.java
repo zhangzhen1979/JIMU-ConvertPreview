@@ -26,7 +26,7 @@ public class IndexController {
 
     @GetMapping("testJacob")
     public MessageBean<Boolean> testJacob(@RequestParam("input") String input, @RequestParam("output") String output)
-            throws IOException {
+            throws IOException, InterruptedException {
         return MessageBean.success(LocalConvertDocUtil.process(input, output));
     }
 }

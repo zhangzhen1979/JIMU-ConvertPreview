@@ -6,10 +6,7 @@ import com.google.common.reflect.TypeToken;
 import com.thinkdifferent.convertpreview.cache.CacheService;
 import com.thinkdifferent.convertpreview.config.ConvertDocConfigBase;
 import com.thinkdifferent.convertpreview.config.RabbitMQConfig;
-import com.thinkdifferent.convertpreview.entity.ConvertDocEntity;
-import com.thinkdifferent.convertpreview.entity.InputType;
-import com.thinkdifferent.convertpreview.entity.WriteBackResult;
-import com.thinkdifferent.convertpreview.entity.WriteBackType;
+import com.thinkdifferent.convertpreview.entity.*;
 import com.thinkdifferent.convertpreview.entity.input.Input;
 import com.thinkdifferent.convertpreview.entity.input.InputBase64;
 import com.thinkdifferent.convertpreview.entity.input.InputPath;
@@ -248,7 +245,7 @@ public class ConvertController {
 
             if (StringUtils.isNotBlank(pageRange.trim())) {
                 File fileCut = new File(strDestFileName + ".pdf");
-                fileCut = DocConvertUtil.cutFile(convertDocEntity, fileCut).getTarget();
+                fileCut = DocConvertUtil.cutFile(convertDocEntity, fileCut, 0).getTarget();
 
                 // 更新输入的input对象，后续使用剪裁过的pdf
                 inputPath.setFilePath(fileCut.getAbsolutePath());
@@ -274,13 +271,15 @@ public class ConvertController {
                 fileDest = new File(fileDestPath.getAbsolutePath() + "/" + strOutFileName + ".pdf");
             }
 
+            TargetFile targetFile = new TargetFile();
+            targetFile.setTarget(fileDest);
 
             // 回写
             writeBackResult = WriteBackUtil.writeBack(
                     WriteBackType.valueOf(
                             pdfCoverVO.getWriteBackType().toUpperCase()).convert(pdfCoverVO.toWriteBackMap()),
                     "pdf",
-                    fileDest,
+                    targetFile,
                     new ArrayList<>(),
                     null);
 

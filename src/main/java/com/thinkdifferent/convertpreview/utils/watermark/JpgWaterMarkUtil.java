@@ -3,7 +3,6 @@ package com.thinkdifferent.convertpreview.utils.watermark;
 import cn.hutool.core.io.FileUtil;
 import com.thinkdifferent.convertpreview.entity.ConvertDocEntity;
 import com.thinkdifferent.convertpreview.entity.mark.BarCode;
-import com.thinkdifferent.convertpreview.entity.mark.FirstPageMark;
 import com.thinkdifferent.convertpreview.entity.mark.PngMark;
 import com.thinkdifferent.convertpreview.entity.mark.PngMarkLocal;
 import lombok.Cleanup;
@@ -71,20 +70,6 @@ public class JpgWaterMarkUtil {
         //  如果添加图片水印，则进行如下处理
         if (convertDocEntity.getPngMark() != null) {
             pngMark = convertDocEntity.getPngMark();
-        }
-
-        // 如果添加归档章水印，则进行如下处理
-        if (convertDocEntity.getFirstPageMark() != null) {
-            FirstPageMark firstPageMark = convertDocEntity.getFirstPageMark();
-            PngMarkLocal pngMarkLocal = pngMark.getPngLocateInJpg(firstPageMark.getLocate(),
-                    intImageHeight, firstPageMark.getPngHeightPx(),
-                    intImageWidth, firstPageMark.getPngWidthPx());
-
-            pngMark.setWaterMarkFile(firstPageMark.getMarkPng().getAbsolutePath());
-            pngMark.setImageWidth(firstPageMark.getPngWidthPx());
-            pngMark.setImageHeight(firstPageMark.getPngHeightPx());
-            pngMark.setLocateX(pngMarkLocal.getLocateX());
-            pngMark.setLocateY(pngMarkLocal.getLocateY());
         }
 
         // 如果添加二维码/条码，则进行如下处理

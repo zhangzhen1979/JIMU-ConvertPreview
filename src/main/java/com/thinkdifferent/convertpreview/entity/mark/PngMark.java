@@ -93,7 +93,58 @@ public class PngMark {
         float floatIconLocateX = 0f;
         float floatIconLocateY = 0f;
 
-        if(rotation == 90 || rotation == 270){
+        if(rotation == 90){
+            switch (strLocate) {
+                case "TL":
+                    strLocate = "BL";
+                    break;
+                case "TM":
+                    strLocate = "BM";
+                    break;
+                case "TR":
+                    strLocate = "BR";
+                    break;
+
+                case "BL":
+                    strLocate = "TL";
+                    break;
+                case "BM":
+                    strLocate = "TM";
+                    break;
+                case "BR":
+                    strLocate = "TR";
+            }
+        }
+
+        if(rotation == 180){
+            switch (strLocate) {
+                case "TL":
+                    strLocate = "BR";
+                    break;
+                case "TM":
+                    strLocate = "BM";
+                    break;
+                case "TR":
+                    strLocate = "BL";
+                    break;
+                case "CL":
+                    strLocate = "CR";
+                    break;
+                case "CR":
+                    strLocate = "CL";
+                    break;
+                case "BL":
+                    strLocate = "TR";
+                    break;
+                case "BM":
+                    strLocate = "TM";
+                    break;
+                case "BR":
+                    strLocate = "TL";
+            }
+        }
+
+        if(rotation == 270){
             switch (strLocate) {
                 case "TL":
                     strLocate = "TR";
@@ -113,7 +164,6 @@ public class PngMark {
                 case "BR":
                     strLocate = "BL";
             }
-
         }
 
 
@@ -233,11 +283,21 @@ public class PngMark {
 
             PDImageXObject pdImage = PDImageXObject.createFromFile(pngMark.getWaterMarkFile(), pdDocument);
 
-            // tx、ty为图片绘制时的左上角坐标点。
+            // tx、ty为图片绘制时的左上角坐标点。（0度）
             float tx = pngMark.getLocateX();
             float ty = pngMark.getLocateY();
 
-            if (rotation ==90 || rotation == 270) {
+            if (rotation == 90) {
+                tx = (float)(pngMark.getLocateY() + doublePngHeightPt);
+                ty = pngMark.getLocateX();
+            }
+
+            if (rotation == 180) {
+                tx = (float)(pngMark.getLocateX() + doublePngWidthPt);
+                ty = (float)(pngMark.getLocateY() + doublePngHeightPt) ;
+            }
+
+            if (rotation == 270) {
                 tx = pngMark.getLocateY();
                 ty = (float)(pngMark.getLocateX() + doublePngWidthPt);
             }

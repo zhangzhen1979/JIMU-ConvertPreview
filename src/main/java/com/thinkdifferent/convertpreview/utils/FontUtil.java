@@ -7,9 +7,16 @@ import java.io.File;
 public class FontUtil {
 
     public static String getSystemFontPathFile(String strFileName){
+
         if(StringUtils.isEmpty(strFileName)){
             strFileName = "simsun.ttf";
+        }else{
+            strFileName = SystemUtil.beautifulFilePath(strFileName);
+            if(strFileName.contains("/")){
+                return strFileName;
+            }
         }
+
         String strFontPathFile;
 
         if (cn.hutool.system.SystemUtil.getOsInfo().isWindows()) {

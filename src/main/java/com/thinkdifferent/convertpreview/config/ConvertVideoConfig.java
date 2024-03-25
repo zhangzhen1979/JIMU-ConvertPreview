@@ -122,19 +122,17 @@ public class ConvertVideoConfig {
         ConvertVideoConfig.ffmpegFontColor = ffmpegFontColor;
     }
 
-
-
-    public static int m3u8ConvertWait;
-    @Value(value = "${convert.video.ffmpeg.m3u8.convertWait:10}")
-    public void setM3u8ConvertWait(int m3u8ConvertWait) {
-        ConvertVideoConfig.m3u8ConvertWait = m3u8ConvertWait;
-    }
     public static int m3u8DownloadWait;
-    @Value(value = "${convert.video.ffmpeg.m3u8.downloadWait:10}")
+    @Value(value = "${convert.video.ffmpeg.downloadWait:10}")
     public void setM3u8DownloadWait(int m3u8DownloadWait) {
         ConvertVideoConfig.m3u8DownloadWait = m3u8DownloadWait;
     }
 
+    public static int m3u8ConvertWait;
+    @Value(value = "${convert.video.ffmpeg.convertWait:0}")
+    public void setM3u8ConvertWait(int m3u8ConvertWait) {
+        ConvertVideoConfig.m3u8ConvertWait = m3u8ConvertWait;
+    }
 
     // 替换字符串里最后出现的元素
     public static String replaceLast( String text, String oldText,

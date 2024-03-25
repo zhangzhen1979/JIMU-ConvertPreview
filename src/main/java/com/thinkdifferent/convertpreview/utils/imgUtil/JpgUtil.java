@@ -1,6 +1,7 @@
 package com.thinkdifferent.convertpreview.utils.imgUtil;
 
 import com.alibaba.simpleimage.ImageWrapper;
+import com.alibaba.simpleimage.SimpleImageException;
 import com.alibaba.simpleimage.util.ImageReadHelper;
 import com.thinkdifferent.convertpreview.entity.ConvertDocEntity;
 import com.thinkdifferent.convertpreview.entity.Thumbnail;
@@ -13,10 +14,7 @@ import javax.imageio.ImageIO;
 import javax.imageio.stream.FileImageOutputStream;
 import javax.imageio.stream.ImageOutputStream;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.List;
 
 /**

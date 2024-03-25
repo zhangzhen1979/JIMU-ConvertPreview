@@ -9,6 +9,7 @@ import com.google.common.cache.RemovalListener;
 import com.thinkdifferent.convertpreview.entity.PdfEntity;
 import net.sf.json.JSONObject;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;

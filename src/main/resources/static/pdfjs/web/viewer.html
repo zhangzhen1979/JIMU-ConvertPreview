@@ -174,7 +174,7 @@ See https://github.com/adobe-type-tools/cmap-resources
 
             <div class="horizontalToolbarSeparator visibleLargeView"></div>
 
-            <button id="presentationMode" class="secondaryToolbarButton" title="Switch to Presentation Mode" tabindex="54" data-l10n-id="presentation_mode">
+            <button id="presentationMode" class="secondaryToolbarButton hiddenMediumView" title="Switch to Presentation Mode" tabindex="54" data-l10n-id="presentation_mode">
               <span data-l10n-id="presentation_mode_label">Presentation Mode</span>
             </button>
 
@@ -446,4 +446,32 @@ See https://github.com/adobe-type-tools/cmap-resources
 
     <input type="file" id="fileInput" class="hidden">
   </body>
+  <script src="../../js/jquery-3.0.0.min.js" ></script>
+  <script>
+    let cookie = document.cookie;
+    let token = '';
+    for (let i in document.cookie.split("; ")) {
+      if(document.cookie.split("; ")[i].indexOf('token=') === 0){
+        token = document.cookie.split("; ")[i].substr(6);
+      }
+    }
+
+    $.ajax({
+      url: '/api/getCtrlParams' + window.location.search,
+      type: 'GET',
+      headers: {
+        'token': token
+      },
+      success: function(response) {
+        // 处理成功响应
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.text = response;
+        document.head.appendChild(script);
+      },
+      error: function(xhr, status, error) {
+        // 处理错误响应
+      }
+    });
+  </script>
 </html>

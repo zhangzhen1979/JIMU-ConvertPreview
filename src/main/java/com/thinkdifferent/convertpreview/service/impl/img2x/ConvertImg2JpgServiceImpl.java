@@ -68,7 +68,7 @@ public class ConvertImg2JpgServiceImpl implements ConvertTypeService {
         File fileJpgNew = jpgUtil.thumbnail(strInputFilePath, strOutputFilePath,
                 1, ConvertDocConfigBase.picQuality);
         FileUtil.del(fileJpg);
-        FileUtil.rename(fileJpgNew, strInputFilePath, true);
+        FileUtil.move(fileJpgNew, fileJpg, true);
     }
 
 }

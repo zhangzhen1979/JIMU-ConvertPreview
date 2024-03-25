@@ -1278,6 +1278,7 @@
 				player.rightBar(false);
 				C['loading'].hide();
 				C['centerPlay'].hide();
+				document.getElementById("media-loading").innerHTML="";
 			}
 			else{
 				loadLogo();//加载logo
@@ -1286,6 +1287,7 @@
 			}
 			if(app=='iphone'){
 				C['loading'].hide();
+				document.getElementById("media-loading").innerHTML="";
 			}
 			changeTopTime();//修改顶部时间
 			CK.mouseout(function(){
@@ -1526,6 +1528,7 @@
 			},
 			canPlay:function(){
 				C['loading'].hide();
+				document.getElementById("media-loading").innerHTML="";
 				eventTarget('canplay');
 			},
 			loadedData:function(){
@@ -1541,6 +1544,7 @@
 					C['tempTime'].htm(formatSeconds(this.currentTime)+'/'+formatSeconds(duration));
 				}
 				C['loading'].hide();
+				document.getElementById("media-loading").innerHTML="";
 				if(vars['poster']){
 					video.attr('poster',vars['poster']);
 				}
@@ -2580,6 +2584,7 @@
 			 * @fn为函数时则监听视频播放，@fn为空时，则控制视频播放
 			*/
 			play:function(fn){
+				document.getElementById("media-loading").innerHTML="";
 				if(valType(fn)=='object'){
 					if(fn['target']==C['bar']['playAndPause']['play'] || fn['target']==C['bar']['playAndPause']['refresh']){
 						playType='button';
@@ -4394,6 +4399,7 @@
 		*/
 		showError=function(){
 			C['loading'].hide();
+			document.getElementById("media-loading").innerHTML="";
 			if(vars['controls'] || !vars['errorShow']){
 				return;
 			}

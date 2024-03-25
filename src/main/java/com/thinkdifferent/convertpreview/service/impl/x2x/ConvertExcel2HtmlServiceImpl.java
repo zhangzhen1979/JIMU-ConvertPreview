@@ -28,7 +28,6 @@ public class ConvertExcel2HtmlServiceImpl implements ConvertTypeService, PoiConv
     @Override
     public File convert0(File inputFile, String targetDir) {
         String htmlFilePath = targetDir + ".html";
-        Excel2HtmlUtil.excel2html(inputFile, htmlFilePath);
-        return new File(htmlFilePath);
+        return Excel2HtmlUtil.excel2html(inputFile, htmlFilePath);
     }
 }

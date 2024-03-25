@@ -2,7 +2,6 @@ package com.thinkdifferent.convertpreview.controller;
 
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.convert.ConvertException;
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.thread.ThreadUtil;
@@ -14,6 +13,7 @@ import com.thinkdifferent.convertpreview.config.ConvertDocConfigBase;
 import com.thinkdifferent.convertpreview.config.ConvertDocConfigPreview;
 import com.thinkdifferent.convertpreview.config.ConvertVideoConfig;
 import com.thinkdifferent.convertpreview.consts.ConvertFileTypeEnum;
+import com.thinkdifferent.convertpreview.consts.Global;
 import com.thinkdifferent.convertpreview.entity.InputType;
 import com.thinkdifferent.convertpreview.entity.input.Input;
 import com.thinkdifferent.convertpreview.entity.input.InputPath;
@@ -30,9 +30,8 @@ import net.sf.json.JSONObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.jetbrains.annotations.Nullable;
 import org.ofdrw.reader.OFDReader;
-import org.springframework.core.io.AbstractResource;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -48,7 +47,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -92,9 +90,9 @@ public class OnlinePreviewController {
     @GetMapping(value = "/getZipList", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public String getZipList(@RequestParam("filePath") String filePath,
-                                @RequestParam(value = "fileType", required = false, defaultValue = "") String fileType,
-                                @RequestParam(value = "pId",required = false,defaultValue = "-1") String pId,
-                                @RequestParam("pathInFile") String pathInFile){
+                             @RequestParam(value = "fileType", required = false, defaultValue = "") String fileType,
+                             @RequestParam(value = "pId", required = false, defaultValue = "-1") String pId,
+                             @RequestParam("pathInFile") String pathInFile) {
         filePath = getFilePathByMd5(filePath, "", "", null);
         Input input = InputType.convert(filePath, null, fileType);
 
@@ -166,17 +164,17 @@ public class OnlinePreviewController {
                 return NOT_SUPPORT;
             }
             // 压缩包文件分级展现处理
-            if (StringUtils.isNotBlank(fileInZip)){
+            if (StringUtils.isNotBlank(fileInZip)) {
                 File zipFile = input.getInputFile();
-                if (blnDirInZip){
+                if (blnDirInZip) {
                     // dir
                     String dirTree = ArcZipUtil.fileTree(zipFile, fileInZip);
                     MODEL_PARAMS_MAPPING.get(COMPRESS_PREVIEW)
-                            .config(model, new ArcZipUtil.ZipFile("tmp", dirTree));
+                            .config(model, new ArcZipUtil.ArcZipFile("tmp", dirTree));
                     return COMPRESS_PREVIEW;
-                }else{
+                } else {
                     // 压缩包内文件
-                    File fileInZipFile = ArcZipUtil.unzipOneFile(zipFile, fileInZip, ConvertDocConfigBase.outPutPath, "");
+                    File fileInZipFile = ArcZipUtil.unzipOneFile(zipFile, fileInZip, ConvertDocConfigBase.inPutTempPath, "");
                     input = new InputPath().of(FileUtil.getCanonicalPath(fileInZipFile), null, null);
                 }
             }
@@ -199,6 +197,8 @@ public class OnlinePreviewController {
 
             // 需要转换格式后才能预览的
             JSONObject joInput = new JSONObject();
+            // 判断是否是预览模式
+            joInput.put("$type", "preview");
             joInput.put("inputFile", FileUtil.getCanonicalPath(input.getInputFile()));
             joInput.put("inputFileType", fileType);
             joInput.put("outPutFileType", outType);
@@ -206,20 +206,22 @@ public class OnlinePreviewController {
             String cacheName = joInput.toString();
             // 缓存文件
             File targetFile = OnlineCacheUtil.get(cacheName);
-            String previewFilePath = null;
+            boolean blnConvertFlag = false;
             if (FileUtil.exist(targetFile)) {
-                if (FileUtil.extName(targetFile).equalsIgnoreCase(outType)) {
-                    // 1. 缓存文件是目标类型，直接返回
-                    previewFilePath = FileUtil.getCanonicalPath(targetFile);
-                } else {
-                    // 2. 缓存文件是中间类型，使用中间类型转换
+                // 1. 缓存文件存在，且类型与目标类型不一致[中间类型]，进行转换
+                if (!StringUtils.equalsIgnoreCase(FileUtil.extName(targetFile), outType)) {
+                    blnConvertFlag = true;
                     joInput.put("inputFile", FileUtil.getCanonicalPath(targetFile));
                     joInput.put("inputFileType", FileUtil.extName(targetFile));
                     joInput.put("outPutFileType", outType);
                 }
+            } else {
+                // 2. 缓存文件不存在
+                blnConvertFlag = true;
             }
-            if (StringUtils.isBlank(previewFilePath)) {
-                joInput.put("outPutFileName", cn.hutool.core.lang.UUID.randomUUID().toString());
+
+            if (blnConvertFlag) {
+                joInput.put("outPutFileName", SecureUtil.md5(inputFile));
                 joInput.put("callBackURL", callBackUrl);
                 if (StringUtils.isNotBlank(writeBack)) {
                     joInput.put("writeBackType", writeBackType);
@@ -232,22 +234,23 @@ public class OnlinePreviewController {
 
                 targetFile = OnlineCacheUtil.get(cacheName, () -> convertService.convert(joInput).getTarget());
             }
+
             // pdf 高亮
             if (StringUtils.isNotBlank(keyword)) {
                 model.addAttribute("keyword", keyword);
             }
 
             // 根据转换后文件类型选择不同的模板
-            if (FileUtil.isFile(previewFilePath) && !MEDIA_PREVIEW.equalsIgnoreCase(outType)) {
-                if (!outType.equalsIgnoreCase(FileUtil.extName(previewFilePath))) {
-                    outType = FileUtil.extName(previewFilePath);
+            if (FileUtil.isFile(targetFile) && !StringUtils.equalsAnyIgnoreCase(outType, COMPRESS_PREVIEW, MEDIA_PREVIEW)) {
+                if (!outType.equalsIgnoreCase(FileUtil.extName(targetFile))) {
+                    outType = FileUtil.extName(targetFile);
                 }
             } else {
                 if (!StringUtils.equalsAny(outType, COMPRESS_PREVIEW, MEDIA_PREVIEW)) {
                     // 文件夹除压缩包外，其他以设置的形式预览
-                    if("pdf".equalsIgnoreCase(ConvertDocConfigPreview.previewType)){
+                    if ("pdf".equalsIgnoreCase(ConvertDocConfigPreview.previewType)) {
                         outType = PDF_PREVIEW;
-                    }else{
+                    } else {
                         outType = JPG_PREVIEW;
                     }
                 }
@@ -277,8 +280,6 @@ public class OnlinePreviewController {
      * @return 转换类型, 合并转换类型及预览页面
      */
     private String getFileOutType(String fileType, String outType) {
-        addDefaultConfig();
-
         if (StringUtils.isNotBlank(outType)) {
             // 输出格式转为 预览格式，原输出格式为officePicture时，转为jpg
             return outType.equalsIgnoreCase("pdf") ? "pdf" : "jpg";
@@ -290,24 +291,20 @@ public class OnlinePreviewController {
         return MAP_FILE_2_PREVIEW.get(ConvertFileTypeEnum.valueOfExtName(fileType).name());
     }
 
-    private static boolean blnAddDefaultConfigFlag = false;
-
-    private void addDefaultConfig() {
-        if (blnAddDefaultConfigFlag) {
-            return;
-        }
-        blnAddDefaultConfigFlag = true;
+    public void addDefaultConfig() {
         if (StringUtils.isNotBlank(ConvertDocConfigPreview.previewType)) {
             // 设置配置的默认预览格式
             MAP_FILE_2_PREVIEW.put(ConvertFileTypeEnum.pdf.name(), ConvertDocConfigPreview.previewType);
             MAP_FILE_2_PREVIEW.put(ConvertFileTypeEnum.cad.name(), ConvertDocConfigPreview.previewType);
+            MAP_FILE_2_PREVIEW.put(ConvertFileTypeEnum.img.name(), ConvertDocConfigPreview.previewType);
+            MAP_FILE_2_PREVIEW.put("jpg", ConvertDocConfigPreview.previewType);
         }
         // 使用engine转换word等 doc\xlsx\ppt 默认转pdf, 但如果启用poi预览，则以html格式进行转换
         try {
             SpringUtil.getBeansOfType(PoiConvertTypeService.class)
                     .keySet()
                     .stream()
-                    .map(bean -> StringUtils.substring(bean.getClass().getName(), 7, -11).toLowerCase())
+                    .map(beanName -> StringUtils.substring(beanName, 7, -11).toLowerCase())
                     .forEach(simpleName -> {
                         if (simpleName.startsWith("word")) {
                             MAP_FILE_2_PREVIEW.put("doc", "html");
@@ -329,7 +326,7 @@ public class OnlinePreviewController {
 
     private String getFilePathByMd5(String filePath, String md5, String controlParams, Model model) throws UnsupportedEncodingException {
         if (controlParams != null && !controlParams.isEmpty()) {
-            changeCtrlParams(controlParams, model);
+            model.addAttribute("controlParams", controlParams);
         }
 
         if (filePath.contains(" ")) {
@@ -446,7 +443,7 @@ public class OnlinePreviewController {
      * @param filePath
      * @return
      */
-    @RequestMapping(value="/checkImg",produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/checkImg", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public List<String> checkImages(@RequestParam("filePath") String filePath, @RequestParam(value = "md5", required = false) String md5) {
         if (!filePath.isEmpty()) {
@@ -481,46 +478,8 @@ public class OnlinePreviewController {
         if (Pattern.matches("%", input)) {
             input = URLDecoder.decode(input, null);
         }
-        return input;
+        return input.replace(" ", "+");
     }
-
-    /**
-     * 设置预览页面按钮开关参数
-     *
-     * @param controlParams 控制参数JSON
-     * @param model         参数对象
-     */
-    private void changeCtrlParams(String controlParams, Model model) {
-        if (controlParams != null && !controlParams.isEmpty()) {
-            try {
-                //解密为原字符串
-                String decryptStr = decodeUrlParamByAes(controlParams);
-
-                JSONObject jsonCtrlParams = JSONObject.fromObject(decryptStr);
-                // 是否允许开启演示模式（默认禁止演示模式）
-                if (jsonCtrlParams.containsKey("PPTMode")) {
-                    model.addAttribute("pdfPresentationModeDisable", changeKey(jsonCtrlParams.optBoolean("PPTMode")));
-                }
-                // 是否允许在线打印（默认禁止打印）
-                if (jsonCtrlParams.containsKey("print")) {
-                    model.addAttribute("pdfPrintDisable", changeKey(jsonCtrlParams.optBoolean("print")));
-                }
-                // 是否允许下载当前文件（默认禁止下载）
-                if (jsonCtrlParams.containsKey("download")) {
-                    model.addAttribute("pdfDownloadDisable", changeKey(jsonCtrlParams.optBoolean("download")));
-                }
-
-            } catch (Exception | Error e) {
-                log.error("页面控制参数编码或内容错误， key={}，controlParams={}",
-                        ConvertDocConfigBase.urlEncodeKey,
-                        controlParams);
-                log.error(e);
-            }
-
-        }
-
-    }
-
 
     /**
      * URL参数解码
@@ -572,60 +531,51 @@ public class OnlinePreviewController {
     public ResponseEntity<Object> download(@RequestParam(value = "urlPath", required = false) String url,
                                            @RequestParam(value = "file", required = false) String strFile) {
         try {
-            HttpHeaders headers = new HttpHeaders();
-
             String downloadFilePath = "";
             if (StringUtils.isNotBlank(url)) {
                 downloadFilePath = AesUtil.decryptStr(url);
-                AbstractResource resource = null;
-                long resourceLength = -1L;
-                // 兼容m3u8格式预览
-                if (FileUtil.extName(url).equalsIgnoreCase("m3u8")){
-                    for (int i = 0; i < ConvertVideoConfig.m3u8DownloadWait; i++) {
-                        if (FileUtil.exist(url)){
-                            break;
-                        }
-                        ThreadUtil.safeSleep(1000);
-                    }
-                    if(!FileUtil.exist(url)){
-                        throw new ConvertException("m3u8文件解析失败，请稍后重试");
-                    }
-
-                    // m3u8解析，需要处理ts前缀
-                    List<String> contents = FileUtil.readUtf8Lines(url).stream().map(s -> {
-                        if (s.startsWith("out") && s.endsWith(".ts")) {
-                            return "/api/download?urlPath=" + AesUtil.encryptStr(FileUtil.getParent(url, 1) + "/"+ s);
-                        }
-                        return s;
-                    }).collect(Collectors.toList());
-                    byte[] bytes = String.join("\n", contents).getBytes(StandardCharsets.UTF_8);
-                    resource = new ByteArrayResource(bytes);
-                    resourceLength = bytes.length;
-                }else{
-                    resource = new FileSystemResource(downloadFilePath);
-                    resourceLength = new File(downloadFilePath).length();
-                }
-                headers.add("Content-Disposition", "attachment;filename=" + URLEncoder.encode(FileUtil.getName(downloadFilePath), "UTF-8"));
-                return ResponseEntity.ok()
-                        .headers(headers)
-                        .contentLength(resourceLength)
-                        .contentType(MediaType.parseMediaType("application/octet-stream"))
-                        .body(resource);
             } else if (StringUtils.isNotBlank(strFile)) {
                 downloadFilePath = Base64.decodeStr(strFile);
             }
             File file = FileUtil.file(downloadFilePath);
-            if (StringUtils.isBlank(downloadFilePath) || !FileUtil.exist(file)) {
+            String fileContent = null;
+            // 兼容m3u8格式预览， 需处理 ts 前缀
+            if (FileUtil.extName(downloadFilePath).equalsIgnoreCase("m3u8")) {
+                for (int i = 0; i < ConvertVideoConfig.m3u8DownloadWait; i++) {
+                    if (FileUtil.exist(downloadFilePath)){
+                        break;
+                    }
+                    ThreadUtil.safeSleep(1000);
+                }
+                if(!FileUtil.exist(downloadFilePath)){
+                    return ResponseEntity.notFound().build();
+                }
+
+                // m3u8解析，需要处理ts前缀
+                String finalDownloadFilePath = downloadFilePath;
+                List<String> contents = FileUtil.readUtf8Lines(downloadFilePath).stream().map(s -> {
+                    if (s.startsWith("out") && s.endsWith(".ts")) {
+                        return "/api/download?urlPath=" + AesUtil.encryptStr(FileUtil.getParent(finalDownloadFilePath, 1) + "/"+ s);
+                    }
+                    return s;
+                }).collect(Collectors.toList());
+                fileContent = String.join("\n", contents);
+            }else if (ConvertFileTypeEnum.zip.equals(ConvertFileTypeEnum.valueOfExtName(FileUtil.extName(file)))){
+                fileContent = ArcZipUtil.fileTree(file, "", null);
+            } else if (StringUtils.isBlank(downloadFilePath) || !FileUtil.exist(file)) {
                 return ResponseEntity.notFound().build();
             }
 
+            // 读取文本内容
+            if (StringUtils.isBlank(fileContent) && com.thinkdifferent.convertpreview.utils.FileUtil.isText(file)){
+                fileContent = FileUtil.readUtf8String(file);
+            }
 
-            boolean blnTextFile = com.thinkdifferent.convertpreview.utils.FileUtil.isText(file);
+            HttpHeaders headers = new HttpHeaders();
             String strExt = FileUtil.extName(file);
-            if (blnTextFile) {
+            if (StringUtils.isNotBlank(fileContent)) {
                 headers.add("Content-Type", "text/html;charset=utf-8");
-                String fileContent = FileUtil.readUtf8String(file);
-                if (!StringUtils.equalsAnyIgnoreCase(strExt, "xml", "htm", "html")) {
+                if (!StringUtils.equalsAnyIgnoreCase(strExt, "m3u8", "xml", "htm", "html")) {
                     fileContent = fileContent.replace("\n", "<br/>");
                 }
                 return ResponseEntity.ok().headers(headers).body(fileContent);
@@ -641,6 +591,59 @@ public class OnlinePreviewController {
             e.printStackTrace();
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * 获取PDF页面控制参数
+     *
+     * @return str, script代码
+     */
+    @GetMapping(value = "/getCtrlParams", produces = MediaType.TEXT_PLAIN_VALUE)
+    @ResponseBody
+    public String getCtrlParams(@RequestParam("file") String file, @RequestParam(value = "controlParams", required = false) String controlParams) {
+        List<String> listScripts = new ArrayList<>();
+        if (file.startsWith("/api/download?urlPath=")) {
+            file = file.substring(22);
+        }
+        String filePath = AesUtil.decryptStr(file);
+        String extName = FileUtil.extName(filePath);
+        //解密为原字符串
+        try {
+            String decryptStr = decodeUrlParamByAes(controlParams);
+
+            JSONObject jsonCtrlParams = JSONObject.fromObject(decryptStr);
+            log.debug("jsonCtrlParams={}", jsonCtrlParams);
+            if ("pdf".equalsIgnoreCase(extName)) {
+                // 是否允许开启演示模式（默认禁止演示模式）
+                if (jsonCtrlParams.containsKey("PPTMode")) {
+                    listScripts.add("window.arcEnableActive = true;");
+                    listScripts.add("document.getElementById(\"presentationMode\").style.display = \"block\";");
+                }
+                // 是否允许在线打印（默认禁止打印）
+                if (jsonCtrlParams.containsKey("print")) {
+                    listScripts.add("window.arcTriggerPrinting = true;");
+                    listScripts.add("document.getElementById(\"print\").style.display = \"block\";");
+                }
+                // 是否允许下载当前文件（默认禁止下载）
+                if (jsonCtrlParams.containsKey("download")) {
+                    listScripts.add("window.arcBlobToDataURI = true;");
+                    listScripts.add("document.getElementById(\"download\").style.display = \"block\";");
+                }
+            } else {
+                // ofd js
+                if (jsonCtrlParams.containsKey("print")) {
+                    listScripts.add("document.getElementById(\"print\").style.display = \"flex\";");
+                }
+                if (jsonCtrlParams.containsKey("download")) {
+                    listScripts.add("document.getElementById(\"download\").style.display = \"flex\";");
+                    listScripts.add("$(\"#download\").click(function(){const link = document.createElement('a');link.href = dUrl;link.download = 'download.ofd';link.click();})");
+                }
+            }
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
+        return String.join("\n", listScripts);
     }
 
     private String getWatermarkImage() {
@@ -702,6 +705,7 @@ public class OnlinePreviewController {
                 put("pdfPrintDisable", "true");
                 put("pdfDownloadDisable", "true");
                 put("pdfBookmarkDisable", "true");
+                put("controlParams", "");
                 put("keyword", "");
                 put("blnExcel", "false");
                 put("blnOfd", "false");
@@ -726,7 +730,7 @@ public class OnlinePreviewController {
      *
      * @see ConvertFileTypeEnum
      */
-    private static final Map<String, String> MAP_FILE_2_PREVIEW = new HashMap<String, String>() {{
+    public static final Map<String, String> MAP_FILE_2_PREVIEW = new HashMap<String, String>() {{
         put(ConvertFileTypeEnum.img.name(), "jpg");
         put(ConvertFileTypeEnum.ppt.name(), "jpg");
         put(ConvertFileTypeEnum.pdf.name(), "pdf");
@@ -810,13 +814,13 @@ public class OnlinePreviewController {
             String strFileTree = Objects.isNull(zipFile) ? "{}" : ArcZipUtil.readZipFree(zipFile);
             model.addAttribute("fileTree", strFileTree);
         });
-        put(MEDIA_PREVIEW, ((model, convertFile) ->{
-            if ("m3u8".equalsIgnoreCase(FileUtil.extName(convertFile))){
+        put(MEDIA_PREVIEW, ((model, convertFile) -> {
+            if ("m3u8".equalsIgnoreCase(FileUtil.extName(convertFile))) {
                 model.addAttribute("hlsJs", "<script type=\"text/javascript\" src=\"/ckplayer/hls.js/hls.min.js\"></script>");
                 model.addAttribute("hlsPlug", "plug:'hls.js',");
             }
-                model.addAttribute("mediaUrl",
-                        "download?urlPath=" + AesUtil.encryptStr(convertFile.getPath()));
+            model.addAttribute("mediaUrl",
+                    "download?urlPath=" + AesUtil.encryptStr(convertFile.getPath()));
         }
         ));
         put(HTML_PREVIEW, ((model, convertFile) ->

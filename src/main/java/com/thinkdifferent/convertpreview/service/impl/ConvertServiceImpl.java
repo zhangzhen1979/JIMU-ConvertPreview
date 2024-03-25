@@ -80,7 +80,7 @@ public class ConvertServiceImpl implements ConvertService {
                 writeBack = convertVideoEntity.getWriteBack();
                 callBackUrl = convertVideoEntity.getCallBackURL();
                 callBackHeaders = convertVideoEntity.getCallBackHeaders();
-                targetFile = convertVideoService.convert(convertVideoEntity);
+                targetFile = convertVideoService.convert(convertVideoEntity, jsonInput.optString("$type"));
             } else {
                 // 文档格式处理
                 jsonInput.put(Global.CONVERT_TYPE, ConvertTypeEnum.IMG);
@@ -91,7 +91,10 @@ public class ConvertServiceImpl implements ConvertService {
                 zipParam = convertDocEntity.getZipParam();
                 targetFile = convertDocService.convert(convertDocEntity);
             }
-            Assert.isTrue(FileUtil.exist(targetFile.getTarget()), "转换失败");
+            Assert.isTrue(StringUtils.equalsIgnoreCase(FileUtil.extName(targetFile.getTarget()), "m3u8")
+                    || targetFile.getClass().getName().equals("java.io.File")
+                            || FileUtil.exist(targetFile.getTarget()),
+                    "转换失败");
 
             // 回写
             outPutFileType = FileUtil.extName(targetFile.getTarget());
@@ -101,7 +104,7 @@ public class ConvertServiceImpl implements ConvertService {
                 writeBackResult = WriteBackUtil.writeBack(
                         writeBack,
                         outPutFileType,
-                        targetFile.getTarget(),
+                        targetFile,
                         null,
                         zipParam);
 

@@ -1,5 +1,6 @@
 package com.thinkdifferent.convertpreview.utils;
 
+import com.thinkdifferent.convertpreview.entity.TargetFile;
 import com.thinkdifferent.convertpreview.entity.WriteBackResult;
 import com.thinkdifferent.convertpreview.entity.ZipParam;
 import com.thinkdifferent.convertpreview.entity.writeback.WriteBack;
@@ -43,19 +44,21 @@ public class WriteBackUtil {
      *
      * @param writeBack      回写对象
      * @param outPutFileType 输出文件类型
-     * @param fileOut        输出文件, @see ArcZipUtil.zipFile, 做了兼容
+     * @param targetFile     输出文件对象, @see ArcZipUtil.zipFile, 做了兼容
      * @param listJpg        jpg list
      * @param zipParam       zip参数
      * @return jo
      */
     @SneakyThrows
     public static WriteBackResult writeBack(WriteBack writeBack, String outPutFileType,
-                                            File fileOut, List<String> listJpg, ZipParam zipParam) {
+                                            TargetFile targetFile, List<String> listJpg, ZipParam zipParam) {
+        File fileOut = targetFile.getTarget();
         if (Objects.isNull(writeBack) || !fileOut.getClass().getName().equals("java.io.File")) {
             return new WriteBackResult(true);
         }
         WriteBackResult writeBackResult = writeBack.writeBack(outPutFileType, fileOut, listJpg, zipParam);
-        long longPageCount = 0;
+        long longPageCount = targetFile.getLongPageCount();
+        writeBackResult.setPageNum(longPageCount);
 
         if(listJpg != null && !listJpg.isEmpty()){
             longPageCount = listJpg.size();
@@ -67,21 +70,6 @@ public class WriteBackUtil {
                 fileOut = new File(strPDF);
             }else{
                 fileOut = new File(writeBackResult.getFile());
-//                if("jpg".equalsIgnoreCase(outPutFileType)){
-//                    longPageCount = 1;
-//                    writeBackResult.setPageNum(longPageCount);
-//                }else if("pdf".equalsIgnoreCase(outPutFileType) && fileOut.getName().endsWith(".pdf")){
-//                    try (PDDocument doc = PDDocument.load(fileOut, MemoryUsageSetting.setupTempFileOnly())) {
-//                        longPageCount = doc.getPages().getCount();
-//                        writeBackResult.setPageNum(longPageCount);
-//                    }
-//
-//                }else if("ofd".equalsIgnoreCase(outPutFileType)){
-//                    try (OFDReader ofdReader = new OFDReader(Paths.get(fileOut.getCanonicalPath()))) {
-//                        longPageCount = ofdReader.getPageList().size();
-//                        writeBackResult.setPageNum(longPageCount);
-//                    }
-//                }
             }
         }
 

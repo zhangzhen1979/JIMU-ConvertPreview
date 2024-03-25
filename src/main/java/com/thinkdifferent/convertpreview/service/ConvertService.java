@@ -40,6 +40,6 @@ public interface ConvertService {
      * @return JSON格式的返回结果
      */
     CallBackResult callBack(String strCallBackURL, Map<String, String> mapWriteBackHeaders,
-                            WriteBackResult writeBackResult, String outPutFileName);
+                                   WriteBackResult writeBackResult, String outPutFileName);
 
 }

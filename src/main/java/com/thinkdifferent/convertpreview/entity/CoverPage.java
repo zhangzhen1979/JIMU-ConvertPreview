@@ -132,7 +132,7 @@ public class CoverPage {
             File fileDest = new File(strDestPathFileName);
             if (fileDest.exists()) {
                 filePDFCover.delete();
-                FileUtil.rename(fileDest, fileInput.getAbsolutePath(), true);
+                FileUtil.move(fileDest, fileInput, true);
             }
 
             return fileInput;
@@ -171,7 +171,7 @@ public class CoverPage {
 
             if (fileDest.exists()) {
                 fileOFDCover.delete();
-                FileUtil.rename(fileDest, fileInput.getAbsolutePath(), true);
+                FileUtil.move(fileDest, fileInput, true);
             }
 
             return fileInput;

@@ -88,4 +88,17 @@ public class OutFileEncryptorEntity {
      */
     private String validPeriodEnd;
 
+    /**
+     * 语言
+     */
+    private String local;
+
+    /**
+     * Aes加密key
+     */
+    private String aesKey;
+    /**
+     * 检查文件有效期、用户名密码的接口URL
+     */
+    private String checkPermissions;
 }

@@ -1,10 +1,7 @@
 package com.thinkdifferent.convertpreview.task;
 
 import com.thinkdifferent.convertpreview.config.SystemConstants;
-import com.thinkdifferent.convertpreview.entity.CallBackResult;
-import com.thinkdifferent.convertpreview.entity.ConvertDocEntity;
-import com.thinkdifferent.convertpreview.entity.ConvertVideoEntity;
-import com.thinkdifferent.convertpreview.entity.WriteBackResult;
+import com.thinkdifferent.convertpreview.entity.*;
 import com.thinkdifferent.convertpreview.service.ConvertService;
 import com.thinkdifferent.convertpreview.service.RabbitMQService;
 import com.thinkdifferent.convertpreview.utils.WriteBackUtil;
@@ -44,7 +41,7 @@ public class ConvertTask implements RabbitTemplate.ConfirmCallback {
 
         CallBackResult callBackResult = new CallBackResult(false);
         try {
-            File fileOut = convertService.convert(jsonInput).getTarget();
+            TargetFile targetFile = convertService.convert(jsonInput);
 
             String strOutType = jsonInput.getString("outPutFileType");
             if (StringUtils.equalsAnyIgnoreCase(strOutType, "pdf", "ofd", "jpg")) {
@@ -55,7 +52,7 @@ public class ConvertTask implements RabbitTemplate.ConfirmCallback {
                     WriteBackResult writeBackResult = WriteBackUtil.writeBack(
                             convertDocEntity.getWriteBack(),
                             convertDocEntity.getOutPutFileType(),
-                            fileOut,
+                            targetFile,
                             null,
                             convertDocEntity.getZipParam());
                     String outPutFileName = convertDocEntity.getOutPutFileName();
@@ -71,7 +68,7 @@ public class ConvertTask implements RabbitTemplate.ConfirmCallback {
                     WriteBackResult writeBackResult = WriteBackUtil.writeBack(
                             convertVideoEntity.getWriteBack(),
                             "mp4",
-                            fileOut,
+                            targetFile,
                             null,
                             null);
                     ;

@@ -133,15 +133,6 @@ public class OfdWaterMarkUtil {
                         convertDocEntity.getAlpha());
             }
 
-            // 如果添加归档章水印，则进行如下处理
-            if (i == 1 && convertDocEntity.getFirstPageMark() != null) {
-                convertDocEntity.getFirstPageMark().mark4Ofd(ofdDoc,
-                        pageSize,
-                        convertDocEntity.getFirstPageMark(),
-                        i,
-                        1f);
-            }
-
             // 如果添加二维码/条码，则进行如下处理
             if (convertDocEntity.getBarCode() != null) {
                 if(convertDocEntity.getBarCode().getIsFirstPage() && i>1){

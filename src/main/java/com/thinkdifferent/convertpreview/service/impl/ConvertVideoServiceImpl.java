@@ -33,17 +33,18 @@ public class ConvertVideoServiceImpl implements ConvertVideoService {
      * 视频文件转换
      *
      * @param convertVideoEntity 视频转换对象
+     * @param type               模式标识：当前只有 preview
      * @return 转换后文件
      */
     @Override
-    public TargetFile convert(ConvertVideoEntity convertVideoEntity) throws IOException {
+    public TargetFile convert(ConvertVideoEntity convertVideoEntity, String type) throws IOException {
         TargetFile targetFile = new TargetFile();
         targetFile.setLongPageCount(0);
 
         // 下载文件
         File fileInput = convertVideoEntity.getInput().getInputFile();
         // 如果文件不需要转换，则直接拷贝
-        if("mp3".equalsIgnoreCase(FileUtil.extName(fileInput))){
+        if ("mp3".equalsIgnoreCase(FileUtil.extName(fileInput))) {
             File fileOut = new File(convertVideoEntity.getWriteBack().getOutputPath() + convertVideoEntity.getOutPutFileName() + ".mp3");
             FileUtil.copy(fileInput.getPath(), fileOut.getPath(), true);
 
@@ -56,7 +57,7 @@ public class ConvertVideoServiceImpl implements ConvertVideoService {
             File fileOut = new File(convertVideoEntity.getWriteBack().getOutputPath() + convertVideoEntity.getOutPutFileName() + ".mp4");
             FileUtil.copy(fileInput.getPath(), fileOut.getPath(), true);
 
-            targetFile.setTarget(mp4_2_m3u8(fileOut));
+            targetFile.setTarget(mp4_2_m3u8(fileOut, type));
 
             return targetFile;
         }
@@ -70,7 +71,7 @@ public class ConvertVideoServiceImpl implements ConvertVideoService {
         File fileOut = new File(convertVideoEntity.getWriteBack().getOutputPath() + convertVideoEntity.getOutPutFileName() + "." + convertVideoUtils.getExt());
         // 校验文件有效性
         if (blnSuccess && checkMp4File(fileOut).isNormal()) {
-            targetFile.setTarget(mp4_2_m3u8(fileOut));
+            targetFile.setTarget(mp4_2_m3u8(fileOut, type));
 
             return targetFile;
         }
@@ -80,11 +81,13 @@ public class ConvertVideoServiceImpl implements ConvertVideoService {
 
     /**
      * mp4 转 m3u8 预览
+     *
      * @param mp4File 转换后的mp4文件
+     * @param type    是否是预览模式
      * @return m3u8 文件
      */
-    private static File mp4_2_m3u8(File mp4File){
-        if (FileUtil.exist(mp4File) && "mp4".equalsIgnoreCase(FileUtil.extName(mp4File))){
+    private static File mp4_2_m3u8(File mp4File, String type) {
+        if ("preview".equals(type) && FileUtil.exist(mp4File) && "mp4".equalsIgnoreCase(FileUtil.extName(mp4File))) {
             return ConvertVideoUtils.mp4_2_M3u8(mp4File, FileUtil.getCanonicalPath(mp4File) + "_m3u8"
                     , new File(FileUtil.getCanonicalPath(mp4File) + "_m3u8/index.m3u8"));
         }

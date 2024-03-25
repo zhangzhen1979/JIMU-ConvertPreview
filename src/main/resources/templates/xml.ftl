@@ -2,13 +2,12 @@
 <html lang="zh-cn">
 <head>
     <meta charset="utf-8"/>
-    <title>XML文件预览</title>
+    <title>文件预览</title>
     <#include "*/commonHeader.ftl">
 
 </head>
 <body>
 
-<pre id="myPre"></pre>
 <script type="text/javascript">
     var xmlUrl = '${xmlUrl}';
 
@@ -17,7 +16,10 @@
     xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
             context = xhr.responseText;
-            document.write("<xmp>" + context + "</xmp>")
+            var xmp = document.createElement("xmp");
+            xmp.textContent = context;
+            document.body.append(xmp)
+            // document.write("<xmp>" + context + "</xmp>")
         }
         return 1;
     };

@@ -1,9 +1,12 @@
 package com.thinkdifferent.convertpreview.utils;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.thread.ThreadUtil;
 import cn.hutool.core.util.RuntimeUtil;
+import cn.hutool.crypto.SecureUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.system.OsInfo;
+import com.thinkdifferent.convertpreview.cache.CacheManager;
 import com.thinkdifferent.convertpreview.config.ConvertVideoConfig;
 import com.thinkdifferent.convertpreview.entity.ConvertVideoEntity;
 import com.thinkdifferent.convertpreview.entity.Thumbnail;
@@ -18,6 +21,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Executor;
 
 @Log4j2
@@ -259,6 +263,13 @@ public class ConvertVideoUtils {
             if (!FileUtil.exist(mp4File)) {
                 return null;
             }
+            // 缓存限制
+            String cacheKey = SecureUtil.md5(FileUtil.getCanonicalPath(mp4File));
+            if (Objects.nonNull(getCacheManager()) && getCacheManager().exists(cacheKey)) {
+                log.info("MP4【{}】转m3u8缓存命中", mp4File.getName());
+                return m3u8FilePath;
+            }
+
             if (FileUtil.exist(m3u8FilePath)) {
                 // 存在删除父级目录
                 FileUtil.del(FileUtil.getParent(m3u8FilePath, 1));
@@ -268,12 +279,13 @@ public class ConvertVideoUtils {
             List<String> listCommand = new ArrayList<>();
             listCommand.add(ConvertVideoConfig.ffmpegFile);
 
-            listCommand.addAll(new LineMaker().lineByCustomM3u8(FileUtil.getCanonicalPath(mp4File), m3u8FileParentPath));
+            String mp4FilePath = FileUtil.getCanonicalPath(mp4File);
+            listCommand.addAll(new LineMaker().lineByCustomM3u8(mp4FilePath, m3u8FileParentPath));
 
             Executor taskExecutor = SpringUtil.getBean("taskExecutor");
-            taskExecutor.execute(()->{
+            taskExecutor.execute(() -> {
                 try {
-                    log.info("mp4转m3u8 命令：{}", listCommand);
+                    log.info("mp4【{}】转m3u8 命令：{}, 开始转换", mp4FilePath, listCommand);
                     Process process = RuntimeUtil.exec(String.join(" ", listCommand));
                     // 取得命令结果的输出流
                     InputStream inputStream = process.getInputStream();
@@ -286,20 +298,31 @@ public class ConvertVideoUtils {
                     while ((strLine = br.readLine()) != null) {
                         log.info("mp4转m3u8:{}", strLine);
                     }
-                }catch (Exception e){
-                    log.error("mp4转m3u8 error", e);
+                    log.info("mp4 【{}】转 m3u8 完成", mp4FilePath);
+                } catch (Exception e) {
+                    log.error("mp4 【" + mp4FilePath + "】转m3u8 error", e);
                 }
             });
-
-            Thread.sleep(ConvertVideoConfig.m3u8ConvertWait * 1000);
-            log.info("MP4转m3u8结果：{}", FileUtil.exist(m3u8FilePath));
-            if (FileUtil.exist(m3u8FilePath)){
-                return m3u8FilePath;
+            for (int i = 0; i < ConvertVideoConfig.m3u8ConvertWait; i++) {
+                if (FileUtil.exist(m3u8FilePath)){
+                    break;
+                }
+                ThreadUtil.safeSleep(1000);
             }
+            return m3u8FilePath;
         } catch (Exception e) {
             log.error("mp4转m3u8 error", e);
         }
         return mp4File;
     }
 
+    private static CacheManager cacheManager;
+
+    @SneakyThrows
+    public static CacheManager getCacheManager() {
+        if (Objects.isNull(cacheManager)) {
+            cacheManager = SpringUtil.getBean(CacheManager.class);
+        }
+        return cacheManager;
+    }
 }

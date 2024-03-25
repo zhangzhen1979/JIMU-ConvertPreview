@@ -100,11 +100,11 @@ public class CopyRight {
      * @throws Exception
      */
     public void addCopyRight4Pdf(PDExtendedGraphicsState pdExtGfxState,
-                                 PDPageContentStream contentStream,
-                                 PDDocument pdDocument,
-                                 PDPage page,
-                                 CopyRight copyRight,
-                                 int intPageCount) throws Exception {
+                               PDPageContentStream contentStream,
+                               PDDocument pdDocument,
+                               PDPage page,
+                               CopyRight copyRight,
+                               int intPageCount) throws Exception {
         // 如果启用了【版权说明】，才加【版权说明】水印；否则不处理。
         if(copyRight.isEnable()){
             pdExtGfxState.setNonStrokingAlphaConstant(1f);
@@ -397,9 +397,9 @@ public class CopyRight {
      * @throws Exception
      */
     public void addCopyRight4Ofd(OFDDoc ofdDoc, ST_Box pageSize,
-                                 CopyRight copyRight,
-                                 int i,
-                                 int intPageCount)
+                               CopyRight copyRight,
+                               int i,
+                               int intPageCount)
             throws NoSuchFieldException, IllegalAccessException, IOException {
         // 如果启用了【版权说明】，才加【版权说明】水印；否则不处理。
         if(copyRight.isEnable()){

@@ -123,11 +123,11 @@ public class TextMark {
             }
 
             if(rotation == 270){
-                intDegree = - textMark.getDegree();
+                intDegree = - textMark.getDegree()*2;
             }else if(rotation == 180){
-                intDegree = 270 - textMark.getDegree();
+                intDegree = 270 - textMark.getDegree()*2;
             }else if(rotation == 90){
-                intDegree = 180 - textMark.getDegree();
+                intDegree = 180 - textMark.getDegree()*2;
             }else{
                 intDegree = - textMark.getDegree();
             }
@@ -188,12 +188,25 @@ public class TextMark {
                             - modifyX;
                     float ty = k * markWidth
                             + 3F * bdFontWidth.intValue();
+
+                    if(rotation == 90 || rotation == 270){
+                        float floatTemp = tx;
+                        tx = ty;
+                        ty = floatTemp;
+                    }
+
+                    // 设置原点，并旋转坐标轴
                     contentStream.setTextMatrix(Matrix.getRotateInstance(
                             Math.toRadians(intDegree),
                             tx,
                             ty
                     ));
-                    contentStream.showText(strWaterMarkTexts[strWaterMarkTexts.length - z - 1]);
+
+                    if(rotation == 0 || rotation ==90 ){
+                        contentStream.showText(strWaterMarkTexts[strWaterMarkTexts.length - z - 1]);
+                    }else if(rotation == 180 || rotation == 270){
+                        contentStream.showText(strWaterMarkTexts[z]);
+                    }
                 }
             }
         }

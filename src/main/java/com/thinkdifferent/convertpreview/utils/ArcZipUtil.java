@@ -1,6 +1,7 @@
 package com.thinkdifferent.convertpreview.utils;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IoUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,6 +11,7 @@ import net.sf.sevenzipjbinding.IInArchive;
 import net.sf.sevenzipjbinding.SevenZip;
 import net.sf.sevenzipjbinding.SevenZipException;
 import net.sf.sevenzipjbinding.impl.RandomAccessFileInStream;
+import net.sf.sevenzipjbinding.impl.RandomAccessFileOutStream;
 import net.sf.sevenzipjbinding.simple.ISimpleInArchive;
 import net.sf.sevenzipjbinding.simple.ISimpleInArchiveItem;
 import org.apache.commons.io.IOUtils;
@@ -41,10 +43,10 @@ public class ArcZipUtil {
         private String isParent;
     }
 
-    public static class ZipFile extends File {
+    public static class ArcZipFile extends File {
         private final String content;
 
-        public ZipFile(@NotNull String pathname, String content) {
+        public ArcZipFile(@NotNull String pathname, String content) {
             super(pathname);
             this.content = content;
         }
@@ -157,6 +159,7 @@ public class ArcZipUtil {
 
         RandomAccessFile randomAccessFile = null;
         IInArchive inArchive = null;
+        RandomAccessFileOutStream rafo = null;
         try {
             // 判断目标目录是否存在，不存在则创建
             File fileTargetDir = new File(targetFileDir);
@@ -177,27 +180,11 @@ public class ArcZipUtil {
                         File fileTarget = new File(strTargetFilePath);
 
                         if (strFilePath.equals(fileInZip)) {
-//                            log.debug("==strFilePath=" + strFilePath);
-//                            log.debug("==fileInZip=" + fileInZip);
-
-                            ExtractOperationResult result = item.extractSlow(data -> {
-                                //写入指定文件
-                                try {
-                                    if (!fileTarget.exists()) {
-                                        FileOutputStream fos1 = new FileOutputStream(strTargetFilePath, false);
-                                        fos1.write(data);
-                                        IOUtils.closeQuietly(fos1);
-
-                                        log.debug(">>>>>>保存文件至：" + strTargetFilePath);
-                                    }
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                                return data.length; // Return amount of consumed data
-                            }, password);
+                            rafo = new RandomAccessFileOutStream(new RandomAccessFile(strTargetFilePath , "rw"));
+                            ExtractOperationResult result = item.extractSlow(rafo, password);
 
                             if (result != ExtractOperationResult.OK) {
-                                log.error("压缩包提取文件失败: {}, file:{}", result, item.getPath());
+                                log.error("压缩包提取文件失败: {}, file:{}", result, item.getPath()  );
                                 break;
                             }
 
@@ -213,30 +200,26 @@ public class ArcZipUtil {
         } catch (Exception | Error e) {
             log.error("压缩包解压失败: " + e);
         } finally {
-            if (inArchive != null) {
-                try {
-                    inArchive.close();
-                } catch (SevenZipException e) {
-                    log.error("Error closing archive: {}", e);
+            IoUtil.close(inArchive);
+            IoUtil.close(randomAccessFile);
+            try {
+                if (rafo != null){
+                    rafo.close();
                 }
-            }
-            if (randomAccessFile != null) {
-                try {
-                    randomAccessFile.close();
-                } catch (IOException ignored) {
-                }
+            }catch (Exception e){
+
             }
         }
         return null;
     }
 
-    public static ZipFile treeFile(File zipFile, String pathInZip) {
-        return new ZipFile(FileUtil.getCanonicalPath(zipFile), fileTree(zipFile, pathInZip));
+    public static ArcZipFile treeFile(File zipFile, String pathInZip) {
+        return new ArcZipFile(FileUtil.getCanonicalPath(zipFile), fileTree(zipFile, pathInZip));
     }
 
     public static String readZipFree(File file) {
-        Assert.isTrue(file instanceof ZipFile, "zipfile 格式错误");
-        return ((ZipFile) file).getContent();
+        Assert.isTrue(file instanceof ArcZipFile, "zipfile 格式错误");
+        return ((ArcZipFile) file).getContent();
     }
 
     public static String fileTree(File zipFile, String pathInZip, String parentPref) {
@@ -292,6 +275,22 @@ public class ArcZipUtil {
                         continue;
                     }
                 }
+
+//                int i = 0;
+//                // 记录路径及ID
+//                Map<String, Integer> mapFileIndex = new HashMap<>();
+//                String zipFilePath = FileUtil.getCanonicalPath(zipFile);
+//                // 所有文件，已解压层级
+//                for (final ISimpleInArchiveItem item : simpleInArchive.getArchiveItems()) {
+//                    String strPathFile = SystemUtil.beautifulFilePath(item.getPath());
+//
+//                    mapFileIndex.put(strPathFile, ++i);
+//                    String parentPath = StringUtils.substring(strPathFile, 0, strPathFile.lastIndexOf("/"));
+//                    fileNodeList.add(new FileNode(
+//                            i,mapFileIndex.getOrDefault(parentPath, -1).toString() , FileUtil.getName(strPathFile),
+//                            strPathFile, String.valueOf(item.isFolder())
+//                    ));
+//                }
 
                 return new ObjectMapper().writeValueAsString(fileNodeList);
             } catch (Exception | Error e) {
@@ -387,16 +386,10 @@ public class ArcZipUtil {
                             fos1 = new FileOutputStream(targetFileDir + "/" + strItemPath, true);
                             log.debug(">>>>>>保存文件至：" + targetFileDir + "/" + strItemPath);
                             fos1.write(data);
-                            fos1.close();
                         } catch (IOException e) {
                             e.printStackTrace();
                         } finally {
-                            if (Objects.nonNull(fos1)) {
-                                try {
-                                    fos1.close();
-                                } catch (IOException ignored) {
-                                }
-                            }
+                            IOUtils.closeQuietly(fos1);
                         }
                         return data.length; // Return amount of consumed data
                     }, password);

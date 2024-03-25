@@ -130,17 +130,6 @@ public class PdfWaterMarkUtil {
                         convertDocEntity.getAlpha());
             }
 
-            // 如果添加归档章水印，则进行如下处理
-            if (i == 0 && convertDocEntity.getFirstPageMark() != null) {
-                convertDocEntity.getFirstPageMark().mark4Pdf(pdExtGfxState,
-                        contentStream,
-                        pdDocument,
-                        page,
-                        convertDocEntity.getFirstPageMark(),
-                        modifyX,
-                        1f);
-            }
-
             // 如果添加二维码/条码，则进行如下处理
             if (convertDocEntity.getBarCode() != null) {
                 if (convertDocEntity.getBarCode().getIsFirstPage() && i > 0) {

@@ -1,8 +1,8 @@
 package com.thinkdifferent.convertpreview.service.impl.ofd2x;
 
 import cn.hutool.core.io.FileUtil;
-import com.thinkdifferent.convertpreview.service.ConvertTypeService;
 import com.thinkdifferent.convertpreview.utils.ConvertOfdUtil;
+import com.thinkdifferent.convertpreview.service.ConvertTypeService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;

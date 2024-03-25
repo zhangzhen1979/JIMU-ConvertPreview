@@ -39,4 +39,8 @@ public class CacheManager {
     public boolean exists(String key) {
         return cacheService.exists(key);
     }
+
+    public void remove(String key) {
+        cacheService.remove(key);
+    }
 }

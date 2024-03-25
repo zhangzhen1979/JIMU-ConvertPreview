@@ -76,10 +76,6 @@ public class ConvertDocEntity {
      */
     private CopyRight copyRight;
     /**
-     * 首页水印（归档章）
-     */
-    private FirstPageMark firstPageMark;
-    /**
      * 二维码/条码
      */
     private BarCode barCode;
@@ -343,11 +339,6 @@ public class ConvertDocEntity {
         entity.setCopyRight(copyRight);
 
 
-        // 首页水印（归档章）
-        if(parameters.get("firstPageMark") != null){
-            entity.setFirstPageMark(FirstPageMark.get((Map<String,Object>)parameters.get("firstPageMark")));
-        }
-
         // 二维码/条码
         if(parameters.get("barcode") != null){
             entity.setBarCode(BarCode.get((Map<String,Object>)parameters.get("barcode")));
@@ -395,6 +386,14 @@ public class ConvertDocEntity {
 
             // 是否可以添加或修改文本注释并填写交互式表单字段，如果canModify()返回true，则创建或修改交互式表单字段（包括签名字段）。
             outFileEncryptorEntity.setModifyAnnotations(joOutEncry.optBoolean("modifyAnnotations", true));
+
+            // 语言
+            outFileEncryptorEntity.setLocal(joOutEncry.optString("local", "zh-CN"));
+
+            // Aes加密key
+            outFileEncryptorEntity.setAesKey(joOutEncry.optString("aesKey", ""));
+            // 检查文件有效期、用户名密码的接口URL
+            outFileEncryptorEntity.setCheckPermissions(joOutEncry.optString("checkPermissions", ""));
 
             // PDF专用设置项
             // 是否可以插入/删除/旋转页面

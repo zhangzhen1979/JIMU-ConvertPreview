@@ -12,6 +12,7 @@ import javax.annotation.PreDestroy;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,6 +52,8 @@ public class Cad2PdfUtil {
                 log.info("Linux转换CAD文件开始");
                 strPath = strPath + "dwg2pdf";
             }
+            long date = new Date().getTime();
+
 
             int intReturn = -1;
             if (!new File(strCadFile).exists()) {
@@ -59,6 +62,7 @@ public class Cad2PdfUtil {
             } else {
                 intReturn = runExe(strPath, strCadFile, strPdfFile);
             }
+            long date2 = new Date().getTime();
 
             if (intReturn == -4) {
                 log.info("CAD Convert PDF fail, fileType not support ...");
@@ -73,7 +77,7 @@ public class Cad2PdfUtil {
                 log.info("CAD Convert PDF fail, Please try again...");
                 return false;
             } else {
-                log.info("CAD Convert PDF success, Use time is: " + intReturn + " s...");
+                log.info("CAD Convert PDF success, Use time is: " + (date2 - date) + " ms...");
             }
         } else {
             return false;

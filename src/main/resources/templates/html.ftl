@@ -2,7 +2,7 @@
 <html lang="zh-cn">
 <head>
     <meta charset="utf-8"/>
-    <title>HTML文件预览</title>
+    <title>文件预览</title>
     <#include "*/commonHeader.ftl">
     <style>
         *::-webkit-scrollbar {

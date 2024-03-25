@@ -46,33 +46,33 @@ public class LocalConvertDocUtil {
                 log.info("Windows开始");
 
                 if (ConvertDocConfigEngineLocal.wpsEnabled || ConvertDocConfigEngineLocal.officeEnabled) {
-                    int intReturn = -1;
+                    long longReturn = -1;
                     if (!new File(strOfficeFile).exists()) {
-                        intReturn = -2;
+                        longReturn = -2;
                     } else {
                         String strAppName = getUseAppName();
 
                         if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "doc", "docx", "txt", "rtf")) {
-                            intReturn = DocByJacob.doc2PDF(strAppName, strOfficeFile, strPdfFile);
+                            longReturn = DocByJacob.doc2PDF(strAppName, strOfficeFile, strPdfFile);
                         } else if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "ppt", "pptx")) {
-                            intReturn = DocByJacob.ppt2PDF(strAppName, strOfficeFile, strPdfFile);
+                            longReturn = DocByJacob.ppt2PDF(strAppName, strOfficeFile, strPdfFile);
                         } else if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "xls", "xlsx", "csv")) {
-                            intReturn = DocByJacob.xls2PDF(strAppName, strOfficeFile, strPdfFile);
+                            longReturn = DocByJacob.xls2PDF(strAppName, strOfficeFile, strPdfFile);
                         } else if (StringUtils.equalsAnyIgnoreCase(strInputFileType, "vsd", "vsdx")) {
-                            intReturn = DocByJacob.vsd2PDF(strOfficeFile, strPdfFile);
+                            longReturn = DocByJacob.vsd2PDF(strOfficeFile, strPdfFile);
                         } else {
-                            intReturn = DocByJacob.doc2PDF(strAppName, strOfficeFile, strPdfFile);
+                            longReturn = DocByJacob.doc2PDF(strAppName, strOfficeFile, strPdfFile);
                         }
                     }
 
-                    if (intReturn == -2) {
+                    if (longReturn == -2) {
                         log.info("Convert PDF by LocalUtil fail, Source File[" + strOfficeFile + "] is not exist...");
                         return false;
-                    } else if (intReturn == -1) {
+                    } else if (longReturn == -1) {
                         log.info("Convert PDF by LocalUtil fail, Please try again...");
                         return false;
                     } else {
-                        log.info("Convert PDF by LocalUtil success, Use time is: " + intReturn + " s...");
+                        log.info("Convert PDF by LocalUtil success, Use time is: " + longReturn + " ms...");
                         return true;
                     }
                 } else {

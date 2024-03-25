@@ -63,7 +63,7 @@ public class WriteBackResult extends SimpleResult {
                 "flag=" + super.isFlag() +
                 ", message='" + super.getMessage() + '\'' +
                 ", file='" + file + '\'' +
-                ", pageNum='" + pageNum + '\'' +
+                ", pageNum=" + pageNum +
                 '}';
     }
 }

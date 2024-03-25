@@ -15,8 +15,8 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SimpleResult {
-    private boolean flag;
-    private String message;
+    private boolean flag = false;
+    private String message = "";
 
     @Override
     public String toString() {
