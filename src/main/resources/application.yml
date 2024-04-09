@@ -125,12 +125,10 @@ convert:
       resolution:
       # 音频编码格式。设置为空，则默认使用aac编码
       audioCode:
-      # 视频转换m3u8相关参数
-      m3u8:
-        # 转换等待时间。如果服务器性能低，请放大此时间。默认值：10秒
-        convertWait: 10
-        # 预览页面下载等待时间。如果服务器性能低，请放大此时间。默认值：10秒
-        downloadWait: 10
+      # 转换等待时间。如果服务器性能低，请放大此时间。默认值：10秒
+      convertWait: 10
+      # 预览页面下载等待时间。如果服务器性能低，请放大此时间。默认值：10秒
+      downloadWait: 10
 
 jodconverter:
   local:

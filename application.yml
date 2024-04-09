@@ -5,102 +5,21 @@ server:
 
 # 本服务设置
 convert:
-  # 当前服务【内网】访问地址（使用【WPS预览服务】、【福昕转换服务】、【数科转换服务】时必须配置此项）
-  baseUrl: http://192.168.1.6:8080
-  #  # URL编码的key（必须16位），用于解码。如果不设置，则默认为空
-  #  urlEncodeKey: archivesAes14023
-
   preview:
     # 预览是否使用水印。如果设置为false，则在预览时传入的水印参数不生效
     watermarkEnable: true
     # 文字水印内容
     watermarkTxt:
-    # 是否使用 poi 预览。如果设置为false，则在预览时传入的 poi 参数不生效
-#    poi:
-#      word: true
-#      excel: true
-#      ppt: true
-  #    # 默认文件预览方式：pdf | img， 默认 pdf
-  #    type: pdf
-  #    # 图片预览时进行异步转换加载的图片数量，默认：0(不进行异步加载)， 1：加载1页，其他页异步加载
-  #    asyncImgNum: 2
-  #    # 图片水印地址, 优先级比文字水印高
-  #    watermarkImage: watermark/watermark.png
-  #    # 是否启用 ticket 验证
-  #    useTicket: false
-  #    timeControl: false
 
-  #  # 转换/下载重试。转换重试功能需启用MQ才有效。
-  #  retry:
-  #    # 最大重试次数（0-8）, 0标识不重试, 若异常情况只记录日志， 大于1（最大8）：标识失败进行重试的次数, 将会在以下时间重试（5min, 10min, 30min, 1h, 2h, 4h, 8h, 16h）
-  #    max: 3
   pdf:
-    # 水印用字体文件路径。默认不配置，则自动取系统内的【宋体】。
-#    font:
-#    fontName:
-#    fontFamilyName:
     # 文本型PDF转图片型pdf，生成的图片的分辨率（dpi）。默认100dpi
     picDpi: 200
     # 图片文件合成pdf时，可以设置合成pdf后图片的压缩率。默认值为0.3。1为不压缩，0.5为压缩50%
     picQuality: 0.5
 
-  #  path:
-  #    # 默认本地接收文件夹。可以为空，则系统自动在当前文件夹中创建“intemp”文件夹。
-  #    # 如果设置，则必须以“intemp/”结尾。不要配置到存储的根目录！定时任务会定时清空临时文件夹中的内容！！！
-  #    inPutTempPath: intemp/
-  #    # 默认本地输出文件夹。可以为空，则系统自动在当前文件夹中创建“outtemp”文件夹。
-  #    # 如果设置，则必须以“outtemp/”结尾。不要配置到存储的根目录！定时任务会定时清空临时文件夹中的内容！！！
-  #    outPutPath: outtemp/
-  #    # 清理临时目录的间隔时间，单位：天（正整数）, 默认：1
-  #    cleanUnit: 1
 
   # 转换引擎配置
   engine:
-    #    # 可转换的图片格式
-    #    picType: tif,tiff,png,jpg,jpeg,bmp,psd,sgi,pcx,webp,batik,icns,pnm,pict,tga,iff,hdr,gif
-    #    # 可转换的其他文件格式
-    #    otherFileType: htm,html,dwg,dxf
-    #    otherUtilPath:
-    #      cad: utils/QCADCAM/windows/
-
-    #    # 自动加入【页码】
-    #    autoAddPageNum:
-    #      # 是否开启自动添加【页码】
-    #      enabled: true
-    #      # 文件的处理类型：single：单个文件；multi：多个文件合并（默认值）；all：以上两种类型
-    #      type: all
-    #      # 字号
-    #      fontSize: 15
-    #      # 文字颜色
-    #      fontColor: black
-    #      # 文字位置。TL：顶部靠左；TM：顶部居中；TR：顶部靠右；CL：中间靠左；C：中间；CR：中间靠右；BL：底部靠左；BM：底部居中；BR：底部靠右
-    #      locate: TR
-    #      # 边距。即页码位置的页边距。PDF边距为OFD边距的3倍。例如，PDF边距为30时，OFD边距设置为10较适宜
-    #      margins: 30
-    #      # 奇偶页交换页码位置。
-    #      swapPosition: false
-    #      # 自动补零位数。如果设置的位数不为0，则自动以0补足位数；如果设置的位数为0，则不对页码补0。
-    #      digits: 3
-    #
-    #    # 自动加入【版权声明】
-    #    autoAddCopyRight:
-    #      # 是否开启自动添加【版权声明】
-    #      enabled: false
-    #      # 文件的处理类型：single：单个文件；multi：多个文件合并（默认值）；all：以上两种类型
-    #      type: multi
-    #      # 文字信息
-    #      text: XX公司内部资料\n严禁外传
-    #      # 字号
-    #      fontSize: 15
-    #      # 文字颜色
-    #      fontColor: black
-    #      # 文字位置。TL：顶部靠左；TM：顶部居中；TR：顶部靠右；CL：中间靠左；C：中间；CR：中间靠右；BL：底部靠左；BM：底部居中；BR：底部靠右
-    #      locate: TR
-    #      # 边距。即页码位置的页边距。PDF边距为OFD边距的3倍。例如，PDF边距为30时，OFD边距设置为10较适宜
-    #      margins: 30
-    #      # 奇偶页交换页码位置。
-    #      swapPosition: false
-
     localUtil:
       # 接受修订：doc、docx、
       acceptRevisions: true
@@ -112,21 +31,4 @@ convert:
         # 是否启用
         enabled: true
 
-#  video:
-#    # ffmpeg相关设置
-#    ffmpeg:
-#      # 支持的音视频文件后缀列表
-#      ext: avi,mp4,mkv,mov,flv,webm,mp3,m4a,ogg,3gp
-#      # ffmpeg所在文件夹和文件名
-#      file: utils/ffmpeg/ffmpeg.exe
-#      # 可以使用的CPU进程数量。设置为0，则使用全部CPU资源
-#      threads: 0
-#      # 视频编码格式。设置为空，则默认使用libx264编码
-#      videoCode:
-#      # 帧率。设置为0，则使用原视频的帧率
-#      fps: 0
-#      # 分辨率。如：640*480。设置为空，则使用原视频的分辨率
-#      resolution:
-#      # 音频编码格式。设置为空，则默认使用aac编码
-#      audioCode:
 

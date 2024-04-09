@@ -53,10 +53,14 @@
 
 * `jdk8`: 编译、运行环境
 * `转换引擎`：
-  * `WPS预览服务`：支持Linux系统，需要8c32g，系统盘不小于100G，数据盘XFS格式，操作系统CentOS 7.9。
-  * `LibreOffice`：支持Windows、Linux环境，但是对Word文档兼容性不好，容易跑版。不推荐。
-  * `WPS应用`：Windows版本地应用程序，速度快，版式兼容性好。推荐。
-  * `Office应用`：Windows版本地应用程序，速度较慢，单线程。对WPS生成的文档格式兼容性不好，会跑版。且生成PDF无法使用在线的pdf.js预览。谨慎使用。
+  * `WPS预览服务`：推荐。需要Linux系统，需要8c32g，系统盘不小于100G，数据盘XFS格式，操作系统CentOS 7.9。
+  * `永中FCS文档服务`：推荐。需要Linux服务器部署。（支持各种格式转换）。
+  * `数科文档转换服务`：推荐。需要Linux服务器部署。（支持各种格式转换）。
+  * `福昕文档转换服务`：推荐。需要Linux服务器部署。（支持各种格式转换）。
+  * `OnlyOffice文档服务`：不推荐。需要Linux服务器部署。（Office系列文件跑版）
+  * `WPS Office客户端`：（Jacob方式单线程调用）。推荐。需要Windows环境部署。（支持Word、Excel、PowerPoint格式转换，速度快）
+  * `微软Office客户端`：（Jacob方式单线程调用）。推荐。需要Windows环境部署。（支持Word、Excel、PowerPoint、Visio格式转换，速度慢，PDF格式兼容性一般）
+  * `LibreOffice客户端`：不推荐。支持Linux、Windows环境部署。（Office系列文件跑版）。
 * `maven`: 编译打包，只运行`jar`不需要，建议`V3.6.3`以上版本
 * `rabbitMQ`: 重试机制依赖MQ延迟队列，需安装插件 `rabbitmq_delayed_message_exchange`
 
